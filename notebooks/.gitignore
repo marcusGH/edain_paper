@@ -1,1 +1,3 @@
 .lsp_symlink
+.virtual_documents/
+.ipynb_checkpoints/
