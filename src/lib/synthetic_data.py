@@ -1,8 +1,9 @@
 import scipy
+from scipy import stats
 import numpy as np
 import pandas as pd
 
-class SynthethicData:
+class SyntheticData:
 
     def __init__(self, dim_size, time_series_length, pdfs, pdf_bounds,
                  ar_q, ar_thetas, ar_sigma_noises=None,
@@ -23,9 +24,9 @@ class SynthethicData:
             raise ValueError("The number of provided PDFs does not match the number of dimensions")
         if len(pdf_bounds) != dim_size:
             raise ValueError("The number of provided PDF bounds does not match the number of dimensions")
-        if q >= time_series_length:
+        if ar_q >= time_series_length:
             raise ValueError("q must be less than T")
-        if thetas.shape != (dim_size, ar_q + 1):
+        if ar_thetas.shape != (dim_size, ar_q + 1):
             raise ValueError("The MA thetas must be of shape (D, q+1)")
 
         # general parameters
@@ -114,13 +115,13 @@ class SynthethicData:
         :param sigma: np.ndarray of shape(D * T, D * T) specifying the covariance relation
         :return: np.ndarray of shape (n, D, T)
         """
-        mvn_sampler = scipy.stats.multivariate_normal(mean = np.zeros(self.D * self.T), cov = self.sigma, allow_singular=True)
+        mvn_sampler = stats.multivariate_normal(mean = np.zeros(self.D * self.T), cov = self.sigma, allow_singular=True)
         # shape (n, D * T)
         norm_samples = mvn_sampler.rvs(n)
         u_samples = np.zeros((n, self.D * self.T))
         for i in range(self.D * self.T):
             # the marginal distribution of the MVN will have this std
-            norm_obj = scipy.stats.norm(loc = 0., scale = np.sqrt(self.sigma[i, i]))
+            norm_obj = stats.norm(loc = 0., scale = np.sqrt(self.sigma[i, i]))
             # The CDF then gives uniform random samples
             u_samples[:, i] = norm_obj.cdf(norm_samples[:, i])
 
@@ -195,10 +196,10 @@ class SynthethicData:
 
     def _create_covariance_matrix(self, thetas):
         if self.cor_init_sigma is not None:
-            A = np.random.normal(loc = 0, scale = self.cor_init_sigma, size = (D * T, D * T))
+            A = np.random.normal(loc = 0, scale = self.cor_init_sigma, size = (self.D * self.T, self.D * self.T))
             A = np.tril(A)
         else:
-            A = np.zeros((D * T, D * T))
+            A = np.zeros((self.D * self.T, self.D * self.T))
 
         # When we later sample MVN of shape (DT), we will unroll
         # one row at a time:
@@ -208,13 +209,13 @@ class SynthethicData:
         # Therefore, to get (D, T) indexing, we use (d * T + i) when
         # indexing into A. We also want to make a lower-triangular
         # matrix, so the highest index should come first
-        for d in range(D):
+        for d in range(self.D):
             # all possible lags
-            for tau in range(T):
+            for tau in range(self.T):
                 # all valid starting entries
-                for i in range(T - tau):
+                for i in range(self.T - tau):
                     # we are setting the correlation between U[d,i] and U[d,i+tau]
-                    A[(d * T + i) + tau , d * T + i] =\
+                    A[(d * self.T + i) + tau , d * self.T + i] =\
                             self._ar_acvs(tau, self.thetas[d, :], self.ar_sigma_noises[d])
         # to preserve the diagonals, reset them after adding the transpose
         sigma = A + A.T
@@ -230,7 +231,6 @@ class SynthethicData:
 
         if self.sigma is None:
             self.sigma = self._create_covariance_matrix(self.thetas)
-            print(self.sigma)
 
         # shape (n, D, T)
         us = self._sample_correlated_uniforms(n)

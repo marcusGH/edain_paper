@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
-from ..lib.synthetic_data import SyntheticData
+from src.lib.synthetic_data import SyntheticData
 
 D = 2
 T = 6
@@ -15,7 +15,7 @@ thetas = np.array([
     [-1., 0.3, 0.9, 0.0]
     ])
 
-synth_data = SynthethicData(
+synth_data = SyntheticData(
         dim_size = D,
         time_series_length = T,
         pdfs = [f1, f2],

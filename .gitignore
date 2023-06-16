@@ -1,3 +1,4 @@
 information-links/*
 information-links/
 __pycache__
+*.swp
