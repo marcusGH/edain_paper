@@ -22,7 +22,7 @@ def split_raddars_parquet(data_path, save_path, label_path=None, pad_customers_t
     df['customer_ID'] = df['customer_ID'].str[-16:].str.hex_to_int().astype('int64')
 
     # LOAD TARGETS
-    if target_path is not None:
+    if label_path is not None:
         # targets = cudf.read_feather(os.path.join(DATA_DIR, 'derived', 'train_labels.feather'))
         targets = cudf.read_feather(label_path)
         targets['customer_ID'] = targets['customer_ID'].str[-16:].str.hex_to_int().astype('int64')
@@ -101,7 +101,9 @@ def split_raddars_parquet(data_path, save_path, label_path=None, pad_customers_t
             # cupy.save(os.path.join(DATA_DIR, "derived", "processed-splits", f"train-data_{i}.npy"), sub_data.astype('float32'))
             cupy.save(os.path.join(save_path, f"test-data_{i}.npy"), sub_data.astype('float32'))
 
-        del sub_df, sub_targets, sub_data
+        del sub_df, sub_data
+        if targets is not None:
+            del sub_targets
         gc.collect()
 
     # clean up
