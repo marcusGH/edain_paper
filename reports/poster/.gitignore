@@ -1,0 +1,11 @@
+build/*
+!build/poster_MAS.pdf
+*.txt
+*.aux
+_minted*
+*.log
+*.blg
+*.bbl
+*.aux
+*.synctex.gz
+Pictures/*

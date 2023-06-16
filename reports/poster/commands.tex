@@ -1,0 +1,105 @@
+% Valore atteso
+\newcommand{\E}[1]{\mathbb{E}(#1)}
+
+% Valore atteso condizionato
+\newcommand{\Econd}[2]{\mathbb{E}(#1 \vert #2)}
+
+% Varianza
+\DeclareMathOperator{\var}{Var}
+
+% Covarianza
+\DeclareMathOperator{\cov}{Cov}
+
+% Correlazione
+\newcommand{\corr}[2]{\mathrm{Cor}(#1,#2)}
+
+% Valore assoluto
+\newcommand{\abs}[1]{\vert #1 \vert}
+
+% Derivate
+\newcommand{\der}[1]{\frac{\partial}{\partial #1}}
+\newcommand{\dder}[1]{\frac{\partial^2}{\partial #1^2}}
+
+% Spazio elenchi
+\newcommand{\spazio}{\vspace{1.5em}}
+\newcommand{\sspazio}{\vspace{3em}}
+
+% Vettore bold
+\renewcommand{\vec}[1]{\mathbf{#1}}
+
+\newcommand{\field}[1]{\mathbb{#1}}
+\newcommand{\olsbeta}{\hat{\bm{\beta}}_\text{OLS}}
+
+% Math operators
+%\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\plim}{plim}
+\DeclareMathOperator*{\logit}{logit}
+\DeclareMathOperator*{\sgn}{sgn}
+
+\newcommand{\widesim}[2][2]{
+  \mathrel{\overset{#2}{\scalebox{#1}[1]{$\sim$}}}
+  }
+  
+% Norm
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+% Rank
+\DeclareMathOperator{\rank}{rank}
+
+% Trace
+\DeclareMathOperator{\trace}{tr}
+
+% Projection
+\DeclareMathOperator*{\proj}{proj_{\perp}}
+
+% Odds
+\newcommand{\odds}{\mathrm{Odds}}
+
+% Complementary set
+\newcommand{\compl}{\mathsf{c}}
+
+% Function floor
+\newcommand{\floor}[1]{\left\lfloor #1 \right\rfloor}
+
+% Function ceiling
+\newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
+
+% Nearest integer function
+\newcommand{\nint}[1]{\left\lfloor #1 \right\rceil}
+
+% Indicator function
+\usepackage{dsfont}
+\newcommand{\indfun}[2]{\mathds{1}_{#1}(#2)}
+
+% Circled numbers
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=2pt] (char) {#1};}}
+     
+% Circled numbers (fixed radius)       
+\newcommand*\circlef[1]{\tikz[baseline=(char.base)]{
+  \draw[fill=white] circle [radius=0.55cm];
+  \node[inner sep=2pt] (char) {#1};
+}}
+
+% Theorems, definitions, proofs
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+\newenvironment{example}[1][Example]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+\newenvironment{remark}[1][Remark]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+\newcommand{\card}[1]{\left\vert #1 \right\vert}
+
+\DeclareMathOperator{\diri}{DP}
+\DeclareMathOperator{\ibp}{IBP}
+\DeclareMathOperator{\crp}{CRP}
+
