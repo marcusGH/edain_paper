@@ -14,6 +14,28 @@ import sklearn
 from datetime import datetime
 from tqdm.notebook import tqdm
 
+class EarlyStopper:
+    """
+    References:
+      - https://stackoverflow.com/a/73704579
+    """
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = np.inf
+
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+
 def amex_metric_mod(y_true, y_pred):
     """
     COMPETITION METRIC FROM Konstantin Yakovlev
@@ -147,7 +169,7 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, de
     return last_loss, last_metric
 
 
-def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = None, num_epochs = 10, verbose = True, dev = torch.device('cuda')):
+def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = None, num_epochs = 10, verbose = True, dev = torch.device('cuda'), early_stopper = None):
     best_vloss = 1_000_000.
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -217,6 +239,10 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
         #     best_vloss = avg_vloss
         #     model_path = 'model_{}_{}'.format(timestamp, epoch)
         #     torch.save(model.state_dict(), model_path)
+
+        # early stopper
+        if early_stopper is not None and early_stopper.early_stop(avg_vloss):
+            break
     pbar.refresh()
 
     return history
@@ -228,13 +254,12 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
     """
 
     history_metrics = {
-            "train_loss"        : np.zeros((fit_kwargs['num_epochs'], len(folds))),
-            "val_loss"          : np.zeros((fit_kwargs['num_epochs'], len(folds))),
-            "train_amex_metric" : np.zeros((fit_kwargs['num_epochs'], len(folds))),
-            "val_amex_metric"   : np.zeros((fit_kwargs['num_epochs'], len(folds))),
+            "train_loss"        : [None] * len(folds),
+            "val_loss"          : [None] * len(folds),
+            "train_amex_metric" : [None] * len(folds),
+            "val_amex_metric"   : [None] * len(folds),
             }
-
-
+    num_epochs = [None] * len(folds)
 
     for i, val_idx in tqdm(enumerate(folds), desc = "Cross-validating model", total = len(folds)):
         # we want to train the model from scratch
@@ -246,24 +271,29 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
                 preprocess_obj=preprocess_init_fn(),
                 **data_loader_kwargs)
 
-        # initialise the optimizer and learning rate scheduler
+        # initialise the optimizer and learning rate scheduler, and an early stopper
         optimizer = fit_kwargs['optimizer_init'](model.parameters())
         if fit_kwargs['scheduler_init'] is not None:
             scheduler = fit_kwargs['scheduler_init'](optimizer)
         else:
             scheduler = None
+        early_stopper = EarlyStopper(fit_kwargs['early_stopper_patience'], fit_kwargs['early_stopper_min_delta'])
 
-        history = fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler, fit_kwargs['num_epochs'], fit_kwargs['verbose'])
+        history = fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler, fit_kwargs['num_epochs'], fit_kwargs['verbose'],
+                early_stopper = early_stopper)
 
         # save the various metrics recorded
         for history_key in history_metrics.keys():
-            history_metrics[history_key][:, i] = np.array(history[history_key])
+            history_metrics[history_key][i] = np.array(history[history_key])
+        num_epochs[i] = len(history['train_loss'])
 
     hist_keys = list(history_metrics.keys())
     for history_key in hist_keys:
         # compute the mean and std of the final value, reducing over folds
-        history_metrics[f"{history_key}_mean"] = np.mean(history_metrics[history_key][-1, :])
-        history_metrics[f"{history_key}_sd"] = np.std(history_metrics[history_key][-1, :])
+        final_values = [history_metrics[history_key][i][-1] for i in range(len(folds))]
+        history_metrics[f"{history_key}_mean"] = np.mean(final_values)
+        history_metrics[f"{history_key}_sd"] = np.std(final_values)
+    history_metrics['num_epochs'] = num_epochs
 
     return history_metrics
 
