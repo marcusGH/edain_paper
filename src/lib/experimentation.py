@@ -41,7 +41,7 @@ def amex_metric_mod(y_true, y_pred):
 
     return 0.5 * (gini[1]/gini[0] + top_four)
 
-def load_numpy_data(val_idx : list, fill_dict, corrupt_func = None, preprocess_obj = None, **data_loader_kwargs) -> (torch.utils.data.DataLoader, torch.utils.data.DataLoader):
+def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 11, corrupt_func = None, preprocess_obj = None, **data_loader_kwargs) -> (torch.utils.data.DataLoader, torch.utils.data.DataLoader):
     """
     val_idx is a list of integers denoting which of the [0, 1, ..., NUM_SPLITS-1] splits to use
     as validation data, and the rest will be used as training data
@@ -49,12 +49,16 @@ def load_numpy_data(val_idx : list, fill_dict, corrupt_func = None, preprocess_o
     if num_cat_columns is set to an integer, the first num_cat_columns columns will have their values shifted to all be non-negative,
     as these are categorical integer indices.
 
+    :param split_data_dir: should be the directory where the train data and targets are located. The number of splits should be the same
+    for both train data and targets
+
     The fill dict should contain the following keys:
     * nan
     * pad_categorical
     * pad_numeric
     """
-    split_data_dir = os.path.join(DATA_DIR, "derived", "processed-splits")
+    data_files = [name for name in os.listdir(split_data_dir) if os.path.isfile(os.path.join(split_data_dir, name))]
+    num_splits = len(data_files) // 2
 
     def load_aux(idx : list, is_train : bool):
         Xs = []; ys = []
@@ -76,18 +80,18 @@ def load_numpy_data(val_idx : list, fill_dict, corrupt_func = None, preprocess_o
         Xs[pad_numeric_mask] = fill_dict['pad_numeric']
 
         # make sure all the categorical entries are non-negative for the embedding layer to work correctly
-        if NUM_CATEGORICAL_COLUMNS is not None:
-            Xs[:, :, :NUM_CATEGORICAL_COLUMNS] = Xs[:, :, :NUM_CATEGORICAL_COLUMNS] - np.amin(Xs[:, :, :NUM_CATEGORICAL_COLUMNS], axis = 0, keepdims = True)
+        if num_cats is not None:
+            Xs[:, :, :num_cats] = Xs[:, :, :num_cats] - np.amin(Xs[:, :, :num_cats], axis = 0, keepdims = True)
 
         # corrupt the data with specified function (only do this on the non-categorical variables)
         if corrupt_func is not None:
-            Xs[:, :, NUM_CATEGORICAL_COLUMNS:], y = corrupt_func(Xs[:, :, NUM_CATEGORICAL_COLUMNS:], ys)
+            Xs[:, :, num_cats:], y = corrupt_func(Xs[:, :, num_cats:], ys)
 
         # the transformation is only applied to the numeric columns
         if is_train and preprocess_obj is not None:
-            Xs[:, :, NUM_CATEGORICAL_COLUMNS:] = preprocess_obj.fit_transform(Xs[:, :, NUM_CATEGORICAL_COLUMNS:], ys)
+            Xs[:, :, num_cats:] = preprocess_obj.fit_transform(Xs[:, :, num_cats:], ys)
         elif preprocess_obj is not None:
-            Xs[:, :, NUM_CATEGORICAL_COLUMNS:] = preprocess_obj.transform(Xs[:, :, NUM_CATEGORICAL_COLUMNS:])
+            Xs[:, :, num_cats:] = preprocess_obj.transform(Xs[:, :, num_cats:])
 
         # compile the DataLoader object and return
         data_loader = torch.utils.data.DataLoader(
@@ -98,12 +102,12 @@ def load_numpy_data(val_idx : list, fill_dict, corrupt_func = None, preprocess_o
 
         return data_loader
 
-    train_idx = [i for i in list(range(NUM_SPLITS)) if i not in val_idx]
+    train_idx = [i for i in list(range(num_splits)) if i not in val_idx]
     train_loader = load_aux(train_idx, is_train = True)
     val_loader = load_aux(val_idx, is_train = False)
     return train_loader, val_loader
 
-def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number):
+def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, dev=torch.device('cuda')):
     running_loss = 0.
     running_metric = 0.
     # last_loss = 0.
@@ -115,7 +119,7 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number):
     for i, data in enumerate(training_loader):
         # Every data instance is an input + label pair
         inputs, labels = data
-        inputs, labels = inputs.to(DEV), labels.to(DEV)
+        inputs, labels = inputs.to(dev), labels.to(dev)
 
         # Zero your gradients for every batch!
         optimizer.zero_grad()
@@ -143,7 +147,7 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number):
     return last_loss, last_metric
 
 
-def fit_model(model, loss_fn, train_loader, val_loader, optimizer, num_epochs, verbose = True):
+def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = None, num_epochs = 10, verbose = True, dev = torch.device('cuda')):
     best_vloss = 1_000_000.
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -162,7 +166,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, num_epochs, v
 
         # Make sure gradient tracking is on, and do a pass over the data
         model.train(True)
-        avg_loss, avg_metric = train_one_epoch(model, loss_fn, train_loader, optimizer, epoch + 1)
+        avg_loss, avg_metric = train_one_epoch(model, loss_fn, train_loader, optimizer, epoch + 1, dev = dev)
 
         running_vloss = 0.0
         running_vmetric = 0.0
@@ -174,7 +178,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, num_epochs, v
         with torch.no_grad():
             for i, vdata in enumerate(val_loader):
                 vinputs, vlabels = vdata
-                vinputs, vlabels = vinputs.to(DEV), vlabels.to(DEV)
+                vinputs, vlabels = vinputs.to(dev), vlabels.to(dev)
                 voutputs = model(vinputs)
                 vloss = loss_fn(voutputs, vlabels).cpu().item()
                 vmetric = amex_metric_mod(vlabels.cpu().numpy(), voutputs.cpu().numpy())
@@ -186,6 +190,10 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, num_epochs, v
         if verbose:
             print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
             print('AMEX metric train {} valid {}'.format(avg_metric, avg_vmetric))
+
+        # update learning rate
+        if scheduler is not None:
+            scheduler.step()
 
         # update progress bar
         pbar.update()
@@ -232,11 +240,20 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
         # we want to train the model from scratch
         reset_all_weights(model)
 
-        train_loader, val_loader = load_numpy_data(val_idx, fill_dict, corrupt_func, preprocess_init_fn(), **data_loader_kwargs)
+        train_loader, val_loader = load_numpy_data(fit_kwargs['train_split_data_dir'], val_idx,
+                fill_dict=fill_dict,
+                corrupt_func=corrupt_func,
+                preprocess_obj=preprocess_init_fn(),
+                **data_loader_kwargs)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr = fit_kwargs['learning_rate'])
+        # initialise the optimizer and learning rate scheduler
+        optimizer = fit_kwargs['optimizer_init'](model.parameters())
+        if fit_kwargs['scheduler_init'] is not None:
+            scheduler = fit_kwargs['scheduler_init'](optimizer)
+        else:
+            scheduler = None
 
-        history = fit_model(model, loss_fn, train_loader, val_loader, optimizer, fit_kwargs['num_epochs'], fit_kwargs['verbose'])
+        history = fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler, fit_kwargs['num_epochs'], fit_kwargs['verbose'])
 
         # save the various metrics recorded
         for history_key in history_metrics.keys():
