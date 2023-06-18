@@ -3,14 +3,16 @@ import torch.nn as nn
 import numpy as np
 
 class GRUNetBasic(nn.Module):
-    def __init__(self, num_features, hidden_dim, layer_dim, emb_dim, num_cat_columns = 11, dropout_prob = 0.2, dev = torch.device('cuda')):
+    def __init__(self, num_features, hidden_dim, layer_dim, emb_dim, num_cat_columns = 11, dropout_prob = 0.2):
         super(GRUNetBasic, self).__init__()
 
         # save the params
         self.layer_dim = layer_dim
         self.hidden_dim = hidden_dim
         self.num_cat_columns = num_cat_columns
-        self.dev = dev
+
+        # to get current device
+        self.dummy_param = nn.Parameter(torch.empty(0))
 
         # the layers we need
         emb_layers = []
@@ -44,7 +46,7 @@ class GRUNetBasic(nn.Module):
         x = torch.concat([x[:, :, self.num_cat_columns:]] + embedding_outs, dim = -1)
 
         # Initializing hidden state for first input with zeros
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim, device = self.dev).requires_grad_()
+        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim, device = self.dummy_param.device).requires_grad_()
 
         # Forward propagation by passing in the input and hidden state into the model
         out, _ = self.gru(x, h0.detach())

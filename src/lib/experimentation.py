@@ -169,7 +169,7 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, de
     return last_loss, last_metric
 
 
-def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = None, num_epochs = 10, verbose = True, dev = torch.device('cuda'), early_stopper = None):
+def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = None, num_epochs = 10, verbose = True, early_stopper = None, device_ids = None):
     best_vloss = 1_000_000.
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -180,6 +180,23 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
             "train_amex_metric" : [],
             "val_amex_metric" : [],
             }
+
+    # find the available GPUs
+    # for i in range(torch.cuda.device_count()):
+    #     if torch.cuda.memory_allocated(i) == 0:
+    #         gpu_ids.append(i)
+    #     if len(gpu_ids) == num_gpus:
+    #         break
+
+    if device_ids is not None and len(device_ids) > 1:
+        # create parallel model and move it to the main gpu
+        model = nn.DataParallel(model, device_ids = device_ids)
+        dev = torch.device('cuda', device_ids[0])
+    elif device_ids is not None:
+        dev = torch.device('cuda', device_ids[0])
+    else:
+        dev = torch.device('cuda')
+    model = model.to(dev)
 
     pbar = tqdm(total = num_epochs)
 
@@ -248,7 +265,8 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
     return history
 
 def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwargs, fill_dict, corrupt_func, preprocess_init_fn,
-                         folds = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]):
+                         folds = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]],
+                         device_ids = None):
     """
     TODO
     """
@@ -280,7 +298,7 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
         early_stopper = EarlyStopper(fit_kwargs['early_stopper_patience'], fit_kwargs['early_stopper_min_delta'])
 
         history = fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler, fit_kwargs['num_epochs'], fit_kwargs['verbose'],
-                early_stopper = early_stopper)
+                early_stopper = early_stopper, device_ids = device_ids)
 
         # save the various metrics recorded
         for history_key in history_metrics.keys():
