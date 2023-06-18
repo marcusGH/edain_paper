@@ -1,0 +1,8 @@
+# Configuration file
+---
+dataset_directory: /home/silo1/mas322/amex-default-prediction/
+checkpoint_directory: /home/silo1/mas322/model-checkpoints/
+train_splits: 10
+test_splits: 20
+# End config
+...

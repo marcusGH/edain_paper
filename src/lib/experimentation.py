@@ -12,7 +12,7 @@ import cudf
 import sklearn
 
 from datetime import datetime
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 
 class EarlyStopper:
     """
@@ -26,7 +26,7 @@ class EarlyStopper:
         self.min_validation_loss = np.inf
 
     def early_stop(self, validation_loss):
-        if validation_loss < (self.min_validation_loss + self.min_delta):
+        if validation_loss < self.min_validation_loss:
             self.min_validation_loss = validation_loss
             self.counter = 0
         elif validation_loss > (self.min_validation_loss + self.min_delta):
@@ -84,7 +84,7 @@ def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 
 
     def load_aux(idx : list, is_train : bool):
         Xs = []; ys = []
-        for k in val_idx:
+        for k in idx:
             Xs.append(np.load(os.path.join(split_data_dir, f"train-data_{k}.npy")))
             ys.append(pd.read_parquet(os.path.join(split_data_dir, f"train-targets_{k}.parquet")))
 
