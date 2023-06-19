@@ -314,6 +314,8 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
         history_metrics[f"{history_key}_sd"] = np.std(final_values)
     history_metrics['num_epochs'] = num_epochs
 
+    print("Done!")
+
     return history_metrics
 
 def reset_all_weights(model: nn.Module) -> None:

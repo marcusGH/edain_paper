@@ -18,8 +18,9 @@ def undo_min_max_corrupt_func(X, y):
     # to ensure we get the same mins and scales every time
     np.random.seed(42)
     # randomize both the starting point and the feature scales
-    mins = np.random.uniform(-1E5, 1E5, size=X.shape[2])[np.newaxis, None]
-    scales = 10 ** np.random.uniform(-5, 5, size=X.shape[2])[np.newaxis, None]
+    mins = np.random.uniform(-1E4, 1E4, size=X.shape[2])[np.newaxis, None]
+    # don't set the smallest scale too tiny, otherwise can lose information due to float 32 bit
+    scales = 10 ** np.random.uniform(-1, 5, size=X.shape[2])[np.newaxis, None]
 
     X_corrupt = X * scales + mins
     return X_corrupt, y

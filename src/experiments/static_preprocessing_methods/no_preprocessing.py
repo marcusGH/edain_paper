@@ -1,6 +1,7 @@
 import yaml
 import sklearn
 import os
+import numpy as np
 import src.experiments.static_preprocessing_methods.experiment_setup as setup
 from src.lib import experimentation
 
@@ -17,6 +18,9 @@ class IdentityTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
     def transform(self, X):
         return X
 
+torch.manual_seed(42)
+np.random.seed(42)
+
 history = experimentation.cross_validate_model(
     model=setup.model,
     loss_fn=setup.loss_fn,
@@ -28,4 +32,4 @@ history = experimentation.cross_validate_model(
     device_ids=None,
 )
 
-np.save(os.path.join(cfg['experiment_directory'], 'no-preprocess.npy'), history)
+np.save(os.path.join(cfg['experiment_directory'], 'no-preprocess-history.npy'), history)
