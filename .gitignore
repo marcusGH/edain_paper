@@ -2,3 +2,5 @@ information-links/*
 information-links/
 __pycache__
 *.swp
+.lsp_symlink
+.virtual_documents/

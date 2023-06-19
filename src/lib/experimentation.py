@@ -13,6 +13,7 @@ import sklearn
 
 from datetime import datetime
 from tqdm.auto import tqdm
+from src.models import basic_grunet
 
 class EarlyStopper:
     """
@@ -107,7 +108,7 @@ def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 
 
         # corrupt the data with specified function (only do this on the non-categorical variables)
         if corrupt_func is not None:
-            Xs[:, :, num_cats:], y = corrupt_func(Xs[:, :, num_cats:], ys)
+            Xs[:, :, num_cats:], ys = corrupt_func(Xs[:, :, num_cats:], ys)
 
         # the transformation is only applied to the numeric columns
         if is_train and preprocess_obj is not None:
