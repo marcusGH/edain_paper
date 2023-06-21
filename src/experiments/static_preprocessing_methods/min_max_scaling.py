@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 import src.experiments.static_preprocessing_methods.experiment_setup as setup
+from src.experiments.static_preprocessing_methods import winsorization
 from src.lib import experimentation
 from sklearn import preprocessing
 
@@ -53,8 +54,9 @@ history = experimentation.cross_validate_model(
     fit_kwargs=setup.fit_kwargs,
     fill_dict=setup.fill_dict,
     corrupt_func=setup.undo_min_max_corrupt_func,
-    preprocess_init_fn=lambda : MinMaxTimeSeries(),
+    # preprocess_init_fn=lambda : MinMaxTimeSeries(),
+    preprocess_init_fn=lambda : winsorization.WinsorizeDecorator(MinMaxTimeSeries, alpha=0.05, a=0, b=1),
     device_ids=[2],
 )
 
-np.save(os.path.join(cfg['experiment_directory'], 'min-max-scaling-history-50-epochs.npy'), history)
+np.save(os.path.join(cfg['experiment_directory'], 'min-max-scaling-history-50-epochs-winsorized.npy'), history)
