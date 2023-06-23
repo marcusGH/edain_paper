@@ -1,4 +1,4 @@
-\documentclass[portrait,final,x11names,a1paper,fontscale=0.36]{baposter}
+\documentclass[portrait,final,x11names,a1paper,fontscale=0.4]{baposter}
 
 \usepackage{calc}
 \usepackage{graphicx,caption}
@@ -270,20 +270,31 @@ TODO: say something about anonymised with random noise.
 \headerbox{4. Synthetic data}{name=meg,column=2,span=3,row=0, aligned=problem}{
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    \noindent
 \begin{itemize}[leftmargin=.15in]
-\item TODO: describe motivation of this and why synthetic data can help
-\item TODO
+\item 
+With the synthetic data generation procedure I have proposed, I can specify arbitrary unnormalized probability density functions (PDFs) for each of the $P$ variables, from which the inverse cumulative
+density functions, $F^{-1}_1,\dots,F^{-1}_P$ are inferred. Correlated uniform random variables
+$U \in [0,1]^{T \times P}$
+with a similar correlation structure as that of a multivariate time-series are then generated,
+and a response $y \in \{0,1\}$ is formed from these. These uniform random variables are then
+transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the response, as samples from the provided PDFs.
+% TODO: could maybe replace this with a diagram of $U$s, arrow down to $X$s, and arrow right to response. Could also shorten the explanation to just emphasize fact that I can specify the PDFs
+\item  By being able to fully control the distribution of each variable, it will be easier to experiment and learn \textit{when} each preprocessing method works best, and this insight can be used to
+    form the heuristics used for automatically selection the appropriate techniques.
 \end{itemize}
+
+
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{5. Evaluation setup}{name=hierarchical,column=2,span=3,row=1, below=meg}{
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent
-\begin{itemize}
-    \item TODO: explain cross-validation procedure, and how experimentation framework setup
-\end{itemize}
+% \headerbox{5. Preliminary results}{name=hierarchical,column=2,span=3,row=1, below=meg}{
+%   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% \noindent
+% \begin{itemize}
+%     \item TODO: explain cross-validation procedure, and how experimentation framework setup
+% \end{itemize}
 %\item \icl{Full Bayesian model} for LSBM embeddings: 
 % \begin{align}
 % \hat{\vec x}_i\vert \theta_i,\vec f_{z_i},\bm\sigma^2_{z_i} &\sim \mathbb N_d\left\{\vec f_{z_i}(\theta_i),\bm\sigma^2_{z_i}\mvec I_d\right\},\ i=1,\dots,n,\\
@@ -296,11 +307,11 @@ TODO: say something about anonymised with random noise.
 % \end{align}
 % where $a_0,b_0,\nu,\omega,\sigma^2_\theta\in\mathbb R_+, \mu_\theta\in\mathbb R$, and $\xi_{k,j}$ is a positive semi-definite kernel function.
 
-}
+% }
 
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{6. Preliminary results}{name=picture,column=2,span=3,row=1, below=hierarchical}{
+\headerbox{5. Preliminary result I: Preprocessing on real data}{name=picture,column=2,span=3,row=1, below=meg}{
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{itemize}[leftmargin=.15in]
 \item Applying appropriate preprocessing can improve both the predictive performance and the training efficiency of deep sequence models (see figure 1a).
@@ -327,14 +338,6 @@ TODO: say something about anonymised with random noise.
 % %\label{sim_graphs}
 % \vspace*{.25cm}
 % \centering
-\begin{tabular}{c | c}
-\toprule
-Dataset & Validation accuracy  \\
-\midrule
-Synthetic data with non-normal distributions & 95.65\%  \\
-Synthetic data with uniform distributions & 98.65\% \\
-\bottomrule 
-\end{tabular}
 % \vspace*{-.1cm}
 % \captionof{table}{ARI for communities estimated using LSBM and alternative methodologies on the embeddings in Figure~1.}
 %
@@ -374,16 +377,35 @@ Synthetic data with uniform distributions & 98.65\% \\
 %\fbox{\parbox{.97\textwidth}{\icl{Main issue:} LFMs are only suitable for matrices, not for point process data.}} 
 %}
 
+\headerbox{6. Preliminary result II: Using synthetic data}{name=results2,column=2,span=3,below=picture}{
+\noindent
+TODO jk: Talk next here about synthetic data results, and not able to learn to undo $F^{-1}_1,\dots,F^{-1}_P$ transformations.
+
+\begin{center}
+\begin{tabular}{c|c}
+\toprule
+Dataset & Validation accuracy  \\
+\midrule
+Synthetic data with non-normal distributions & 95.65\%  \\
+Synthetic data with uniform distributions & 98.65\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{7. Automating the  preprocessing step}{name=results,column=2,span=3,below=picture}{
+\headerbox{7. Automating the preprocessing procedure}{name=results,column=2,span=3,below=results2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent
 \includegraphics[width=\textwidth]{Figures/automated-preprocessing-diagram.pdf} 
 
 \noindent
-TODO: explain diagram
-Mention selection informed by either heuristics or learned as part of backpropagation.
+To automate the selection of preprocessing techniques, heuristics based on each
+variable's distribution can be used. Another option is parameterizing the distribution
+transformations and incorporating it as part of the forward- and back-propagation of the
+training procedure. This ensures that the optimal transformations are learned automatically.
+
 
 % \begin{center}
 % \begin{minipage}{.325\textwidth}

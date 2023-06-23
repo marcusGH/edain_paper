@@ -7,10 +7,12 @@ from scipy import stats
 D = 2
 T = 10
 # lower bound, upper bound, and unormalized PDF
-bounds = [(-3, 5), (-30, 12)]
+bounds = [(-3, 5), (-25, 20)]
 f1 = lambda x: 10 * stats.norm.cdf(10 * x) * stats.norm.pdf(x)
 # f2 = lambda x: (0.001 / np.abs(x + 3)) ** (1/100)
 # f2 = lambda x: 10 * stats.norm.cdf(100 * x) * stats.norm.pdf(x)
+f2 = lambda x: np.where(x > 3, np.exp(7-x), np.exp(x / 10) * (10 * np.sin(x) + 10))
+f1 = lambda x: 10 * stats.norm.cdf(10 * x) * stats.norm.pdf(x) + 2 * np.where(x > 2.0, np.exp(x - 2), 0) * np.where(x < 2.1, np.exp(2.1 - x), 0)
 f2 = lambda x: np.where(x > 3, np.exp(7-x), np.exp(x / 10) * (10 * np.sin(x) + 10))
 # both of the two time-series will be q=3 and q=2, respecitvely
 thetas = np.array([
