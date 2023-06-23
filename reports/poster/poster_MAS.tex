@@ -317,11 +317,19 @@ transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the respo
 \item Applying appropriate preprocessing can improve both the predictive performance and the training efficiency of deep sequence models (see figure 1a).
 \item Non-normalized data reduces the predictive power of deep sequence models (see figure 1b/table)
 \end{itemize}
-\begin{center}
-\noindent
+
+
+\begin{minipage}{.975\textwidth}
+\captionof{figure}{\textbf{Validation loss for different preprocessing techniques}}
 \vspace*{-.25cm}
-\includegraphics[width=0.975\textwidth]{Figures/loss-cv.png}
-\end{center}
+% TODO: if room, increase height of the figure so can fit blue plot better
+% TODO: also add title to legend to describe validation loss at convergence
+% TODO: maybe put legend on top-right instead!
+\includegraphics[width=0.975\textwidth]{Figures/poster-val-loss.pdf}
+\vspace*{-.25cm}
+\end{minipage}
+
+Some text
 
 % \begin{minipage}{.325\textwidth}
 % \captionof{subfigure}{DCSBM: $f_{k,j}(\theta_i)=\theta_i\nu_{k,j}$}
@@ -379,7 +387,10 @@ transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the respo
 
 \headerbox{6. Preliminary result II: Using synthetic data}{name=results2,column=2,span=3,below=picture}{
 \noindent
+TODO: also briefly present how this experiment conducted, then present conclusion that having a preprocessing step that has the capability to undo these skewed or non-normal/non-uniform distributions
+can increase performance.
 TODO jk: Talk next here about synthetic data results, and not able to learn to undo $F^{-1}_1,\dots,F^{-1}_P$ transformations.
+
 
 \begin{center}
 \begin{tabular}{c|c}
@@ -448,6 +459,7 @@ training procedure. This ensures that the optimal transformations are learned au
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \headerbox{References}{name=conclusion,column=2,span=3,above=bottom, below=results}{
+% TODO: add the background paper from 1997, and also maybe DAIN or BiN if end up experimenting with it
 %\begin{itemize}[leftmargin=.15in] 
 %\item \icl{\underline{Latent structure blockmodels}}
 %\begin{itemize}[leftmargin=.1cm] 
