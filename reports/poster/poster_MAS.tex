@@ -138,14 +138,23 @@
 %\end{minipage} \ \hspace{-0.5cm}
 %\begin{minipage}[b]{0.7\linewidth} %\smaller
 \noindent
-\includegraphics[width=0.48\textwidth]{Figures/eda1.png}
-\includegraphics[width=0.48\textwidth]{Figures/eda2.png}
-\includegraphics[width=0.48\textwidth]{Figures/eda1.png}
-\includegraphics[width=0.48\textwidth]{Figures/eda2.png}
+\begin{minipage}{.975\textwidth}
+    \captionof{figure}{\textbf{Histogram of 3 of the 188 variables from the default prediction dataset.}}
+    \vspace*{-.3cm}
+    % TODO: if room, increase height of the figure so can fit blue plot better
+    % TODO: also add title to legend to describe validation loss at convergence
+    % TODO: maybe put legend on top-right instead!
+    \includegraphics[width=0.975\textwidth]{Figures/poster-eda.pdf}
+    \vspace*{-.15cm}
+\end{minipage}
 
 \noindent
 A lot of the variables have very skewed distributions or extreme values. There are also many missing values.
-
+TODO: more comments on the figure above...
+Across the whole dataset, 8.50\% of the numeric data points are missing values.
+The 5 most incomplete variables are missing between 91.52\% and 92.62\% of the data points. On
+the other hand, 138 out of the 177 numeric variables have less than 1\% of the data points
+missing.
 %\end{minipage}
 %\vspace{.25cm}
 %\medskip
