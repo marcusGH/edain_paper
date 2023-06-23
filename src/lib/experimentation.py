@@ -126,8 +126,8 @@ def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 
         return data_loader
 
     train_idx = [i for i in list(range(num_splits)) if i not in val_idx]
-    train_loader = load_aux(train_idx, is_train = True)
-    val_loader = load_aux(val_idx, is_train = False)
+    train_loader = load_aux(train_idx, is_train = True) if len(train_idx) > 0 else None
+    val_loader = load_aux(val_idx, is_train = False) if len(val_idx) > 0 else None
     return train_loader, val_loader
 
 def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, dev=torch.device('cuda')):
