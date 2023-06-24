@@ -222,7 +222,14 @@ class SyntheticData:
         np.fill_diagonal(sigma, np.diag(A))
         return self._find_closest_psd_matrix(sigma)
 
-    def generate_data(self, n, return_uniform = False):
+    def uniform_to_pdf_samples(self, us):
+        n = us.shape[0]
+        Xs = np.zeros((n, self.D, self.T))
+        for f_idx in range(self.D):
+            Xs[:, f_idx, :] = self._sample_pdf(f_idx, us[:, f_idx, :].reshape(-1)).reshape((n, self.T))
+        return Xs
+
+    def generate_data(self, n, return_uniform = False, random_state = None):
         """
         Generates correlated Xs and corresponding responses y
 
@@ -231,6 +238,9 @@ class SyntheticData:
 
         if self.sigma is None:
             self.sigma = self._create_covariance_matrix(self.thetas)
+
+        if random_state is not None:
+            np.random.seed(random_state)
 
         # shape (n, D, T)
         us = self._sample_correlated_uniforms(n)
