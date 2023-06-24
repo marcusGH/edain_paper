@@ -39,7 +39,7 @@ fit_kwargs = {
     'num_epochs' : 50,
     'early_stopper_patience' : 5,
     'early_stopper_min_delta' : 0.0,
-    'optimizer_init' : lambda x: torch.optim.Adam(x, lr = 0.001),
+    'optimizer_init' : lambda x: torch.optim.Adam(x.parameters(), lr = 0.001),
     'scheduler_init' : lambda x: torch.optim.lr_scheduler.MultiStepLR(x, milestones=[4, 7], gamma=0.1),
     'verbose' : False,
 }

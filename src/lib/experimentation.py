@@ -291,7 +291,7 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
                 **data_loader_kwargs)
 
         # initialise the optimizer and learning rate scheduler, and an early stopper
-        optimizer = fit_kwargs['optimizer_init'](model.parameters())
+        optimizer = fit_kwargs['optimizer_init'](model)
         if fit_kwargs['scheduler_init'] is not None:
             scheduler = fit_kwargs['scheduler_init'](optimizer)
         else:

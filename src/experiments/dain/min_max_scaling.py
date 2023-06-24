@@ -42,4 +42,4 @@ history = experimentation.cross_validate_model(
     device_ids=[2],
 )
 
-np.save(os.path.join(cfg['experiment_directory'], 'dain2-min-max-scaling-history-50-epochs.npy'), history)
+np.save(os.path.join(cfg['experiment_directory'], 'dain3-min-max-scaling-history-50-epochs.npy'), history)
