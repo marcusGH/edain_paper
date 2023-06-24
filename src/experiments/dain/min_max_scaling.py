@@ -39,7 +39,7 @@ history = experimentation.cross_validate_model(
     fill_dict=setup.fill_dict,
     corrupt_func=setup.undo_min_max_corrupt_func,
     preprocess_init_fn=lambda : MinMaxTimeSeries(),
-    device_ids=[2],
+    device_ids=[6],
 )
 
-np.save(os.path.join(cfg['experiment_directory'], 'dain3-min-max-scaling-history-50-epochs.npy'), history)
+np.save(os.path.join(cfg['experiment_directory'], 'dain5-min-max-scaling-history-50-epochs.npy'), history)
