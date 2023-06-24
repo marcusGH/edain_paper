@@ -1,11 +1,11 @@
 \documentclass[portrait,final,x11names,a1paper,fontscale=0.4]{baposter}
-
 \usepackage{calc}
 \usepackage{graphicx,caption}
 \usepackage{relsize}
 \usepackage{multirow}
 \usepackage{rotating}
 \usepackage{bm}
+\usepackage[]{hyperref} 
 \usepackage{url}
 
 \usepackage{graphicx,subfigure}
@@ -129,37 +129,6 @@
     % \includegraphics[height=9.0em]{images/logo}
 %  }
 
-\headerbox{3. Exploratory data analysis}{name=ack,column=0,above=bottom,span=2}{
-%\vspace*{.2cm}
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\begin{minipage}[t]{0.25\linewidth}
-%\hspace*{-0.5cm}
-%\includegraphics[width=0.95\textwidth]{1920px-M_box.png}
-%\end{minipage} \ \hspace{-0.5cm}
-%\begin{minipage}[b]{0.7\linewidth} %\smaller
-\noindent
-\begin{minipage}{.975\textwidth}
-    \captionof{figure}{\textbf{Histogram of 3 of the 188 variables from the default prediction dataset.}}
-    \vspace*{-.3cm}
-    % TODO: if room, increase height of the figure so can fit blue plot better
-    % TODO: also add title to legend to describe validation loss at convergence
-    % TODO: maybe put legend on top-right instead!
-    \includegraphics[width=0.975\textwidth]{Figures/poster-eda.pdf}
-    \vspace*{-.15cm}
-\end{minipage}
-
-\noindent
-A lot of the variables have very skewed distributions or extreme values. There are also many missing values.
-TODO: more comments on the figure above...
-Across the whole dataset, 8.50\% of the numeric data points are missing values.
-The 5 most incomplete variables are missing between 91.52\% and 92.62\% of the data points. On
-the other hand, 138 out of the 177 numeric variables have less than 1\% of the data points
-missing.
-%\end{minipage}
-%\vspace{.25cm}
-%\medskip
-}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \headerbox{1. Problem and motivation}{name=problem,column=0,row=0,span=2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,54 +137,98 @@ missing.
 Deep learning sequence models, such as Recurrent Neural Networks (RNNs) and
 transformers, are sensitive to input variable distributions. Both training
 speed and performance can drop significantly for non-normal distributions, such
-as skewed distributions and those with outliers. Real-world data also usually
-contains a lot of missing values, which needs to be converted to numeric values
-for use in deep learning models. Deciding on appropriate preprocessing methods
-and how to handle missing values is essential in optimising model performance.
-However, this is a time-consuming process. The project aims to automate this by
+as skewed distributions and those with outliers.
+% Real-world data also usually
+% contains a lot of missing values, which needs to be converted to numeric values
+% for use in deep learning models. Deciding on appropriate preprocessing methods
+% and how to handle missing values is essential in optimising model performance.
+Preprocessing includes all transformations applied to the data before feeding it into
+the neural network, and deciding the appropriate techniques is essential for
+optimising model performance.
+However, this is a time-consuming process. This project aims to automate this by
 automatically selecting the preprocessing methods to use for any given
-sequence dataset, in order to optimise performance and training efficiency.
+sequence dataset, increasing both model performance and training efficiency.
 }
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{2. Data}{name=data,column=0,row=1,below=problem,above=ack,span=2}{
+\headerbox{2. Default prediction dataset}{name=data,column=0,row=1,below=problem,span=2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent
-Dataset consists of $N\approx 460000$ customers, each with $P=188$ aggregated
-profile features recorded at each of the $T=13$ sequential statement dates.
-Together, the dataset forms $N$ instances of a $P$-dimensional multivariate
+The default prediction dataset, provided by American Express,
+has data from $N\approx 460\;000$ customers, each with $P=188$ aggregated
+profile features recorded up to $T=13$ different credit card statement
+dates.  That is, the dataset has $N$ instances of $P$-dimensional multivariate
 time-series of length $T$. For each multivariate time-series, the target label
 $y \in \{0,1\}$ indicates whether the customer defaulted on their loan or not.
-The task is to predict the probability $\mathbb{P}(Y=1)$. Note that due to
-privacy concerns, all the dataset features have been anonymized. 
-TODO: say something about anonymised with random noise.
+The task is to predict the probability $\mathbb{P}(Y=1)$ for each customer.
+Note that due to
+privacy concerns, the name of all the features have been anonymized. 
+Additionally, a small amount of uniform noise has been added to all the numeric features.
 }
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{4. Synthetic data}{name=meg,column=2,span=3,row=0, aligned=problem}{
+\headerbox{3. Exploratory data analysis}{name=eda,column=0,row=1,span=2,below=data}{
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %\vspace*{.2cm}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %\begin{minipage}[t]{0.25\linewidth}
+    %\hspace*{-0.5cm}
+    %\includegraphics[width=0.95\textwidth]{1920px-M_box.png}
+    %\end{minipage} \ \hspace{-0.5cm}
+    %\begin{minipage}[b]{0.7\linewidth} %\smaller
+    \noindent
+    \begin{minipage}{.975\textwidth}
+        \captionof{figure}{\textbf{Histogram of 3 of the 188 variables from the default prediction dataset.}}
+        \vspace*{-.3cm}
+        \includegraphics[width=0.975\textwidth]{Figures/poster-eda.pdf}
+        \vspace*{-.15cm}
+    \end{minipage}
+
+    \noindent
+    The default prediction dataset exhibits many traits
+    of real-world datasets, such as very skewed distributions, multiple modes, unusual peaks
+    and extreme values.
+    Across the whole dataset, 8.50\% of the numeric data points are missing.
+    The 5 most incomplete variables are missing between 91.52\% and 92.62\% of the data points.
+    Only 138 out of the 177 numeric variables have less than 1\% missing values. 
+    All this makes the dataset ideal for evaluating how effective the proposed
+    preprocessing techniques are on real-world data.
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{4. Synthetic data}{name=synthdata,column=0,span=2,row=3,below=eda}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent
-\begin{itemize}[leftmargin=.15in]
-\item 
-With the synthetic data generation procedure I have proposed, I can specify arbitrary unnormalized probability density functions (PDFs) for each of the $P$ variables, from which the inverse cumulative
-density functions, $F^{-1}_1,\dots,F^{-1}_P$ are inferred. Correlated uniform random variables
-$U \in [0,1]^{T \times P}$
-with a similar correlation structure as that of a multivariate time-series are then generated,
-and a response $y \in \{0,1\}$ is formed from these. These uniform random variables are then
-transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the response, as samples from the provided PDFs.
-% TODO: could maybe replace this with a diagram of $U$s, arrow down to $X$s, and arrow right to response. Could also shorten the explanation to just emphasize fact that I can specify the PDFs
-\item  By being able to fully control the distribution of each variable, it will be easier to experiment and learn \textit{when} each preprocessing method works best, and this insight can be used to
-    form the heuristics used for automatically selection the appropriate techniques.
-\end{itemize}
+With a custom-made synthetic data  generation procedure, I can generate new
+labelled multivariate time-series where the variables follow arbitrary distributions based on the
+unnormalized PDFs I provide. This allows synthesizing data with real-world-like distributions
+in a controlled matter, which makes it easier and more efficiency to experiment and learn
+when each preprocessing method works best. This insight will then be used to automate the
+preprocessing step.
+
+
+% \begin{itemize}[leftmargin=.15in]
+% \item 
+% With the synthetic data generation procedure I have proposed, I can specify arbitrary unnormalized probability density functions (PDFs) for each of the $P$ variables, from which the inverse cumulative
+% density functions, $F^{-1}_1,\dots,F^{-1}_P$ are inferred. Correlated uniform random variables
+% $U \in [0,1]^{T \times P}$
+% with a similar correlation structure as that of a multivariate time-series are then generated,
+% and a response $y \in \{0,1\}$ is formed from these. These uniform random variables are then
+% transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the response, as samples from the provided PDFs.
+% % TODO: could maybe replace this with a diagram of $U$s, arrow down to $X$s, and arrow right to response. Could also shorten the explanation to just emphasize fact that I can specify the PDFs
+% \item  By being able to fully control the distribution of each variable, it will be easier to experiment and learn \textit{when} each preprocessing method works best, and this insight can be used to
+%     form the heuristics used for automatically selection the appropriate techniques.
+% \end{itemize}
 
 
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{5. Preliminary result I: Preprocessing on real data}{name=picture,column=2,span=3,row=1, below=meg}{
+\headerbox{5. Preliminary result I: Preprocessing on real data}{name=picture,column=2,span=3,row=1,aligned=problem}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{itemize}[leftmargin=.15in]
     \item Applying appropriate preprocessing can improve both the predictive performance and the training efficiency of deep sequence models (see figure 1a).
@@ -228,6 +241,8 @@ transformed by $F^{-1}_1,\dots,F^{-1}_P$ and returned to the user with the respo
 % TODO: if room, increase height of the figure so can fit blue plot better
 % TODO: also add title to legend to describe validation loss at convergence
 % TODO: maybe put legend on top-right instead!
+% TODO: actually, just replace the whole thing with a simple table to use space better
+%       seeing as convergence rate isn't even that important
 \includegraphics[width=0.975\textwidth]{Figures/poster-val-loss.pdf}
 \vspace*{-.25cm}
 \end{minipage}
