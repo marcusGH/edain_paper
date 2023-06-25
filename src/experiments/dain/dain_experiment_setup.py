@@ -69,6 +69,6 @@ np.random.seed(42)
 # optimal learning rates for RNN according to paper
 # mean_lr, std_lr, scale_lr = 1e-02, 1e-8, 10 # Used for experiment 3.
 # mean_lr, std_lr, scale_lr = 0.01, 0.01, 10 # Used for experiment 4.
-mean_lr, std_lr, scale_lr = 10, 10, 10 # Used for experiment 5.
+mean_lr, std_lr, scale_lr = 1, 1, 1 # Used for experiment 5.
 model = DainGRUNet(188, 128, 2, 4, mode='adaptive_scale', mean_lr=mean_lr, scale_lr=std_lr, gate_lr=scale_lr)
 loss_fn = F.binary_cross_entropy
