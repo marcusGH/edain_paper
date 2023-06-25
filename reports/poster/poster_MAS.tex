@@ -230,13 +230,15 @@ preprocessing step.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{5. Preliminary result I: Preprocessing on real data}{name=picture,column=2,span=3,row=1,aligned=problem}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{itemize}[leftmargin=.15in]
-    \item Applying appropriate preprocessing can improve both the predictive performance and the training efficiency of deep sequence models (see figure 1a).
-    \item Non-normalized data reduces the predictive power of deep sequence models (see figure 1b/table)
-\end{itemize}
+% \begin{itemize}[leftmargin=.15in]
+%     \item Applying appropriate preprocessing can improve both the predictive performance and the training efficiency of deep sequence models (see figure 1a).
+%     \item Non-normalized data reduces the predictive power of deep sequence models (see figure 1b/table)
+% \end{itemize}
 
+\noindent
 \begin{minipage}{.975\textwidth}
-\captionof{figure}{\textbf{Validation loss for different preprocessing techniques}}
+\captionof{figure}{\textbf{Average 5-fold cross-validation loss for different preprocessing
+techniques \\ applied on the American Express default prediction dataset, using a GRU RNN model}}
 \vspace*{-.25cm}
 % TODO: if room, increase height of the figure so can fit blue plot better
 % TODO: also add title to legend to describe validation loss at convergence
@@ -246,35 +248,68 @@ preprocessing step.
 \includegraphics[width=0.975\textwidth]{Figures/poster-val-loss.pdf}
 \vspace*{-.25cm}
 \end{minipage}
-
-Some text
+\noindent
+Applying an appropriate preprocessing technique before training can significantly decrease the loss
+at convergence. Additionally, selecting the right technique can improve the number of training
+epochs required to converge.
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{6. Preliminary result II: Using synthetic data}{name=results2,column=2,span=3,below=picture}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent
-TODO: also briefly present how this experiment conducted, then present conclusion that having a preprocessing step that has the capability to undo these skewed or non-normal/non-uniform distributions
-can increase performance.
-TODO jk: Talk next here about synthetic data results, and not able to learn to undo $F^{-1}_1,\dots,F^{-1}_P$ transformations.
-
+Using the synthetic data generation procedure, two multivariate time-series datasets of dimensions $(N=10\;000,T=6,D=2)$ were
+generated. The first one was configured to generate data with very skewed and irregular distributions, containing outliers, while the
+variables in the second dataset were all normally distributed. 
+\noindent
 \begin{center}
-\begin{tabular}{c|c}
-\toprule
-Dataset & Validation accuracy  \\
-\midrule
-Synthetic data with non-normal distributions & 95.65\%  \\
-Synthetic data with uniform distributions & 98.65\% \\
-\bottomrule
+    \vspace*{-.5cm}
+\captionof{table}{\textbf{Performance metrics after training a GRU RNN model on synthetic data with specified variable distributions (Sample size 50, and results presented with a 95\% CI)}}
+\begin{tabular}{c|c|c|c}
+    \toprule
+    Variable distributions & Validation loss & AMEX metric & Binary accuracy \\
+    \midrule
+    Non-normal & $0.2209 \pm 0.0183$ & $0.7907 \pm 0.0373$ & $90.53\% \pm 1.13\%$ \\
+    Normal & $ 0.1356 \pm 0.0176$ & $ 0.8683 \pm 0.0242$ & $ 94.19\% \pm 1.12\%$ \\
+    \bottomrule
+    % Using non-normal distributions
+    % Average validation loss: 0.2209 +- 0.0183
+    % Average metrics: 0.7907 +- 0.0373
+    % Average accuracy: 0.9053 +- 0.0113
+    % Number of epochs: 16.9800 +- 7.3701% % Using normally distributed data
+    % Average validation loss: 0.1356 +- 0.0176
+    % Average metrics: 0.8683 +- 0.0242
+    % Average accuracy: 0.9419 +- 0.0112
+    % Number of epochs: 13.2000 +- 6.4531
+    % Sample size 50
+% \toprule
+% Dataset & Validation accuracy  \\
+% \midrule
+% Synthetic data with non-normal distributions & 95.65\%  \\
+% Synthetic data with uniform distributions & 98.65\% \\
+% \bottomrule
 \end{tabular}
 \end{center}
+From table 1, we can conclude there exists suitable variable transformations that can be applied to the data to
+significantly increase performance.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{7. Automating the preprocessing procedure}{name=results,column=2,span=3,below=results2}{
+\headerbox{7. Automating the preprocessing procedure}{name=results,column=2,span=3,below=results2,above=bottom}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent
-\includegraphics[width=\textwidth]{Figures/automated-preprocessing-diagram.pdf} 
+\begin{minipage}{.975\textwidth}
+    \captionof{figure}{\textbf{Proposition I: Automating preprocessing using heuristics and suitable static variable transformations}}
+    \vspace*{-.3cm}
+    \includegraphics[width=0.975\textwidth]{Figures/automated-preprocessing-heuristics.pdf} 
+\end{minipage}
+\begin{minipage}{.975\textwidth}
+    \captionof{figure}{\textbf{Proposition II: Automating preprocessing using an adaptive preprocessing layer with weights that are
+    learned during training}}
+    \vspace*{-.15cm}
+    \includegraphics[width=\textwidth]{Figures/automated-preprocessing-adaptive.pdf} 
+    \vspace*{-.15cm}
+\end{minipage}
 
 \noindent
 To automate the selection of preprocessing techniques, heuristics based on each
@@ -284,30 +319,28 @@ training procedure. This ensures that the optimal transformations are learned au
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{References}{name=conclusion,column=2,span=3,above=bottom, below=results}{
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: add the background paper from 1997, and also maybe DAIN or BiN if end up experimenting with it
-%\begin{itemize}[leftmargin=.15in] 
-%\item \icl{\underline{Latent structure blockmodels}}
-%\begin{itemize}[leftmargin=.1cm] 
-%\item A model for graphs with group-specific manifold structure;
-%\item Gaussian process priors on the unknown latent functions;
-%\item Common clustering models are special cases of LSBMs.
-%\end{itemize}
-%\end{itemize}
-{\footnotesize{
-\begin{itemize}[leftmargin=.1in] 
-\item TODO
-% \item Athreya, A. et al. (2018). “Statistical Inference on Random Dot Product Graphs: a Survey”. Journal of Machine Learning Research 18, 1--92.
-% \item Athreya, A. et al. (2021). “On Estimation and Inference in Latent Structure Random Graphs”. Statistical Science 36.1, 68--88.
-% \item Hoff, P. D. et al. (2002). “Latent space approaches to social network analysis”. Journal of the American Statistical Association 97, 1090--1098. 
-% %\item Holland, P. W., K. B. Laskey, and S. Leinhardt (1983). “Stochastic blockmodels: First steps”. Social Networks 5.2, 109--137.
-% %\item Karrer, B. and M. E. J. Newman (2011). “Stochastic blockmodels and community structure in networks”. Physical Review E 83 (1).
-% \item Rubin-Delanchy, P. (2020). “Manifold structure in graph embeddings”. Advances in Neural Information Processing Systems 33, %Ed. by H. Larochelle et al. Vol. 33. Curran Associates, Inc.,  
-% 11687–11699.
-\end{itemize}
-}}
-}
+% \headerbox{References}{name=conclusion,column=2,span=3,above=bottom, below=results}{
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %\begin{itemize}[leftmargin=.15in] 
+% %\item \icl{\underline{Latent structure blockmodels}}
+% %\begin{itemize}[leftmargin=.1cm] 
+% %\item A model for graphs with group-specific manifold structure;
+% %\item Gaussian process priors on the unknown latent functions;
+% %\item Common clustering models are special cases of LSBMs.
+% %\end{itemize}
+% %\end{itemize}
+% {\footnotesize{
+% \begin{itemize}[leftmargin=.1in] 
+% % \item Athreya, A. et al. (2018). “Statistical Inference on Random Dot Product Graphs: a Survey”. Journal of Machine Learning Research 18, 1--92.
+% % \item Athreya, A. et al. (2021). “On Estimation and Inference in Latent Structure Random Graphs”. Statistical Science 36.1, 68--88.
+% % \item Hoff, P. D. et al. (2002). “Latent space approaches to social network analysis”. Journal of the American Statistical Association 97, 1090--1098. 
+% % %\item Holland, P. W., K. B. Laskey, and S. Leinhardt (1983). “Stochastic blockmodels: First steps”. Social Networks 5.2, 109--137.
+% % %\item Karrer, B. and M. E. J. Newman (2011). “Stochastic blockmodels and community structure in networks”. Physical Review E 83 (1).
+% % \item Rubin-Delanchy, P. (2020). “Manifold structure in graph embeddings”. Advances in Neural Information Processing Systems 33, %Ed. by H. Larochelle et al. Vol. 33. Curran Associates, Inc.,  
+% % 11687–11699.
+% \end{itemize}
+% }}
+% }
 
 \end{poster}
 
