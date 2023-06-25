@@ -112,7 +112,7 @@
   {\centering\color{blue_icl2}{\bf{\huge Automating the selection of  preprocessing  \\[0.1cm]techniques for deep neural networks}}\vspace{0.5em}}
   % Authors
   {\vspace*{-.3cm}
-  \hspace*{.8cm} 
+  \hspace*{1.9cm} 
   \leavevmode\hbox to \linewidth{ \color{blue_icl2}% 
   \centering
 \begin{tabular}[t]{c@{}}
@@ -156,10 +156,10 @@ sequence dataset, increasing both model performance and training efficiency.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent
 The default prediction dataset, provided by American Express,
-has data from $N\approx 460\;000$ customers, each with $P=188$ aggregated
-profile features recorded up to $T=13$ different credit card statement
-dates.  That is, the dataset has $N$ instances of $P$-dimensional multivariate
-time-series of length $T$. For each multivariate time-series, the target label
+contains a multivariate time-series from $N\approx 460\;000$ different customers.
+Each time-series has $P=188$ aggregated
+profile features recorded at up to $T=13$ different credit card statement
+dates.  For each multivariate time-series, the target label
 $y \in \{0,1\}$ indicates whether the customer defaulted on their loan or not.
 The task is to predict the probability $\mathbb{P}(Y=1)$ for each customer.
 Note that due to
@@ -240,18 +240,13 @@ preprocessing step.
 \captionof{figure}{\textbf{Average 5-fold cross-validation loss for different preprocessing
 techniques \\ applied on the American Express default prediction dataset, using a GRU RNN model}}
 \vspace*{-.25cm}
-% TODO: if room, increase height of the figure so can fit blue plot better
-% TODO: also add title to legend to describe validation loss at convergence
-% TODO: maybe put legend on top-right instead!
-% TODO: actually, just replace the whole thing with a simple table to use space better
-%       seeing as convergence rate isn't even that important
 \includegraphics[width=0.975\textwidth]{Figures/poster-val-loss.pdf}
 \vspace*{-.25cm}
 \end{minipage}
 \noindent
-Applying an appropriate preprocessing technique before training can significantly decrease the loss
-at convergence. Additionally, selecting the right technique can improve the number of training
-epochs required to converge.
+Applying an appropriate preprocessing technique before training can significantly improve
+performance. Additionally, with the right preprocessing technique the number of epochs required for convergence is
+reduced, as seen in figure 2.
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{6. Preliminary result II: Using synthetic data}{name=results2,column=2,span=3,below=picture}{
@@ -299,23 +294,26 @@ significantly increase performance.
 
 \noindent
 \begin{minipage}{.975\textwidth}
-    \captionof{figure}{\textbf{Proposition I: Automating preprocessing using heuristics and suitable static variable transformations}}
+    \captionof{figure}{\textbf{Proposition I: Automating preprocessing using heuristics and determining suitable static transformations for each variable based on these}}
     \vspace*{-.3cm}
+    \begin{center}
     \includegraphics[width=0.975\textwidth]{Figures/automated-preprocessing-heuristics.pdf} 
+    \end{center}
 \end{minipage}
 \begin{minipage}{.975\textwidth}
     \captionof{figure}{\textbf{Proposition II: Automating preprocessing using an adaptive preprocessing layer with weights that are
     learned during training}}
     \vspace*{-.15cm}
+    \begin{center}
     \includegraphics[width=\textwidth]{Figures/automated-preprocessing-adaptive.pdf} 
+    \end{center}
     \vspace*{-.15cm}
 \end{minipage}
 
 \noindent
-To automate the selection of preprocessing techniques, heuristics based on each
-variable's distribution can be used. Another option is parameterizing the distribution
-transformations and incorporating it as part of the forward- and back-propagation of the
-training procedure. This ensures that the optimal transformations are learned automatically.
+To automate the selection of preprocessing techniques, there are two methods I propose to investigate
+further. One option, illustrated in figure 3, is based on heuristics. With the second option, as shown in figure 4,
+the preprocessing methods are parameterized and learned as part of the training procedure.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
