@@ -3,7 +3,6 @@ import sklearn
 import os
 import torch
 import numpy as np
-import src.experiments.static_preprocessing_methods.experiment_setup as setup
 from src.lib import experimentation
 
 with open("config.yaml") as f:
@@ -19,18 +18,21 @@ class IdentityTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
     def transform(self, X):
         return X
 
-torch.manual_seed(42)
-np.random.seed(42)
+if __name__ == "__main__":
+    import src.experiments.static_preprocessing_methods.experiment_setup as setup
 
-history = experimentation.cross_validate_model(
-    model=setup.model,
-    loss_fn=setup.loss_fn,
-    data_loader_kwargs=setup.data_loader_kwargs,
-    fit_kwargs=setup.fit_kwargs,
-    fill_dict=setup.fill_dict,
-    corrupt_func=setup.undo_min_max_corrupt_func,
-    preprocess_init_fn=lambda : IdentityTransform(),
-    device_ids=[0],
-)
+    torch.manual_seed(42)
+    np.random.seed(42)
 
-np.save(os.path.join(cfg['experiment_directory'], 'no-preprocess-history-50-epochs.npy'), history)
+    history = experimentation.cross_validate_model(
+        model=setup.model,
+        loss_fn=setup.loss_fn,
+        data_loader_kwargs=setup.data_loader_kwargs,
+        fit_kwargs=setup.fit_kwargs,
+        fill_dict=setup.fill_dict,
+        corrupt_func=setup.undo_min_max_corrupt_func,
+        preprocess_init_fn=lambda : IdentityTransform(),
+        device_ids=[0],
+    )
+
+    np.save(os.path.join(cfg['experiment_directory'], 'no-preprocess-history-50-epochs.npy'), history)
