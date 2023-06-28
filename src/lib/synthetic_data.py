@@ -10,7 +10,7 @@ class SyntheticData:
                  cross_variables_cor_init_sigma=None,
                  pdf_approximation_number_of_samples=20_000,
                  response_noise_sigma=1e-3, response_thresh=0.5,
-                 response_beta_sigma=1.0):
+                 response_beta_sigma=1.0, random_state=None):
         """
         TODO
 
@@ -28,6 +28,11 @@ class SyntheticData:
             raise ValueError("q must be less than T")
         if ar_thetas.shape != (dim_size, ar_q + 1):
             raise ValueError("The MA thetas must be of shape (D, q+1)")
+
+        # reproducible initialisation
+        if random_state is not None:
+            np.random.seed(random_state)
+        self.init_random_state = random_state
 
         # general parameters
         self.D = dim_size
@@ -237,6 +242,8 @@ class SyntheticData:
         """
 
         if self.sigma is None:
+            if self.init_random_state is not None:
+                np.random.seed(self.init_random_state)
             self.sigma = self._create_covariance_matrix(self.thetas)
 
         if random_state is not None:
