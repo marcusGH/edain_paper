@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('-g', '--groups', nargs='+', help='<Required> Specify group', required=False, default=[])
     parser.add_argument('-b', '--baseline', action='store_true', required=False)
     parser.add_argument('-d', '--device', metavar='D', type=int, required=True)
+    parser.add_argument('--optimal-loss-mix', action='store_true', required=False)
 
     # 1: skewed normal, possibly with outliers
     group1 = [26, 39, 57, 68, 123, 125, 130, 137, 145, 153]
@@ -119,6 +120,39 @@ if __name__ == "__main__":
         )
 
         np.save(os.path.join(cfg['experiment_directory'], 'mixed-transform-baseline.npy'), history)
+
+    if args.optimal_loss_mix:
+        transforms_list = [
+            (group1, lambda : StandardScalerTimeSeries()),
+            (group2, lambda : TanhStandardScalerTimeSeries()),
+            (group3, lambda : StandardScalerTimeSeries()),
+            (group4, lambda : StandardScalerTimeSeries()),
+            (group5, lambda : TanhStandardScalerTimeSeries()),
+            (group6, lambda : StandardScalerTimeSeries()),
+            (group7, lambda : TanhStandardScalerTimeSeries()),
+            (group8, lambda : TanhStandardScalerTimeSeries()),
+            (group9, lambda : TanhStandardScalerTimeSeries()),
+        ]
+
+        preprocess_init = lambda : MixedTransformsTimeSeries(transforms_list)
+
+        print("Starting experiment using optimal mixture from previous experiments...")
+        torch.manual_seed(42)
+        np.random.seed(42)
+        # start baseline experiment
+        history = experimentation.cross_validate_model(
+            model=setup.model,
+            loss_fn=setup.loss_fn,
+            data_loader_kwargs=setup.data_loader_kwargs,
+            fit_kwargs=setup.fit_kwargs,
+            fill_dict=setup.fill_dict,
+            corrupt_func=setup.undo_min_max_corrupt_func,
+            preprocess_init_fn=preprocess_init,
+            device_ids=[dev],
+        )
+
+        np.save(os.path.join(cfg['experiment_directory'], 'mixed-transform-optimal.npy'), history)
+
 
     for gid in group_ids:
         print(f"[{group_ids.index(gid) + 1} / {len(group_ids)}] Starting experiments for {gid} in {group_ids}")
