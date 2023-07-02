@@ -10,7 +10,7 @@ import importlib.util
 import sys
 
 from src.lib import experimentation
-from src.models.dain_grunet import AdaptiveGRUNet
+from src.models.adaptive_grunet import AdaptiveGRUNet
 import src.experiments.static_preprocessing_methods.experiment_setup as spm
 
 with open(os.path.join("config.yaml")) as f:
