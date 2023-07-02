@@ -15,11 +15,13 @@ with open(os.path.join("config.yaml")) as f:
     cfg = yaml.load(f, Loader=yaml.FullLoader)
 
 class AdaptiveGRUNet(nn.Module):
-    def __init__(self, adaptive_layer, num_features, hidden_dim, layer_dim, emb_dim, num_cat_columns = 11, dropout_prob = 0.2, **adaptive_layer_kwargs):
+    def __init__(self, adaptive_layer_init_fn, num_features, hidden_dim, layer_dim, emb_dim, num_cat_columns = 11, time_series_length = 13, dropout_prob = 0.2):
         """
-        This model takes input of shape (N, T, D)
-        :param adaptive_layer: The class of the adaptive preporcessing layer. It's forward method
-        should take a tensor of shape (N, D, T) and return tensor of same shape (not the axis swap)
+        This model takes input of shape (N, T, D) and returns probabilities of shape (N,)
+
+        :param adaptive_layer_init_fn: A lambda function taking arguments T and D. It should return an adaptive
+        preprocessing layer with a forward method that takes a tensor of shape (N, D', T) and return tensor
+        of same shape (not the axis swap compared to this module). Here D' is the number of numeric features
         """
         super(AdaptiveGRUNet, self).__init__()
 
@@ -55,7 +57,9 @@ class AdaptiveGRUNet(nn.Module):
         )
 
         # DAIN preprocessing layer or other variant
-        self.preprocess = adaptive_layer(input_dim=num_features - num_cat_columns, **adaptive_layer_kwargs)
+        self.D = num_features - num_cat_columns
+        self.T = time_series_length
+        self.preprocess = adaptive_layer_init_fn(D=self.D, T=self.T)
 
     def forward(self, x):
         # First 11 columns are categorical, next 177 are numerical
