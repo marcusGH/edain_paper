@@ -180,7 +180,7 @@ if __name__ == "__main__":
     if 1 in exps:
         print("Starting experiment 1: Performance on irregular data")
         results = evaluate_model(irregular_datasets)
-        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-irregular-data.npy'), results)
+        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-irregular-data2.npy'), results)
 
     ###################################################
     ### Experiment 2: Performance on normal data    ###
@@ -189,37 +189,23 @@ if __name__ == "__main__":
     if 2 in exps:
         print("Starting experiment 2: Performance on normal data")
         results = evaluate_model(norm_datasets)
-        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-normal-data.npy'), results)
+        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-normal-data2.npy'), results)
 
     ########################################################
     ### Experiment 3: Standard scaling on irregular data ###
     ########################################################
 
-    class StandardScaler2(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
-        def __init__(self, **kwargs):
-            self.ss = StandardScalerTimeSeries(**kwargs)
-
-        def fit(self, X, y=None):
-            X = np.swapaxes(X, 1, 2)
-            self.ss = self.ss.fit(X, y)
-            return self
-
-        def transform(self, X):
-            X = np.swapaxes(X, 1, 2)
-            X = self.ss.transform(X)
-            return np.swapaxes(X, 1, 2)
-
     if 3 in exps:
         print("Starting experiment 3: Standard scaling on irregular data")
-        results = evaluate_model(irregular_datasets, preprocess_init_fn=lambda : StandardScaler2(time_series_length=6))
-        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-standard-scaling.npy'), results)
+        results = evaluate_model(irregular_datasets, preprocess_init_fn=lambda : StandardScalerTimeSeries(time_series_length=6))
+        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-standard-scaling2.npy'), results)
 
     ##################################################################
     ### Experiment 4: Undo corruption on irregular data using CDFs ###
     ##################################################################
 
     class UndoCorruptionTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
-        def __init__(self, time_series_length = 13, epsilon=1E-4):
+        def __init__(self, time_series_length = 6, epsilon=1E-4):
             self.epsilon = epsilon
             self.T = time_series_length
 
@@ -227,14 +213,14 @@ if __name__ == "__main__":
             return self
 
         def transform(self, X):
-            for t in range(X.shape[2]):
+            for t in range(self.T):
                 # inverse normal CDF * original CDF
-                X[:, 0, t] = norm.ppf(cdf_f1(X[:, 0, t]) * (1 - self.epsilon) + self.epsilon / 2)
+                X[:, t, 0] = norm.ppf(cdf_f1(X[:, t, 0]) * (1 - self.epsilon) + self.epsilon / 2)
                 # inverse normal CDF * original CDF
-                X[:, 1, t] = norm.ppf(cdf_f2(X[:, 1, t]) * (1 - self.epsilon) + self.epsilon / 2)
+                X[:, t, 1] = norm.ppf(cdf_f2(X[:, t, 1]) * (1 - self.epsilon) + self.epsilon / 2)
             return X
 
     if 4 in exps:
         print("Starting experiment 4: Undo transformation on irregular data")
         results = evaluate_model(irregular_datasets, preprocess_init_fn=lambda : UndoCorruptionTimeSeries())
-        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-undo-transform.npy'), results)
+        np.save(os.path.join(cfg['experiment_directory'], 'synth-data-undo-transform2.npy'), results)

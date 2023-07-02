@@ -132,7 +132,8 @@ class SyntheticData:
 
         # shape (n, D, T)
         u_samples = u_samples.reshape((n, self.D, self.T))
-        return u_samples
+        # change to shape (n, T, D) to be consistent with RNN's expected input
+        return np.swapaxes(u_samples, 1, 2)
 
     def _isPositiveDefinite(self, A):
         try:
@@ -249,15 +250,15 @@ class SyntheticData:
         if random_state is not None:
             np.random.seed(random_state)
 
-        # shape (n, D, T)
+        # shape (n, T, D)
         us = self._sample_correlated_uniforms(n)
         # shape (n,)
         ys = self._create_responses(us)
 
         # corrupt the data using our PDFs and u samples
-        Xs = np.zeros((n, self.D, self.T))
+        Xs = np.zeros((n, self.T, self.D))
         for f_idx in range(self.D):
-            Xs[:, f_idx, :] = self._sample_pdf(f_idx, us[:, f_idx, :].reshape(-1)).reshape((n, self.T))
+            Xs[:, :, f_idx] = self._sample_pdf(f_idx, us[:, :, f_idx].reshape(-1)).reshape((n, self.T))
 
         if return_uniform:
             return np.float32(us), ys
