@@ -10,8 +10,16 @@ import importlib.util
 import sys
 
 from src.lib import experimentation
-from src.models.dain_grunet import DainGRUNet
+from src.models.dain_grunet import AdaptiveGRUNet
 import src.experiments.static_preprocessing_methods.experiment_setup as spm
+
+with open(os.path.join("config.yaml")) as f:
+    cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+spec = importlib.util.spec_from_file_location("dain", os.path.join(cfg['dain_repo'], 'dain.py'))
+dain = importlib.util.module_from_spec(spec)
+sys.modules["module.name"] = dain
+spec.loader.exec_module(dain)
 
 def undo_min_max_corrupt_func(X, y):
     """
@@ -28,9 +36,6 @@ def undo_min_max_corrupt_func(X, y):
     X_corrupt = X * scales + mins
     return X_corrupt, y
 
-with open(os.path.join("config.yaml")) as f:
-    cfg = yaml.load(f, Loader=yaml.FullLoader)
-
 data_loader_kwargs = {
     'batch_size' : 1024,
     'shuffle' : False,
@@ -39,12 +44,12 @@ data_loader_kwargs = {
 
 def optimizer_init(mod, lr=1e-3):
     return torch.optim.Adam([
-        {'params': model.gru.parameters()},
-        {'params': model.emb_layers.parameters()},
-        {'params': model.feed_forward.parameters()},
-        {'params': model.dain.mean_layer.parameters(), 'lr': lr * model.dain.mean_lr},
-        {'params': model.dain.scaling_layer.parameters(), 'lr': lr * model.dain.scale_lr},
-        {'params': model.dain.gating_layer.parameters(), 'lr': lr * model.dain.gate_lr},
+        {'params': mod.gru.parameters()},
+        {'params': mod.emb_layers.parameters()},
+        {'params': mod.feed_forward.parameters()},
+        {'params': mod.preprocess.mean_layer.parameters(), 'lr': lr * mod.preprocess.mean_lr},
+        {'params': mod.preprocess.scaling_layer.parameters(), 'lr': lr * mod.preprocess.scale_lr},
+        {'params': mod.preprocess.gating_layer.parameters(), 'lr': lr * mod.preprocess.gate_lr},
     ], lr=lr)
 
 
@@ -70,5 +75,5 @@ np.random.seed(42)
 # mean_lr, std_lr, scale_lr = 1e-02, 1e-8, 10 # Used for experiment 3.
 # mean_lr, std_lr, scale_lr = 0.01, 0.01, 10 # Used for experiment 4.
 mean_lr, std_lr, scale_lr = 1, 1, 1 # Used for experiment 5.
-model = DainGRUNet(188, 128, 2, 4, mode='adaptive_scale', mean_lr=mean_lr, scale_lr=std_lr, gate_lr=scale_lr)
+model = AdaptiveGRUNet(dain.DAIN_Layer, 188, 128, 2, 4, mode='adaptive_scale', mean_lr=mean_lr, scale_lr=std_lr, gate_lr=scale_lr)
 loss_fn = F.binary_cross_entropy
