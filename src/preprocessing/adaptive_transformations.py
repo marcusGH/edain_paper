@@ -40,17 +40,32 @@ class FullDAIN_Layer(nn.Module):
         # for adaptive shift
         self.shift_layer = nn.Linear(self.D, self.D, bias=False)
         self.shift_layer.weight.data = torch.FloatTensor(data=np.eye(self.D, self.D))
+        self.skip_shift = nn.Parameter(
+            data=torch.Tensor(1, self.D, self.T),
+            requires_grad=True,
+        )
+        nn.init.constant_(self.skip_shift, 10.)
 
         # for adaptive scaling
         self.scaling_layer = nn.Linear(self.D, self.D, bias=False)
         self.scaling_layer.weight.data = torch.FloatTensor(data=np.eye(self.D, self.D))
+        self.skip_scale = nn.Parameter(
+            data=torch.Tensor(1, self.D, self.T),
+            requires_grad=True,
+        )
+        nn.init.constant_(self.skip_scale, 10.)
 
         # for adaptive power-transform
         self.lambd = nn.Parameter(
             data=torch.Tensor(1, self.D, self.T),
             requires_grad=True,
         )
+        self.skip_power_transform = nn.Parameter(
+            data=torch.Tensor(1, self.D, self.T),
+            requires_grad=True,
+        )
         nn.init.ones_(self.lambd)
+        nn.init.zeros_(self.skip_power_transform)
 
         # for saving power transform forward pass output
         self.power_transform_out = None # (N, D, T)
@@ -80,7 +95,7 @@ class FullDAIN_Layer(nn.Module):
         # scale to mean 0, then scale back to ensure winsorization symmetric
         winsorized_x = torch.exp(self.beta) * torch.tanh((x - mean_x) * torch.exp(-self.beta)) + mean_x
         # residual bypass
-        return (1 - torch.sigmoid(self.alpha)) * x + torch.sigmoid(self.alpha) * winsorized_x
+        return torch.sigmoid(self.alpha) * x + (1. - torch.sigmoid(self.alpha)) * winsorized_x
 
     def _adaptive_shift(self, x):
         # Input of shape (N, D, T)
@@ -110,10 +125,6 @@ class FullDAIN_Layer(nn.Module):
         idx = (torch.abs(lambd) <= self.eps) & (x >= 0.0)
         x[idx] = torch.log1p(x[idx])
 
-        # Case 2: lambd not 2, y negative
-        idx = (torch.abs(lambd - 2) > self.eps) & (x < 0.0)
-        x[idx] = ((torch.pow(1 - x, 2 - lambd) - 1) / (lambd - 2))[idx]
-
         # Case 3: lambd = 2, y negative
         idx = (torch.abs(lambd - 2) <= self.eps) & (x < 0.0)
         x[idx] = -torch.log1p(-x[idx])
@@ -128,7 +139,13 @@ class FullDAIN_Layer(nn.Module):
 
     def power_transform_params(self):
         # https://stackoverflow.com/questions/69774137/constructing-parameter-groups-in-pytorch
-        return chain([self.lambd])
+        return chain([self.lambd, self.skip_power_transform])
+
+    def scaling_params(self):
+        return chain(self.scaling_layer.parameters(), [self.skip_scale])
+
+    def shift_params(self):
+        return chain(self.shift_layer.parameters(), [self.skip_shift])
 
     def forward(self, x, dim_first=True):
         """
@@ -143,15 +160,15 @@ class FullDAIN_Layer(nn.Module):
 
         # Step 2: Shift
         if self.adaptive_shift:
-            x = self._adaptive_shift(x)
+            x = (1. - torch.sigmoid(self.skip_shift)) * self._adaptive_shift(x) + torch.sigmoid(self.skip_shift) * x
 
         # Step 3: Scale
         if self.adaptive_scale:
-            x = self._adaptive_scale(x)
+            x = (1. - torch.sigmoid(self.skip_scale)) * self._adaptive_scale(x) + torch.sigmoid(self.skip_scale) * x
 
         # Step 4: Power transform
         if self.adaptive_power_transform:
-            x = self._adaptive_power_transform(x, self.lambd)
+            x = (1. - torch.sigmoid(self.skip_power_transform)) * self._adaptive_power_transform(x, self.lambd) + torch.sigmoid(self.skip_power_transform) * x
 
         if not dim_first:
             x = x.tranpose(1, 2)
