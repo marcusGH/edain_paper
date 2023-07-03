@@ -175,12 +175,12 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     history = {
-            "timestamp" : timestamp,
-            "train_loss" : [],
-            "val_loss" : [],
-            "train_amex_metric" : [],
-            "val_amex_metric" : [],
-            }
+        "timestamp" : timestamp,
+        "train_loss" : [],
+        "val_loss" : [],
+        "train_amex_metric" : [],
+        "val_amex_metric" : [],
+    }
 
     # find the available GPUs
     # for i in range(torch.cuda.device_count()):
@@ -189,7 +189,9 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
     #     if len(gpu_ids) == num_gpus:
     #         break
 
-    if device_ids is not None and len(device_ids) > 1:
+    if device_ids == "cpu":
+        dev = torch.device('cpu')
+    elif device_ids is not None and len(device_ids) > 1:
         # create parallel model and move it to the main gpu
         model = nn.DataParallel(model, device_ids = device_ids)
         dev = torch.device('cuda', device_ids[0])
