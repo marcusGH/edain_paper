@@ -52,7 +52,6 @@ class FullDAIN_Layer(nn.Module):
         )
         nn.init.ones_(self.lambd)
 
-        self.kl_loss = nn.KLDivLoss(log_target=True)
         # for saving power transform forward pass output
         self.power_transform_out = None # (N, D, T)
         def power_transform_backward_hook(_):
@@ -64,20 +63,10 @@ class FullDAIN_Layer(nn.Module):
             with the same mean and std.
             """
             x = self.power_transform_out # (N, D, T)
-            mean_x = torch.mean(x, 0, keepdim=True)
-            std_x = torch.std(x, 0, keepdim=True)
-            # sample from a normal distribution with same moments as the input
-            target_samples = torch.empty((x.size(0), self.D, self.T),
-                    device=self.dummy_param.device,
-                ).normal_() * std_x + mean_x
-            # enable autograd
-            x.requires_grad_()
-
-            print(torch.log(x), torch.log(target_samples))
-            loss = self.kl_loss(x, target_samples) # (1,)
-            loss.backward(inputs=x)
-            print(x.grad)
-            print(x.grad.shape)
+            mean_x = torch.mean(x, 0, keepdim=False)
+            std_x = torch.std(x, 0, keepdim=False)
+            # create a normal distribution with same moments as the input
+            norm = torch.distributions.normal.Normal(loc=mean_x, scale=std_x)
             # Grads should be of shape (1, D, T)
             return torch.zeros_like(grad)
         self.lambd.register_hook(power_transform_backward_hook)
@@ -108,25 +97,25 @@ class FullDAIN_Layer(nn.Module):
         adaptive_std[adaptive_std <= self.eps] = 1
         return x / adaptive_std.unsqueeze(-1)
 
-    def _adaptive_power_transform(self, x):
+    def _adaptive_power_transform(self, x, lambd):
         """
         References:
           - Yeo and Johnson (2000)
         """
         # Case 0: lambd not 0, y non-negative
-        idx = (torch.abs(self.lambd) > self.eps) & (x >= 0.0)
-        x[idx] = ((torch.pow(x + 1, self.lambd) - 1) / self.lambd)[idx]
+        idx = (torch.abs(lambd) > self.eps) & (x >= 0.0)
+        x[idx] = ((torch.pow(x + 1, lambd) - 1) / lambd)[idx]
 
         # Case 1: lambd = 0, y non-negative
-        idx = (torch.abs(self.lambd) <= self.eps) & (x >= 0.0)
+        idx = (torch.abs(lambd) <= self.eps) & (x >= 0.0)
         x[idx] = torch.log1p(x[idx])
 
         # Case 2: lambd not 2, y negative
-        idx = (torch.abs(self.lambd - 2) > self.eps) & (x < 0.0)
-        x[idx] = ((torch.pow(1 - x, 2 - self.lambd) - 1) / (self.lambd - 2))[idx]
+        idx = (torch.abs(lambd - 2) > self.eps) & (x < 0.0)
+        x[idx] = ((torch.pow(1 - x, 2 - lambd) - 1) / (lambd - 2))[idx]
 
         # Case 3: lambd = 2, y negative
-        idx = (torch.abs(self.lambd - 2) <= self.eps) & (x < 0.0)
+        idx = (torch.abs(lambd - 2) <= self.eps) & (x < 0.0)
         x[idx] = -torch.log1p(-x[idx])
 
         # required for computing backward gradients
@@ -162,7 +151,7 @@ class FullDAIN_Layer(nn.Module):
 
         # Step 4: Power transform
         if self.adaptive_power_transform:
-            x = self._adaptive_power_transform(x)
+            x = self._adaptive_power_transform(x, self.lambd)
 
         if not dim_first:
             x = x.tranpose(1, 2)

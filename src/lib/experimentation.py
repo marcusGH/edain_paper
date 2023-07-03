@@ -199,6 +199,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
         dev = torch.device('cuda', device_ids[0])
     else:
         dev = torch.device('cuda')
+    print(f"Using device = {dev}")
     model = model.to(dev)
 
     pbar = tqdm(total = num_epochs)
