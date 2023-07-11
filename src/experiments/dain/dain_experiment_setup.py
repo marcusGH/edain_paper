@@ -54,13 +54,13 @@ def optimizer_init(mod, lr=1e-3):
 
 
 fit_kwargs = {
-        'train_split_data_dir' : os.path.join(cfg['dataset_directory'], "derived", "processed-splits"),
-        'num_epochs' : 50,
-        'early_stopper_patience' : 5,
-        'early_stopper_min_delta' : 0.0,
-        'optimizer_init' : optimizer_init,
-        'scheduler_init' : lambda x: torch.optim.lr_scheduler.MultiStepLR(x, milestones=[4, 7], gamma=0.1),
-        'verbose' : False,
+    'train_split_data_dir' : os.path.join(cfg['dataset_directory'], "derived", "processed-splits"),
+    'num_epochs' : 50,
+    'early_stopper_patience' : 5,
+    'early_stopper_min_delta' : 0.0,
+    'optimizer_init' : optimizer_init,
+    'scheduler_init' : lambda x: torch.optim.lr_scheduler.MultiStepLR(x, milestones=[4, 7], gamma=0.1),
+    'verbose' : False,
 }
 
 fill_dict = {
@@ -75,5 +75,5 @@ np.random.seed(42)
 # mean_lr, std_lr, scale_lr = 1e-02, 1e-8, 10 # Used for experiment 3.
 # mean_lr, std_lr, scale_lr = 0.01, 0.01, 10 # Used for experiment 4.
 mean_lr, std_lr, scale_lr = 1, 1, 1 # Used for experiment 5.
-model = AdaptiveGRUNet(dain.DAIN_Layer, 188, 128, 2, 4, mode='adaptive_scale', mean_lr=mean_lr, scale_lr=std_lr, gate_lr=scale_lr)
+model = AdaptiveGRUNet(lambda D, T: dain.DAIN_Layer(input_dim=D, mode='adaptive_scale', mean_lr=mean_lr, scale_lr=std_lr, gate_lr=scale_lr), 188, 128, 2, 4)
 loss_fn = F.binary_cross_entropy

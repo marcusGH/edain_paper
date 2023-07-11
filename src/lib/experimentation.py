@@ -144,6 +144,11 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, de
         inputs, labels = data
         inputs, labels = inputs.to(dev), labels.to(dev)
 
+        # sanity check
+        if not torch.all(torch.isfinite(inputs)):
+            msg = f"Encountered {len(inputs[~torch.isfinite(inputs)]))} non-finite input values at iteration {i} during training"
+            raise ValueError(msg)
+
         # Zero your gradients for every batch!
         optimizer.zero_grad()
 
