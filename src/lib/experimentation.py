@@ -64,7 +64,7 @@ def amex_metric_mod(y_true, y_pred):
 
     return 0.5 * (gini[1]/gini[0] + top_four)
 
-def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 11, corrupt_func = None, preprocess_obj = None, **data_loader_kwargs) -> (torch.utils.data.DataLoader, torch.utils.data.DataLoader):
+def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 11, corrupt_func = None, preprocess_obj = None, dtype=torch.float32, **data_loader_kwargs) -> (torch.utils.data.DataLoader, torch.utils.data.DataLoader):
     """
     val_idx is a list of integers denoting which of the [0, 1, ..., NUM_SPLITS-1] splits to use
     as validation data, and the rest will be used as training data
@@ -119,8 +119,8 @@ def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 
         # compile the DataLoader object and return
         data_loader = torch.utils.data.DataLoader(
                 dataset = torch.utils.data.TensorDataset(
-                    torch.from_numpy(Xs).type(torch.float32),
-                    torch.from_numpy(ys).type(torch.float32)
+                    torch.from_numpy(Xs).type(dtype),
+                    torch.from_numpy(ys).type(dtype)
                     ), **data_loader_kwargs)
 
         return data_loader
@@ -146,7 +146,7 @@ def train_one_epoch(model, loss_fn, training_loader, optimizer, epoch_number, de
 
         # sanity check
         if not torch.all(torch.isfinite(inputs)):
-            msg = f"Encountered {len(inputs[~torch.isfinite(inputs)]))} non-finite input values at iteration {i} during training"
+            msg = f"Encountered {len(inputs[~torch.isfinite(inputs)])} non-finite input values at iteration {i} during training"
             raise ValueError(msg)
 
         # Zero your gradients for every batch!
