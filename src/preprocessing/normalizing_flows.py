@@ -51,6 +51,7 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
     def _inverse_log_abs_det_jacobian(self, x, y):
         return torch.sum(-self.log_scale)
 
+
 class AdaptiveShift(dist.torch_transform.TransformModule):
     """
     Todo
@@ -89,6 +90,7 @@ class AdaptiveShift(dist.torch_transform.TransformModule):
     def _inverse_log_abs_det_jacobian(self, x, y):
         return torch.zeros(y.size(0), device=y.device, dtype=y.dtype)
 
+
 class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     """
     Only invertible if residual_connection is set to False
@@ -105,16 +107,19 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    def __init__(self, input_dim, residual_connection=True, init_sigma=0.1):
+    def __init__(self, input_dim, init_sigma=0.1, residual_connection=True, mode='exp'):
         super(AdaptiveOutlierRemoval, self).__init__(cache_size=1)
 
         self.input_dim = input_dim
-        # learned b' in above equation should be positive
-        # TODO: why is this 1 and not 0, it becomes 1 if we start with 0 because of exp(.)
+        # learned b' in above equation should be positive, which we either constrain with softplus
+        # or an exponential function, depending on the mode
+        assert mode in ['exp', 'softplus']
+        self.mode = mode
         self.log_cutoff = nn.Parameter(
-            1. + torch.randn(self.input_dim) * init_sigma
+            torch.randn(self.input_dim) * init_sigma
         )
-        # skip parameter, before applying sigmoid
+
+        # skip-parameter, before applying sigmoid
         self.alpha = None
         if residual_connection:
             self.alpha = nn.Parameter(
@@ -136,7 +141,14 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         _validate_tensor(x, "Outlier removal input: ")
 
-        x_tanh = torch.exp(self.log_cutoff) * torch.tanh(x * torch.exp(-self.log_cutoff))
+        if self.mode == 'exp':
+            beta = torch.exp(self.log_cutoff)
+        elif self.mode == 'softplus':
+            beta = F.softplus(self.self.log_cutoff)
+        else:
+            raise NotImplementedError("Invalid mode: " + self.mode)
+
+        x_tanh = beta * torch.tanh(x / beta)
         if self.alpha is not None:
             y = (1. - torch.sigmoid(self.alpha)) * x + torch.sigmoid(self.alpha) * x_tanh
         else:
@@ -149,8 +161,15 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     def _inverse(self, y):
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for inverting adaptive outlier removal transformation when using a residual connection")
-        x = torch.atanh(y * torch.exp(-self.log_cutoff)) * torch.exp(self.log_cutoff)
-        return x
+
+        if self.mode == 'exp':
+            beta = torch.exp(self.log_cutoff)
+        elif self.mode == 'softplus':
+            beta = F.softplus(self.self.log_cutoff)
+        else:
+            raise NotImplementedError("Invalid mode: " + self.mode)
+
+        return torch.atanh(y / beta) * beta
 
     def log_abs_det_jacobian(self, x, y):
         """
@@ -162,7 +181,15 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
-        ladj = 2. * (np.log(2.) - x * torch.exp(-self.log_cutoff) - F.softplus(-2. * x * torch.exp(-self.log_cutoff)))
+
+        if self.mode == 'exp':
+            beta = torch.exp(self.log_cutoff)
+        elif self.mode == 'softplus':
+            beta = F.softplus(self.self.log_cutoff)
+        else:
+            raise NotImplementedError("Invalid mode: " + self.mode)
+
+        ladj = 2. * (np.log(2.) - x / beta - F.softplus(-2. * x / beta))
         # determinant of diagonal matrix is just sum since we're taking logs
         return torch.sum(ladj, axis=-1)
 
@@ -173,6 +200,14 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for inverse log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
+
+        if self.mode == 'exp':
+            beta = torch.exp(self.log_cutoff)
+        elif self.mode == 'softplus':
+            beta = F.softplus(self.self.log_cutoff)
+        else:
+            raise NotImplementedError("Invalid mode: " + self.mode)
+
         #  Derivation:
         # ----------------------------------------
         #    -log(|1-y'^2|)
@@ -190,13 +225,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         #  = (case 1: 1 + y' < 0)  -log(-y' - 1)
         #    (case 2: 1 + y' > 0)  -log1p(y')
         # (For cases where y' is numerically close to -1 or 1, clip gradient to 0 and don't apply log)
-        # TODO: use F.softplus(.) instead of exp for more linear growth???
-        # TODO BUG: It's actually the log of the absolute det J, so det applied first, then abs,
-        #           instead of abs then det/sum, which I do here. I should instead sum all the values,
-        #           then do the absolute value, then take the log!
-        #     Nevermind, because log| prod v_i|, and |.| of product is same as product of |v_i|, so can actually
-        #           do abs of all the values, then take the logs and sum the logs, so this here is correct
-        y_prime = y * torch.exp(self.log_cutoff)
+        y_prime = y * beta
         iladj = torch.zeros_like(y)
         # Part 1: case 1
         iladj[1. < y_prime] -= torch.log(y_prime[1. < y_prime] - 1.)
@@ -240,28 +269,13 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
         stored lambda parameter, independetly for each input dimension
         """
 
-        # print(self.lambd)
-
         _validate_tensor(self.lambd, "Power transform lambda: ")
         _validate_tensor(x, "Power transform input: ")
-
-        # x = x + 100.
 
         out = torch.zeros_like(x)
         pos_x = x >= 0.                               # binary mask on input
         pos_l0 = torch.abs(self.lambd) < self.eps     # binary mask on lambda == 0
         pos_l2 = torch.abs(self.lambd - 2) < self.eps # binary mask on lambda == 2
-
-        # print("The negative values...")
-        # print(x[~pos_x])
-        # out[pos_x] = ((torch.pow(x + 1., 2.) - 1) / self.lambd)[pos_x]
-        # if torch.any(~pos_x):
-        #     print(x[~pos_x])
-        #     # out[~pos_x] = ((torch.pow(1. - x, self.lambd) - 1) / self.lambd)[~pos_x]
-        #     out[~pos_x] = ((torch.log1p(torch.abs(x)) - 1) / self.lambd)[~pos_x]
-        #     print("Here:")
-        #     print(out[~pos_x])
-        # return out
 
         # Case 1: lambda != 0 and x >= 0
         if torch.any(pos_x & ~pos_l0):
@@ -286,7 +300,8 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
         return out
 
     def _inverse(self, y):
-        raise NotImplementedError("Not")
+        # TODO: apply the same bugfixes to this code as was done for forward call
+        raise NotImplementedError("Faulty implementation that may cause numerical errors.")
         out = torch.zeros_like(y)
         pos_y = y >= 0.                               # binary mask on input
         pos_l0 = torch.abs(self.lambd) < self.eps     # binary mask on lambda == 0
@@ -309,7 +324,8 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
 
         :return: torch.tensor of same same as x
         """
-        raise NotImplementedError("Not")
+        # TODO: apply the same bugfixes to this code as was done for inverse log abs det jacobian
+        raise NotImplementedError("Faulty implementation that may cause numerical errors.")
         out = torch.zeros_like(x)
         pos_x = x >= 0.                               # binary mask on input
         pos_l0 = torch.abs(self.lambd) < self.eps     # binary mask on lambda == 0
@@ -329,10 +345,6 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
 
     def _inverse_log_abs_det_jacobian(self, _, y):
         out = torch.zeros_like(y)
-        # print("ILDJ print sum: ")
-        # print(torch.sum(out, axis=-1))
-        # return torch.sum(out, axis=-1)
-
 
         pos_x = y >= 0.                               # binary mask on input
         pos_l0 = torch.abs(self.lambd) < self.eps     # binary mask on lambda == 0
@@ -340,27 +352,29 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
 
         _validate_tensor(y, "Power transform ILDJ input: ")
 
-        # BUG: if do not have these nay and do the update when there are none matching the cases, the gradients become zero
-
         # Case 1: lambda != 0 and x >= 0
-        if torch.any(pos_x & ~pos_l0):
-            out[pos_x & ~pos_l0] = ((1. - self.lambd) / self.lambd * torch.log1p(torch.abs(y) * self.lambd))[pos_x & ~pos_l0]
+        pos_extra = torch.abs(y) * self.lambd < -1. + self.eps # to avoid NaNs in log1p
+        if torch.any(pos_x & ~pos_l0 & ~pos_extra):
+            out[pos_x & ~pos_l0 & ~pos_extra] = ((1. - self.lambd) / self.lambd * torch.log1p(torch.abs(y) * self.lambd))[pos_x & ~pos_l0 & ~pos_extra]
+        if torch.any(pos_x & ~pos_l0 & pos_extra):
+            out[pos_x & ~pos_l0 & pos_extra] = 0.
+
         # Case 2: lambda == 0 and x >= 0
         if torch.any(pos_x & pos_l0):
             out[pos_x & pos_l0] = y[pos_x & pos_l0]
+
         # Case 3: lambda != 2 and x < 0
-        if torch.any(~pos_x & ~pos_l2):
-            out[~pos_x & ~pos_l2] = ((self.lambd - 1.) / (2. - self.lambd) * torch.log1p(torch.abs(y) * (2. - self.lambd)))[~pos_x & ~pos_l2]
+        pos_extra = torch.abs(y) * (2. - self.lambd) < -1. + self.eps # to avoid NaNs in log1p
+        if torch.any(~pos_x & ~pos_l2 & ~pos_extra):
+            out[~pos_x & ~pos_l2 & ~pos_extra] = ((self.lambd - 1.) / (2. - self.lambd) * torch.log1p(torch.abs(y) * (2. - self.lambd)))[~pos_x & ~pos_l2 & ~pos_extra]
+        if torch.any(~pos_x & ~pos_l2 & pos_extra):
+            out[~pos_x & ~pos_l2 & pos_extra] = 0.
+
         # Case 4: lambda == 2 and x < 0
         if torch.any(~pos_x & pos_l2):
             out[~pos_x & pos_l2] = -y[~pos_x & pos_l2]
 
         _validate_tensor(out, "Power transform ILDJ: ")
-#         print(torch.sum(out, axis=-1))
-#         print(torch.min(torch.sum(out, axis=-1)))
-#         print(torch.max(torch.sum(out, axis=-1)))
-        # out = torch.zeros_like(out)
-
         # apply determinant (which is sum of diagonals because logs
         return torch.sum(out, axis=-1)
 
@@ -390,7 +404,67 @@ class InvertBijector(dist.torch_transform.TransformModule):
         return self.bijector(y)
 
     def log_abs_det_jacobian(self, x, y):
-        # Should this be flipped or not ????
-        # TODO: look at log_prob impementation of:
-        # - https://pytorch.org/docs/master/_modules/torch/distributions/transformed_distribution.html#TransformedDistribution
         return self.bijector._inverse_log_abs_det_jacobian(y, x)
+
+
+class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
+    domain = dist.transforms.constraints.real_vector # or just real?
+    codomain = dist.transforms.constraints.real_vector
+    bijective = True
+
+    def __init__(self, input_dim, init_sigma=0.1, eps=1e-6, invert_bijector=True, adaptive_shift=True, adaptive_scale=True, adaptive_outlier_removal=True, adaptive_power_transform=True, outlier_removal_residual_connection=False, outlier_removal_mode='softplus'):
+        super(AdaptivePreprocessingLayer, self).__init__(cache_size=1)
+
+        self.input_dim = input_dim
+
+        # initialise all the layers
+        self.shift = AdaptiveShift(input_dim, init_sigma)
+        self.scale = AdaptiveScale(input_dim, init_sigma)
+        self.outlier_removal = AdaptiveOutlierRemoval(input_dim, init_sigma, outlier_removal_residual_connection, outlier_removal_mode)
+        self.power_transfrom = AdaptivePowerTransform(input_dim, init_sigma, eps)
+
+        # create the list of transformations
+        transform_list = [
+            self.outlier_removal,
+            self.shift,
+            self.scale,
+            self.power_transform
+        ]
+        if invert_bijector:
+            transform_list = [InvertBijector(t) for t in reversed(transform_list)]
+
+        # compose our final bijector for internal use
+        self.bijector = dist.torch_transform.ComposeTransformModule(transform_list)
+
+
+    def _params(self):
+        return self.shift._params(), self.scale._params(), self.outlier_removal._params(), self.power_transform._params()
+
+
+    def _call(self, x):
+        return self.bijector(x)
+
+
+    def _inverse(self, x):
+        return self.bijector.inv(x)
+
+
+    def log_abs_det_jacobian(self, x, y):
+        return self.bijector.log_abs_det_jacobian(x, y)
+
+
+    def to(self, **kwargs):
+        # to ensure bijector is moved to specified device when doing .to(DEV)
+        module = super(AdaptivePreprocessingLayerm, self).to(**kwargs)
+        module.bijector = self.bijector.to(**kwargs)
+        return module
+
+
+    def get_norm_flow(dev):
+        base_dist = dist.Normal(torch.zeros(self.input_dim, device=dev), torch.ones(self.input_dim, device=dev)).to_event(1)
+        return dist.TransformedDistribution(base_dist, [self])
+
+    def get_optimizer_param_dict(base_lr, scale_lr, shift_lr, outlier_lr, power_lr):
+        return {
+            'parameters' : self.
+        }
