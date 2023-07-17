@@ -98,6 +98,8 @@ def transform_data(bijector, data_loader, batch_preprocess_fn=None, batch_postpr
     X_processed = []
     y_processed = []
 
+    dev = next(bijector.parameters()).device
+
     if batch_preprocess_fn is None:
         batch_preprocess_fn = lambda x : x
     if batch_postprocess_fn is None:
@@ -106,7 +108,7 @@ def transform_data(bijector, data_loader, batch_preprocess_fn=None, batch_postpr
 
     for X, y in tqdm(data_loader):
         with torch.no_grad():
-            X_in = batch_preprocess_fn(X).to(DEV)
+            X_in = batch_preprocess_fn(X).to(dev)
             X_out = bijector.inv(X_in).detach().cpu()
 
             if not torch.all(torch.isfinite(X_out)):

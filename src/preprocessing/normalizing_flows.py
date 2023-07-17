@@ -144,7 +144,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         if self.mode == 'exp':
             beta = torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.self.log_cutoff)
+            beta = F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
@@ -165,7 +165,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         if self.mode == 'exp':
             beta = torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.self.log_cutoff)
+            beta = F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
@@ -185,7 +185,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         if self.mode == 'exp':
             beta = torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.self.log_cutoff)
+            beta = F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
@@ -204,7 +204,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         if self.mode == 'exp':
             beta = torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.self.log_cutoff)
+            beta = F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
@@ -290,11 +290,6 @@ class AdaptivePowerTransform(dist.torch_transform.TransformModule):
         if torch.any(~pos_x & pos_l2):
             out[~pos_x & pos_l2] = -torch.log1p(torch.abs(x[~pos_x & pos_l2]))
 
-        # print("Max and min")
-        # print(torch.max(out))
-        # print(torch.min(out))
-        # print("Output:")
-        # print(out)
         _validate_tensor(out, "Power Transform forward: ")
 
         return out
@@ -418,27 +413,34 @@ class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
         self.input_dim = input_dim
 
         # initialise all the layers
-        self.shift = AdaptiveShift(input_dim, init_sigma)
-        self.scale = AdaptiveScale(input_dim, init_sigma)
-        self.outlier_removal = AdaptiveOutlierRemoval(input_dim, init_sigma, outlier_removal_residual_connection, outlier_removal_mode)
-        self.power_transfrom = AdaptivePowerTransform(input_dim, init_sigma, eps)
+        self.shift, self.scale, self.outlier_removal, self.power_transform = None, None, None, None
+        if adaptive_shift:
+            self.shift = AdaptiveShift(input_dim, init_sigma)
+        if adaptive_scale:
+            self.scale = AdaptiveScale(input_dim, init_sigma)
+        if adaptive_outlier_removal:
+            self.outlier_removal = AdaptiveOutlierRemoval(input_dim, init_sigma, outlier_removal_residual_connection, outlier_removal_mode)
+        if adaptive_power_transform:
+            self.power_transform = AdaptivePowerTransform(input_dim, init_sigma, eps)
 
         # create the list of transformations
-        transform_list = [
+        self.transform_list = [
             self.outlier_removal,
             self.shift,
             self.scale,
             self.power_transform
         ]
+        # remove the Nones
+        self.transform_list = [t for t in self.transform_list if t is not None]
         if invert_bijector:
-            transform_list = [InvertBijector(t) for t in reversed(transform_list)]
+            self.transform_list = [InvertBijector(t) for t in reversed(self.transform_list)]
 
         # compose our final bijector for internal use
-        self.bijector = dist.torch_transform.ComposeTransformModule(transform_list)
+        self.bijector = dist.torch_transform.ComposeTransformModule(self.transform_list)
 
 
     def _params(self):
-        return self.shift._params(), self.scale._params(), self.outlier_removal._params(), self.power_transform._params()
+        return [t.parameters() for t in self.transform_list]
 
 
     def _call(self, x):
@@ -453,18 +455,32 @@ class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
         return self.bijector.log_abs_det_jacobian(x, y)
 
 
-    def to(self, **kwargs):
+    def to(self, device):
         # to ensure bijector is moved to specified device when doing .to(DEV)
-        module = super(AdaptivePreprocessingLayerm, self).to(**kwargs)
-        module.bijector = self.bijector.to(**kwargs)
+        module = super(AdaptivePreprocessingLayer, self).to(device)
+        module.bijector = self.bijector.to(device)
         return module
 
 
-    def get_norm_flow(dev):
+    def get_norm_flow(self, dev):
         base_dist = dist.Normal(torch.zeros(self.input_dim, device=dev), torch.ones(self.input_dim, device=dev)).to_event(1)
         return dist.TransformedDistribution(base_dist, [self])
 
-    def get_optimizer_param_dict(base_lr, scale_lr, shift_lr, outlier_lr, power_lr):
-        return {
-            'parameters' : self.
-        }
+    def get_optimizer_param_list(self, base_lr, scale_lr, shift_lr, outlier_lr, power_lr):
+        """
+        Usage:
+        param_list = get_optimizer_param_dict(base_lr, ...)
+        optim = torch.optim.Adam(param_list, lr=base_lr)
+        """
+        param_list = []
+
+        if self.outlier_removal is not None:
+            param_list.append({'params' : self.outlier_removal.parameters(), 'lr' : base_lr * outlier_lr})
+        if self.shift is not None:
+            param_list.append({'params' : self.shift.parameters(), 'lr' : base_lr * shift_lr})
+        if self.scale is not None:
+            param_list.append({'params' : self.scale.parameters(), 'lr' : base_lr * scale_lr})
+        if self.power_transform is not None:
+            param_list.append({'params' : self.power_transform.parameters(), 'lr' : base_lr * power_lr})
+
+        return param_list
