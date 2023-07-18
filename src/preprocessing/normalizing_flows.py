@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+import sklearn
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +10,7 @@ import pyro.distributions.transforms as T
 
 from tqdm.auto import tqdm
 from src.lib import experimentation
-from src.lib.bijector_util import _validate_tensor
+from src.lib.bijector_util import _validate_tensor, fit_bijector, transform_data
 
 class AdaptiveScale(dist.torch_transform.TransformModule):
     """
@@ -484,3 +485,89 @@ class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
             param_list.append({'params' : self.power_transform.parameters(), 'lr' : base_lr * power_lr})
 
         return param_list
+
+
+class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
+    """
+    Note: for making the sklearn thing for the monotonic normalizing flow model, can just
+    subclass this and override relevant methods...
+
+    :param bijector_fit_kwargs: should contain the following keys: base_lr, scale_lr, ..., dev
+    :param bijector_kwargs: dictionary that is passed on to the internal _get_bijector function
+    """
+    def __init__(self, time_series_length=13, input_dim, bijector_kwargs, bijector_fit_kwargs):
+        self.T = time_series_length
+        self.D = input_dim
+
+        # Merge and unmerge D and T dimensions
+        self.batch_preprocess_fn = lambda x : x.flatten(1, 2)
+        self.batch_postprocess_fn = lambda _, x_out : x_out.unflatten(1, (self.T, self.D))
+        # bijector and its various fit arguments
+        self.bijector = self._get_bijector(**bijector_kwargs)
+        self.fit_kwargs = bijector_fit_kwargs
+
+    def fit(self, X, y=None):
+        assert X.shape == (X.shape[0], self.T, self.D)
+        # do a 80%-20% train-validation split
+        batch_size = self.fit_kwargs['batch_size']
+        N = X.shape[0]
+        train_loader = torch.utils.data.DataLoader(
+            dataset=torch.utils.data.TensorDataset(
+                torch.from_numpy(X[:int(N*0.8)]).type(torch.float32),
+                torch.from_numpy(y[:int(N*0.8)]).type(torch.float32)
+            ), batch_size=batch_size, shuffle = True)
+        val_loader = torch.utils.data.DataLoader(
+            dataset=torch.utils.data.TensorDataset(
+                torch.from_numpy(X[int(N*0.8):]).type(torch.float32),
+                torch.from_numpy(y[int(N*0.8):]).type(torch.float32)
+                ), batch_size=batch_size, shuffle = True)
+        # fit the bijector
+        self._fit_bijector(train_loader, val_loader)
+        return self
+
+
+    def _get_bijector(self, **kwargs):
+        return AdaptivePreprocessingLayer(self.D, **kwargs)
+
+
+    def _fit_bijector(self, train_loader, val_loader):
+        """
+        If subclassing this module, override this method.
+        """
+        # extract various fit kwargs
+        dev = self.fit_kwargs['device']
+        milestones = self.fit_kwargs['milestones']
+        num_epochs = self.fit_kwargs['num_epochs']
+        param_lr_list = {
+            k : self.fit_kwargs[k] for k in ('base_lr', 'scale_lr', 'shift_lr', 'outlier_lr', 'power_lr')
+        }
+
+        # setup optimizer
+        optimizer = torch.optim.Adam(
+            params=self.bijector.get_optimizer_param_list(**param_lr_list)
+        )
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
+        # optimizer = torch.optim.Adam(
+        #     params=bijector.get_optimizer_param_list(base_lr, 10, 10, 1e-1, 1e-3),
+        #     lr=base_lr,
+        # )
+
+        # setup flow and preprocessing functions
+        base_dist = dist.Normal(torch.zeros(self.D * self.T, device=dev), torch.ones(self.D * self.T, device=dev)).to_event(1)
+        bijector = bijector.to(dev)
+        # fit the bijector using specified parameters
+        fit_bijector(self.bijector, base_dist, train_loader, val_loader, optimizer=optimizer,
+                scheduler=scheduler, batch_preprocess_fn=self.batch_preprocess_fn,
+                num_epochs=num_epochs, inverse_fit=False, max_errors_ignore=5)
+
+    def transform(self, X):
+        assert X.shape == (X.shape[0], self.T, self.D)
+
+        data_loader = torch.utils.data.DataLoader(
+            dataset=torch.utils.data.TensorDataset(
+                torch.from_numpy(X.type(torch.float32),
+                torch.zeros(X.shape[0]).type(torch.float32)
+            ), batch_size=self.fit_kwargs['batch_size'], shuffle=False, drop_last=False)
+        # use the utility function to transform all of our data
+        X_transformed, _ = transform_data(self.bijector, data_loader, self.batch_preprocess_fn, self.batch_postprocess_fn)
+        return X_transformed

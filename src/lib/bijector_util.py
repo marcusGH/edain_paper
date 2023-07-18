@@ -38,7 +38,7 @@ def get_iaf_bijector(num_layers, scale_and_shift_dims, input_dim, dev, random_st
 
     return T.ComposeTransformModule(transforms)
 
-def fit_bijector(bijector, base_dist, train_loader, num_epochs=3, optimizer=None, scheduler=None, early_stopper=None, batch_preprocess_fn=None, inverse_fit=False, max_errors_ignore=20):
+def fit_bijector(bijector, base_dist, train_loader, val_loader=None, num_epochs=3, optimizer=None, scheduler=None, early_stopper=None, batch_preprocess_fn=None, inverse_fit=False, max_errors_ignore=20):
     """
     Set scheduler or early_stopper to "False" to disable them. Leaving as None uses default values
     """
@@ -50,14 +50,18 @@ def fit_bijector(bijector, base_dist, train_loader, num_epochs=3, optimizer=None
     if scheduler is None:
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [2, 3], gamma=0.1)
     if early_stopper is None:
-        early_stopper = experimentation.EarlyStopper(patience=100)
+        early_stopper = experimentation.EarlyStopper(patience=1)
     if batch_preprocess_fn is None:
         batch_preprocess_fn = lambda x : x
 
-    stop = False
 
-    for epoch_idx in tqdm(range(num_epochs), desc="Fitting bijector"):
-        for X, _ in (pbar := tqdm(train_loader)):
+    for epoch_idx in (pbar_outer := tqdm(range(num_epochs), desc="Fitting bijector")):
+        running_loss = 0.0
+        running_vloss = 0.0 if val_loader is not None else float("inf")
+
+        # train one epoch
+        bijector.train(True)
+        for i, (X, _) in (pbar := tqdm(enumerate(train_loader), total=len(train_loader))):
             try:
                 X = batch_preprocess_fn(X).to(dev)
                 # compute loss and update gradients
@@ -69,11 +73,11 @@ def fit_bijector(bijector, base_dist, train_loader, num_epochs=3, optimizer=None
                     loss = -flow_dist.log_prob(X).mean()
                 loss.backward()
                 optimizer.step()
-                # check for early stopping and report
-                pbar.set_description(f"Bijector loss : {loss.detach().cpu().item():.4f}")
-                if early_stopper and early_stopper.early_stop(loss.detach().cpu().item()):
-                    stop = True
-                    break
+
+                # save copy for reporting
+                running_loss += loss.item()
+                pbar.set_description(f"Bijector train loss: {running_loss/(i+1):.4f}")
+
                 # gc
                 flow_dist.clear_cache()
                 del X, loss
@@ -84,10 +88,37 @@ def fit_bijector(bijector, base_dist, train_loader, num_epochs=3, optimizer=None
                 if max_errors_ignore <= 0:
                     raise e
                 continue
+        # update running loss to be average batch loss
+        running_loss /= (i + 1)
+
+        # evaluate on evaluation data
+        if val_loader is not None:
+            bijector.eval()
+            with torch.no_grad():
+                for i, (X, _) in enumerate(val_loader):
+                    X = batch_preprocess_fn(X).to(dev)
+                    if inverse_fit:
+                        z = bijector.inv(X)
+                        loss = -base_dist.log_prob(z).mean()
+                    else:
+                        loss = -flow_dist.log_prob(X).mean()
+                    # save copy for reporting
+                    running_vloss += loss.item()
+
+                    # gc
+                    flow_dist.clear_cache()
+                    del X, loss
+                running_vloss /= (i + 1)
+
         # at end of each epoch, step scheduler
         if scheduler:
             scheduler.step()
-        if stop:
+        # update progress bar
+        if val_loader is None:
+            running_vloss = running_loss
+        pbar_outer.set_description(f"Bijector train loss: {running_loss:.4f} validation loss: {running_vloss:.4f}")
+        # check for early stoppping
+        if early_stopper and early_stopper.early_stop(running_vloss):
             break
 
 def transform_data(bijector, data_loader, batch_preprocess_fn=None, batch_postprocess_fn=None) -> (np.ndarray, np.ndarray):
