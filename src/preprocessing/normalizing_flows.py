@@ -495,7 +495,7 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
     :param bijector_fit_kwargs: should contain the following keys: base_lr, scale_lr, ..., dev
     :param bijector_kwargs: dictionary that is passed on to the internal _get_bijector function
     """
-    def __init__(self, time_series_length=13, input_dim, bijector_kwargs, bijector_fit_kwargs):
+    def __init__(self, time_series_length, input_dim, bijector_kwargs, bijector_fit_kwargs):
         self.T = time_series_length
         self.D = input_dim
 
@@ -527,7 +527,7 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
 
 
     def _get_bijector(self, **kwargs):
-        return AdaptivePreprocessingLayer(self.D, **kwargs)
+        return AdaptivePreprocessingLayer(self.D * self.T, **kwargs)
 
 
     def _fit_bijector(self, train_loader, val_loader):
@@ -554,18 +554,18 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
 
         # setup flow and preprocessing functions
         base_dist = dist.Normal(torch.zeros(self.D * self.T, device=dev), torch.ones(self.D * self.T, device=dev)).to_event(1)
-        bijector = bijector.to(dev)
+        self.bijector = self.bijector.to(dev)
         # fit the bijector using specified parameters
         fit_bijector(self.bijector, base_dist, train_loader, val_loader, optimizer=optimizer,
                 scheduler=scheduler, batch_preprocess_fn=self.batch_preprocess_fn,
-                num_epochs=num_epochs, inverse_fit=False, max_errors_ignore=5)
+                num_epochs=num_epochs, inverse_fit=False, max_errors_ignore=float("inf"))
 
     def transform(self, X):
         assert X.shape == (X.shape[0], self.T, self.D)
 
         data_loader = torch.utils.data.DataLoader(
             dataset=torch.utils.data.TensorDataset(
-                torch.from_numpy(X.type(torch.float32),
+                torch.from_numpy(X).type(torch.float32),
                 torch.zeros(X.shape[0]).type(torch.float32)
             ), batch_size=self.fit_kwargs['batch_size'], shuffle=False, drop_last=False)
         # use the utility function to transform all of our data

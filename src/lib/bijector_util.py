@@ -83,6 +83,7 @@ def fit_bijector(bijector, base_dist, train_loader, val_loader=None, num_epochs=
                 del X, loss
             except ValueError as e:
                 warnings.warn("Skipping a batch due to value errors during training: " + str(e), RuntimeWarning)
+                flow_dist.clear_cache()
                 del X
                 max_errors_ignore -= 1
                 if max_errors_ignore <= 0:
@@ -137,7 +138,7 @@ def transform_data(bijector, data_loader, batch_preprocess_fn=None, batch_postpr
         batch_postprocess_fn = lambda x : x
     dev = next(bijector.parameters()).device
 
-    for X, y in tqdm(data_loader):
+    for X, y in tqdm(data_loader, desc="Transforming data using bijector"):
         with torch.no_grad():
             X_in = batch_preprocess_fn(X).to(dev)
             X_out = bijector.inv(X_in).detach().cpu()
