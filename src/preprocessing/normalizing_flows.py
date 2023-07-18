@@ -73,7 +73,6 @@ class AdaptiveShift(dist.torch_transform.TransformModule):
         )
 
     def _params(self):
-        # s = torch.exp(self.log_scale)
         return self.shift
 
     def _call(self, x):
@@ -108,7 +107,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    def __init__(self, input_dim, init_sigma=0.1, residual_connection=True, mode='exp'):
+    def __init__(self, input_dim, init_sigma=0.1, residual_connection=True, mode='exp', min_beta=1.):
         super(AdaptiveOutlierRemoval, self).__init__(cache_size=1)
 
         self.input_dim = input_dim
@@ -116,8 +115,10 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         # or an exponential function, depending on the mode
         assert mode in ['exp', 'softplus']
         self.mode = mode
+        # for mode=exp, this puts the initial beta at min_beta + exp(1) = 3.71,
+        #   which is similar to not applying a tanh activation at all.
         self.log_cutoff = nn.Parameter(
-            torch.randn(self.input_dim) * init_sigma
+            1. + torch.randn(self.input_dim) * init_sigma
         )
 
         # skip-parameter, before applying sigmoid
@@ -126,6 +127,11 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             self.alpha = nn.Parameter(
                 torch.randn(self.input_dim) * init_sigma
             )
+
+        # keep track of running mean for shifting in forward transformation
+        self.running_mean = torch.zeros(input_dim)
+        self.running_n = torch.tensor(0)
+        self.min_beta = torch.tensor(min_beta)
 
     def _params(self):
         if self.alpha is None:
@@ -142,14 +148,26 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         _validate_tensor(x, "Outlier removal input: ")
 
+        # update running mean
+        if self.training:
+            # move internal tensors to the correct GPU if necessary
+            if self.running_n.device != x.device:
+                self.running_mean = self.running_mean.to(x.device)
+                self.running_n = self.running_n.to(x.device)
+                self.min_beta = self.min_beta.to(x.device)
+            # update using cumulative moving average
+            sum_x = self.running_mean * self.running_n + torch.sum(x.detach(), 0)
+            self.running_n += x.size(0)
+            self.running_mean = sum_x / self.running_n
+
         if self.mode == 'exp':
-            beta = torch.exp(self.log_cutoff)
+            beta = self.min_beta + torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.log_cutoff)
+            beta = self.min_beta + F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
-        x_tanh = beta * torch.tanh(x / beta)
+        x_tanh = beta * torch.tanh((x - self.running_mean) / beta) + self.running_mean
         if self.alpha is not None:
             y = (1. - torch.sigmoid(self.alpha)) * x + torch.sigmoid(self.alpha) * x_tanh
         else:
@@ -164,13 +182,13 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             raise NotImplementedError("There is not analytical expression for inverting adaptive outlier removal transformation when using a residual connection")
 
         if self.mode == 'exp':
-            beta = torch.exp(self.log_cutoff)
+            beta = self.min_beta + torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.log_cutoff)
+            beta = self.min_beta + F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
-        return torch.atanh(y / beta) * beta
+        return torch.atanh((y - self.running_mean) / beta) * beta + self.running_mean
 
     def log_abs_det_jacobian(self, x, y):
         """
@@ -184,13 +202,14 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             raise NotImplementedError("There is not analytical expression for log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
 
         if self.mode == 'exp':
-            beta = torch.exp(self.log_cutoff)
+            beta = self.min_beta + torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.log_cutoff)
+            beta = self.min_beta + F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
-        ladj = 2. * (np.log(2.) - x / beta - F.softplus(-2. * x / beta))
+        x_prime = (x - self.running_mean) / beta
+        ladj = 2. * (np.log(2.) - x_prime - F.softplus(-2. * x_prime))
         # determinant of diagonal matrix is just sum since we're taking logs
         return torch.sum(ladj, axis=-1)
 
@@ -203,9 +222,9 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             raise NotImplementedError("There is not analytical expression for inverse log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
 
         if self.mode == 'exp':
-            beta = torch.exp(self.log_cutoff)
+            beta = self.min_beta + torch.exp(self.log_cutoff)
         elif self.mode == 'softplus':
-            beta = F.softplus(self.log_cutoff)
+            beta = self.min_beta + F.softplus(self.log_cutoff)
         else:
             raise NotImplementedError("Invalid mode: " + self.mode)
 
@@ -226,7 +245,7 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         #  = (case 1: 1 + y' < 0)  -log(-y' - 1)
         #    (case 2: 1 + y' > 0)  -log1p(y')
         # (For cases where y' is numerically close to -1 or 1, clip gradient to 0 and don't apply log)
-        y_prime = y * beta
+        y_prime = (y - self.running_mean) / beta
         iladj = torch.zeros_like(y)
         # Part 1: case 1
         iladj[1. < y_prime] -= torch.log(y_prime[1. < y_prime] - 1.)
@@ -503,7 +522,8 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
         self.batch_preprocess_fn = lambda x : x.flatten(1, 2)
         self.batch_postprocess_fn = lambda _, x_out : x_out.unflatten(1, (self.T, self.D))
         # bijector and its various fit arguments
-        self.bijector = self._get_bijector(**bijector_kwargs)
+        self.bijector_kwargs = bijector_kwargs
+        # self.bijector = self._get_bijector(**bijector_kwargs)
         self.fit_kwargs = bijector_fit_kwargs
 
     def fit(self, X, y=None):
@@ -511,18 +531,28 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
         # do a 80%-20% train-validation split
         batch_size = self.fit_kwargs['batch_size']
         N = X.shape[0]
-        train_loader = torch.utils.data.DataLoader(
-            dataset=torch.utils.data.TensorDataset(
-                torch.from_numpy(X[:int(N*0.8)]).type(torch.float32),
-                torch.from_numpy(y[:int(N*0.8)]).type(torch.float32)
-            ), batch_size=batch_size, shuffle = True)
-        val_loader = torch.utils.data.DataLoader(
-            dataset=torch.utils.data.TensorDataset(
-                torch.from_numpy(X[int(N*0.8):]).type(torch.float32),
-                torch.from_numpy(y[int(N*0.8):]).type(torch.float32)
+
+        best_bijector = None
+        best_loss = float("inf")
+        for _ in range(10):
+            train_loader = torch.utils.data.DataLoader(
+                dataset=torch.utils.data.TensorDataset(
+                    torch.from_numpy(X[:int(N*0.8)]).type(torch.float32),
+                    torch.from_numpy(y[:int(N*0.8)]).type(torch.float32)
                 ), batch_size=batch_size, shuffle = True)
-        # fit the bijector
-        self._fit_bijector(train_loader, val_loader)
+            val_loader = torch.utils.data.DataLoader(
+                dataset=torch.utils.data.TensorDataset(
+                    torch.from_numpy(X[int(N*0.8):]).type(torch.float32),
+                    torch.from_numpy(y[int(N*0.8):]).type(torch.float32)
+                    ), batch_size=batch_size, shuffle = True)
+            # val_loader = train_loader
+            # fit the bijector
+            self.bijector = self._get_bijector(**self.bijector_kwargs)
+            vloss = self._fit_bijector(train_loader, val_loader)
+            if vloss < best_loss:
+                best_loss = vloss
+                best_bijector = self.bijector
+        self.bijector = best_bijector
         return self
 
 
@@ -547,18 +577,13 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
             params=self.bijector.get_optimizer_param_list(**param_lr_list)
         )
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
-        # optimizer = torch.optim.Adam(
-        #     params=bijector.get_optimizer_param_list(base_lr, 10, 10, 1e-1, 1e-3),
-        #     lr=base_lr,
-        # )
-
         # setup flow and preprocessing functions
         base_dist = dist.Normal(torch.zeros(self.D * self.T, device=dev), torch.ones(self.D * self.T, device=dev)).to_event(1)
         self.bijector = self.bijector.to(dev)
         # fit the bijector using specified parameters
-        fit_bijector(self.bijector, base_dist, train_loader, val_loader, optimizer=optimizer,
+        return fit_bijector(self.bijector, base_dist, train_loader, val_loader, optimizer=optimizer,
                 scheduler=scheduler, batch_preprocess_fn=self.batch_preprocess_fn,
-                num_epochs=num_epochs, inverse_fit=False, max_errors_ignore=float("inf"))
+                num_epochs=num_epochs, inverse_fit=False, max_errors_ignore=25)
 
     def transform(self, X):
         assert X.shape == (X.shape[0], self.T, self.D)

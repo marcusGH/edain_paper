@@ -22,19 +22,20 @@ class MinMaxAdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, 
             'adaptive_shift' : True,
             'adaptive_scale' : True,
             'adaptive_outlier_removal' : True,
-            'adaptive_power_transform' : True,
+            'adaptive_power_transform' : False,
+            'outlier_removal_mode' : 'exp',
         }
         bijector_fit_kwargs = {
-                'batch_size' : 1024,
-                'device' : torch.device('cuda', 4),
-                'milestones' : [3, 6],
-                'num_epochs' : 5,
-                # learning rates
-                'base_lr' : 1e-3,
-                'scale_lr' : 10,
-                'shift_lr' : 10,
-                'outlier_lr' : 1e-1,
-                'power_lr' : 1e-7,
+            'batch_size' : 1024,
+            'device' : torch.device('cuda', 4),
+            'milestones' : [3, 7],
+            'num_epochs' : 20,
+            # learning rates
+            'base_lr' : 1e-3,
+            'scale_lr' : 10,
+            'shift_lr' : 10,
+            'outlier_lr' : 1,
+            'power_lr' : 1e-7,
         }
         self.min_max = MinMaxTimeSeries(time_series_length=time_series_length)
         self.adaptive_layer = AdaptivePreprocessingLayerTimeSeries(time_series_length, input_dim, bijector_kwargs, bijector_fit_kwargs)
@@ -52,8 +53,8 @@ class MinMaxAdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, 
 if __name__ == "__main__":
     import src.experiments.static_preprocessing_methods.experiment_setup as setup
 
-    torch.manual_seed(42)
-    np.random.seed(42)
+    torch.manual_seed(101)
+    np.random.seed(101)
 
     history = experimentation.cross_validate_model(
         model=setup.model,
@@ -67,4 +68,4 @@ if __name__ == "__main__":
         device_ids=[4],
     )
 
-    np.save(os.path.join(cfg['experiment_directory'], 'adaptive-preprocessing-kl.npy'), history)
+    np.save(os.path.join(cfg['experiment_directory'], 'adaptive-preprocessing-kl-4.npy'), history)

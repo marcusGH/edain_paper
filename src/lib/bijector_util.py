@@ -50,7 +50,7 @@ def fit_bijector(bijector, base_dist, train_loader, val_loader=None, num_epochs=
     if scheduler is None:
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [2, 3], gamma=0.1)
     if early_stopper is None:
-        early_stopper = experimentation.EarlyStopper(patience=1)
+        early_stopper = experimentation.EarlyStopper(patience=2)
     if batch_preprocess_fn is None:
         batch_preprocess_fn = lambda x : x
 
@@ -121,6 +121,7 @@ def fit_bijector(bijector, base_dist, train_loader, val_loader=None, num_epochs=
         # check for early stoppping
         if early_stopper and early_stopper.early_stop(running_vloss):
             break
+    return running_vloss
 
 def transform_data(bijector, data_loader, batch_preprocess_fn=None, batch_postprocess_fn=None) -> (np.ndarray, np.ndarray):
     """
