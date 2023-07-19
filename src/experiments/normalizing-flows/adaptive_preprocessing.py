@@ -68,4 +68,4 @@ if __name__ == "__main__":
         device_ids=[4],
     )
 
-    np.save(os.path.join(cfg['experiment_directory'], 'adaptive-preprocessing-kl-4.npy'), history)
+    np.save(os.path.join(cfg['experiment_directory'], 'adaptive-preprocessing-kl-6-inverse.npy'), history)

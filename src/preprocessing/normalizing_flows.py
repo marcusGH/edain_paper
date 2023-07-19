@@ -9,6 +9,7 @@ import pyro.distributions as dist
 import pyro.distributions.transforms as T
 
 from tqdm.auto import tqdm
+from sklearn.model_selection import train_test_split
 from src.lib import experimentation
 from src.lib.bijector_util import _validate_tensor, fit_bijector, transform_data
 
@@ -159,6 +160,9 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             sum_x = self.running_mean * self.running_n + torch.sum(x.detach(), 0)
             self.running_n += x.size(0)
             self.running_mean = sum_x / self.running_n
+
+            # TODO: temporary experiment, remove later
+            # self.running_mean = torch.mean(x.detach(), 0)
 
         if self.mode == 'exp':
             beta = self.min_beta + torch.exp(self.log_cutoff)
@@ -534,18 +538,20 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
 
         best_bijector = None
         best_loss = float("inf")
-        for _ in range(10):
+        for _ in range(4):
+            X_train, X_val, y_train, y_val = train_test_split(
+                X, y, test_size=0.2, shuffle=True
+            )
             train_loader = torch.utils.data.DataLoader(
                 dataset=torch.utils.data.TensorDataset(
-                    torch.from_numpy(X[:int(N*0.8)]).type(torch.float32),
-                    torch.from_numpy(y[:int(N*0.8)]).type(torch.float32)
+                    torch.from_numpy(X_train).type(torch.float32),
+                    torch.from_numpy(y_train).type(torch.float32)
                 ), batch_size=batch_size, shuffle = True)
             val_loader = torch.utils.data.DataLoader(
                 dataset=torch.utils.data.TensorDataset(
-                    torch.from_numpy(X[int(N*0.8):]).type(torch.float32),
-                    torch.from_numpy(y[int(N*0.8):]).type(torch.float32)
+                    torch.from_numpy(X_val).type(torch.float32),
+                    torch.from_numpy(y_val).type(torch.float32)
                     ), batch_size=batch_size, shuffle = True)
-            # val_loader = train_loader
             # fit the bijector
             self.bijector = self._get_bijector(**self.bijector_kwargs)
             vloss = self._fit_bijector(train_loader, val_loader)
