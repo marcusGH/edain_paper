@@ -11,17 +11,19 @@ with open("config.yaml") as f:
     cfg = yaml.load(f, Loader=yaml.FullLoader)
 
 class MinMaxTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
-    def __init__(self, a=0, b=1, time_series_length=13):
+    def __init__(self, time_series_length=13, a=0, b=1):
         self.T = time_series_length
         self.min_max_scaler = preprocessing.MinMaxScaler(feature_range=(a, b))
 
     def fit(self, X, y = None):
+        assert X.shape[1] == self.T
         # merge the dimensions and time axis
         X = X.reshape((X.shape[0], -1))
         self.min_max_scaler.fit(X, y)
         return self
 
     def transform(self, X):
+        assert X.shape[1] == self.T
         X = X.reshape((X.shape[0], -1))
         # scale all the features
         X = self.min_max_scaler.transform(X)

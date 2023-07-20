@@ -16,11 +16,13 @@ class TanhStandardScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.B
         self.T = time_series_length
 
     def fit(self, X, y = None):
+        assert X.shape[1] == self.T
         X = X.reshape((X.shape[0], -1))
         self.ss.fit(X, y)
         return self
 
     def transform(self, X):
+        assert X.shape[1] == self.T
         X = X.reshape((X.shape[0], -1))
         X = self.ss.transform(X)
         X = X.reshape((X.shape[0], self.T, -1))
