@@ -8,9 +8,7 @@ import pyro
 import pyro.distributions as dist
 import pyro.distributions.transforms as T
 
-from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
-from src.lib import experimentation
 from src.lib.bijector_util import _validate_tensor, fit_bijector, transform_data
 
 class AdaptiveScale(dist.torch_transform.TransformModule):
@@ -481,7 +479,7 @@ class EDAIN_Layer(dist.torch_transform.TransformModule):
 
     def to(self, device):
         # to ensure bijector is moved to specified device when doing .to(DEV)
-        module = super(AdaptivePreprocessingLayer, self).to(device)
+        module = super(EDAIN_Layer, self).to(device)
         module.bijector = self.bijector.to(device)
         return module
 

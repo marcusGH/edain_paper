@@ -2,6 +2,7 @@
 ---
 # General dataset configuration
 num_categorical_features: 11
+time_series_length: 13
 data_loader:
   batch_size: 1024
   shuffle: false

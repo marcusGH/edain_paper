@@ -15,7 +15,7 @@ with open(os.path.join("config.yaml")) as f:
     cfg = yaml.load(f, Loader=yaml.FullLoader)
 
 class AdaptiveGRUNet(nn.Module):
-    def __init__(self, adaptive_layer_init_fn, num_features, hidden_dim, layer_dim, emb_dim, num_cat_columns = 11, time_series_length = 13, dropout_prob = 0.2):
+    def __init__(self, adaptive_layer_init_fn, num_features, hidden_dim, layer_dim, embedding_dim, num_cat_columns = 11, time_series_length = 13, dropout_prob = 0.2):
         """
         This model takes input of shape (N, T, D) and returns probabilities of shape (N,)
 
@@ -36,11 +36,11 @@ class AdaptiveGRUNet(nn.Module):
         # the layers we need
         emb_layers = []
         for k in range(num_cat_columns):
-            emb_layers.append(nn.Embedding(10, emb_dim))
+            emb_layers.append(nn.Embedding(10, embedding_dim))
         self.emb_layers = nn.ModuleList(emb_layers)
 
         self.gru = nn.GRU(
-            input_size = num_features - num_cat_columns + num_cat_columns * emb_dim,
+            input_size =num_features - num_cat_columns + num_cat_columns * embedding_dim,
             hidden_size = hidden_dim,
             num_layers = layer_dim,
             batch_first = True,

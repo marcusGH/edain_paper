@@ -194,6 +194,8 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
     #     if len(gpu_ids) == num_gpus:
     #         break
 
+    if isinstance(device_ids, torch.device):
+        dev = device_ids
     if device_ids == "cpu":
         dev = torch.device('cpu')
     elif device_ids is not None and len(device_ids) > 1:
@@ -272,6 +274,97 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
     pbar.refresh()
 
     return history
+
+def cross_validate_experiment(
+        model_init_fn,
+        preprocess_init_fn,
+        optimizer_init_fn,
+        scheduler_init_fn,
+        early_stopper_init_fn,
+        loss_fn,
+        X,
+        y,
+        num_epochs,
+        dataloader_kwargs,
+        num_folds,
+        device,
+        random_state,
+    ):
+    """
+    Cross-validates the provided model on provided data with provided preprocessing method
+
+    :param model_init_fn: function that returns a model
+    :param preprocess_init_fn: function that returns a preprocessing method
+    :param loss_fn: loss function
+    :param X: np.ndarray of shape (n_samples, n_timesteps, n_features)
+    :param y: np.ndarray of labels of shape (n_samples,)
+    :param num_folds: number of folds to use
+    :param device: device to use for training
+    :param random_state: random state to use for splitting data
+    """
+    history_metrics = {
+        "train_loss": [None] * len(num_folds),
+        "val_loss": [None] * len(num_folds),
+        "train_amex_metric": [None] * len(num_folds),
+        "val_amex_metric": [None] * len(num_folds),
+    }
+    history_num_epochs = [None] * len(num_folds)
+
+    # split data into folds
+    kf = sklearn.model_selection.KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
+    for i, (train_idx, val_idx) in tqdm(enumerate(kf.split(X, y)), desc="Cross-validating model", total=num_folds):
+        # get data
+        X_train, y_train = X[train_idx], y[train_idx]
+        X_val, y_val = X[val_idx], y[val_idx]
+
+        # preprocess data
+        preprocess = preprocess_init_fn()
+        X_train = preprocess.fit_transform(X_train)
+        X_val = preprocess.transform(X_val)
+
+        # create the data loaders
+        train_loader = torch.utils.data.DataLoader(
+            dataset=torch.utils.data.TensorDataset(
+                torch.from_numpy(X_train).float(),
+                torch.from_numpy(y_train).long(),
+            ),
+            **dataloader_kwargs
+        )
+        val_loader = torch.utils.data.DataLoader(
+            dataset=torch.utils.data.TensorDataset(
+                torch.from_numpy(X_val).float(),
+                torch.from_numpy(y_val).long(),
+            ),
+            **dataloader_kwargs
+        )
+
+        # initialize model as well as optimizer, scheduler, and early stopper
+        model = model_init_fn()
+        optimizer = optimizer_init_fn(model)
+        scheduler = scheduler_init_fn(optimizer)
+        early_stopper = early_stopper_init_fn()
+
+        history = fit_model(
+            model, loss_fn,
+            train_loader, val_loader,
+            optimizer, scheduler,
+            num_epochs, verbose=False,
+            early_stopper=early_stopper, device_ids=device
+        )
+
+        # save metrics
+        for history_key in history_metrics.keys():
+            history_metrics[history_key][i] = np.array(history[history_key])
+        history_num_epochs[i] = len(history['train_loss'])
+
+    hist_keys = list(history_metrics.keys())
+    for history_key in hist_keys:
+        # compute the mean and std of the final value, reducing over folds
+        final_values = [history_metrics[history_key][i][-1] for i in range(len(folds))]
+        history_metrics[f"{history_key}_mean"] = np.mean(final_values)
+        history_metrics[f"{history_key}_sd"] = np.std(final_values)
+    history_metrics['num_epochs'] = history_num_epochs
+    return history_metrics
 
 def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwargs, fill_dict, corrupt_func, preprocess_init_fn,
                          folds = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]],
