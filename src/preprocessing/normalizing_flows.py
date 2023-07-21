@@ -426,13 +426,13 @@ class InvertBijector(dist.torch_transform.TransformModule):
         return self.bijector._inverse_log_abs_det_jacobian(y, x)
 
 
-class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
+class EDAIN_Layer(dist.torch_transform.TransformModule):
     domain = dist.transforms.constraints.real_vector # or just real?
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
     def __init__(self, input_dim, init_sigma=0.1, eps=1e-6, invert_bijector=True, adaptive_shift=True, adaptive_scale=True, adaptive_outlier_removal=True, adaptive_power_transform=True, outlier_removal_residual_connection=False, outlier_removal_mode='softplus'):
-        super(AdaptivePreprocessingLayer, self).__init__(cache_size=1)
+        super(EDAIN_Layer, self).__init__(cache_size=1)
 
         self.input_dim = input_dim
 
@@ -510,7 +510,7 @@ class AdaptivePreprocessingLayer(dist.torch_transform.TransformModule):
         return param_list
 
 
-class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
+class EDAINScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
     """
     Note: for making the sklearn thing for the monotonic normalizing flow model, can just
     subclass this and override relevant methods...
@@ -563,7 +563,7 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
 
 
     def _get_bijector(self, **kwargs):
-        return AdaptivePreprocessingLayer(self.D * self.T, **kwargs)
+        return EDAIN_Layer(self.D * self.T, **kwargs)
 
 
     def _fit_bijector(self, train_loader, val_loader):
@@ -602,3 +602,22 @@ class AdaptivePreprocessingLayerTimeSeries(sklearn.base.TransformerMixin, sklear
         # use the utility function to transform all of our data
         X_transformed, _ = transform_data(self.bijector, data_loader, self.batch_preprocess_fn, self.batch_postprocess_fn)
         return X_transformed
+
+class EDAINScalerTimeSeriesDecorator(EDAINScalerTimeSeries):
+    """
+    Wraps the EDAINScalerTimeSeries with another preprocessing transformation that is applied before the EDAIN layer
+    """
+    def __init__(self, scaler, *args, **kwargs):
+        # initialise the edain scaler
+        super().__init__(*args, **kwargs)
+        self.scaler = scaler
+
+    def fit(self, X, y=None):
+        X = self.scaler.fit_transform(X, y)
+        super().fit(X, y)
+        return self
+
+    def transform(self, X):
+        X = self.scaler.transform(X)
+        X = super().transform(X)
+        return X

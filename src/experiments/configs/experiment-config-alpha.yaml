@@ -1,0 +1,58 @@
+# Experimentation configuration file alpha
+---
+# General dataset configuration
+num_categorical_features: 11
+data_loader:
+  batch_size: 1024
+  shuffle: false
+  drop_last: true
+
+# Configuration for fitting the amex dataset
+fit:
+  train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
+  num_epochs: 50
+  early_stopper_patience: 5
+  early_stopper_min_delta: 0.0
+  optimizer: adam
+  base_lr: 0.001
+  scheduler_milestones: [4, 7]
+  verbose: False
+  loss: bce
+
+# configuration for handling missing values in amex dataset
+fill:
+  nan: -0.5
+  pad_categorical: -2
+  pad_numeric: -1
+
+# Configuration for GRU RNN model
+gru_model:
+  num_features: 188
+  hidden_dim: 128
+  layer_dim: 2
+  embedding_dim: 4
+  dropout_prob: 0.2
+
+# Configuration for the EDAIN Layer
+edain_bijector:
+  init_sigma: 0.3
+  eps: 0.000001
+  adaptive_shift: true
+  adaptive_scale: true
+  adaptive_outlier_removal: true
+  adaptive_power_transform: false
+  outlier_removal_mode: exp
+
+# Configuration for EDAIN layer, when optimised with KL-divergence
+edain_bijector_fit:
+  batch_size: 1024
+  milestones: [3, 7]
+  num_epochs: 20
+  base_lr: 0.001
+  scale_lr: 10
+  shift_lr: 10
+  outlier_lr: 1
+  power_lr: 0.0000001
+
+# End config
+...

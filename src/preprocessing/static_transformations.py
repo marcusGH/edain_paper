@@ -200,8 +200,8 @@ class WinsorizeDecorator(sklearn.base.TransformerMixin, sklearn.base.BaseEstimat
     Before fitting provided transformer winsorizes the data to be within
     the [alpha/2, 1-alpha/2] quantiles of the fitted data.
     """
-    def __init__(self, TransformerClass, alpha=0.05, time_series_length=13, **kwargs):
-        self.transformer = TransformerClass(time_series_length=time_series_length, **kwargs)
+    def __init__(self, scaler, alpha=0.05, time_series_length=13):
+        self.transformer = scaler
         self.T = time_series_length
         self.alpha = alpha
 
@@ -229,8 +229,8 @@ class IgnoreTimeDecorator(sklearn.base.TransformerMixin, sklearn.base.BaseEstima
     """
     Learns the transformation only on the dimension axis, ignore time index
     """
-    def __init__(self, TransformerClass, time_series_length=13, **kwargs):
-        self.transformer = TransformerClass(time_series_length=time_series_length, **kwargs)
+    def __init__(self, scaler, time_series_length=13):
+        self.transformer = scaler
         self.T = time_series_length
         self.D = None
 
