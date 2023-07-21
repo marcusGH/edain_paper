@@ -9,7 +9,7 @@ def identity_corrupt(X, y) -> (np.ndarray, np.ndarray):
     return X, y
 
 class IdentityTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
 
     def fit(self, X, y = None):
