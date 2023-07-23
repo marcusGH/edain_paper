@@ -26,7 +26,8 @@ from src.models.adaptive_grunet import AdaptiveGRUNet
 from src.lib.experimentation import (
     EarlyStopper,
     cross_validate_experiment,
-    load_numpy_amex_data,
+    load_amex_numpy_data,
+    undo_min_max_corrupt_func,
 )
 
 static_preprocessing_methods = {
@@ -146,9 +147,13 @@ if __name__ == '__main__':
 
     # load dataset
     if args.dataset == 'amex':
-        # TODO: refactor load_numpy_data to work with this interface
         # TODO: refactor out dataset-specific config into amex_dataset.yaml file
-        X, y = None, None
+        X, y = load_amex_numpy_data(
+            split_data_dir=main_cfg['data']['split_data_dir'],
+            fill_dict=main_cfg['data']['fill_dict'],
+            corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, args.random_state),
+            num_categorical_features=11
+        )
     else:
         raise ValueError(f"Dataset not supported: {args.dataset}")
 

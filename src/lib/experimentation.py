@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import warnings
 import torch.nn.functional as F
 import numpy as np
 import sklearn
@@ -37,6 +38,22 @@ class EarlyStopper:
         return False
 
 
+# undo the min-max preprocessing
+def undo_min_max_corrupt_func(X, y, random_state=42):
+    """
+    X of shape (num_examples, series_length, num_features)
+    In this undo, we assume scale same for each feature, over temporal scale
+    """
+    # to ensure we get the same mins and scales every time
+    np.random.seed(random_state)
+    # randomize both the starting point and the feature scales
+    mins = np.random.uniform(-1E4, 1E4, size=X.shape[2])[np.newaxis, None]
+    # don't set the smallest scale too tiny, otherwise can lose information due to float 32 bit
+    scales = 10 ** np.random.uniform(-1, 5, size=X.shape[2])[np.newaxis, None]
+
+    X_corrupt = X * scales + mins
+    return X_corrupt, y
+
 def amex_metric_mod(y_true, y_pred):
     """
     COMPETITION METRIC FROM Konstantin Yakovlev
@@ -63,6 +80,51 @@ def amex_metric_mod(y_true, y_pred):
         gini[i]        = np.sum((lorentz - weight_random) * weight)
 
     return 0.5 * (gini[1]/gini[0] + top_four)
+
+def load_amex_numpy_data(split_data_dir, fill_dict, corrupt_func=None, num_categorical_features=11):
+    """
+    :param split_data_dir: should be the directory where the train data and targets are located.
+    :param fill_dict: should contain the following keys:
+        * nan
+        * pad_categorical
+        * pad_numeric
+    :param corrupt_func: should be a function that takes in a numpy
+          array and returns a corrupted version of it of same shape
+    :param num_categorical_features: number of categorical features in the dataset
+
+    :returns: (X, y) numpy.ndarrays of the data and targets
+    """
+    data_files = [name for name in os.listdir(split_data_dir) if os.path.isfile(os.path.join(split_data_dir, name))]
+
+    Xs = []; ys = []
+    for k in range(len(data_files) // 2):
+        Xs.append(np.load(os.path.join(split_data_dir, f"train-data_{k}.npy")))
+        ys.append(pd.read_parquet(os.path.join(split_data_dir, f"train-targets_{k}.parquet")))
+
+    Xs = np.concatenate(Xs, axis = 0)
+    ys = pd.concat(ys).target.values
+
+    # fill NAs and padded values with provided numerics
+    # (See PAD_CUSTOMER_TO_13_ROWS code)
+    na_mask = (Xs == -0.5)
+    pad_cat_mask = (Xs == -2)
+    pad_numeric_mask = (Xs == -3)
+
+    Xs[na_mask] = fill_dict['nan']
+    Xs[pad_cat_mask] = fill_dict['pad_categorical']
+    Xs[pad_numeric_mask] = fill_dict['pad_numeric']
+
+    # make sure all the categorical entries are non-negative for the embedding layer to work correctly
+    if num_categorical_features is not None:
+        Xs[:, :, :num_categorical_features] = \
+            Xs[:, :, :num_categorical_features] - \
+            np.amin(Xs[:, :, :num_categorical_features], axis=0, keepdims=True)
+
+    # corrupt the data with specified function (only do this on the non-categorical variables)
+    if corrupt_func is not None:
+        Xs[:, :, num_categorical_features:], ys = corrupt_func(Xs[:, :, num_categorical_features:], ys)
+
+    return Xs, ys
 
 def load_numpy_data(split_data_dir : str, val_idx : list, fill_dict, num_cats = 11, corrupt_func = None, preprocess_obj = None, dtype=torch.float32, **data_loader_kwargs) -> (torch.utils.data.DataLoader, torch.utils.data.DataLoader):
     """
@@ -187,16 +249,9 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
         "val_amex_metric" : [],
     }
 
-    # find the available GPUs
-    # for i in range(torch.cuda.device_count()):
-    #     if torch.cuda.memory_allocated(i) == 0:
-    #         gpu_ids.append(i)
-    #     if len(gpu_ids) == num_gpus:
-    #         break
-
     if isinstance(device_ids, torch.device):
         dev = device_ids
-    if device_ids == "cpu":
+    elif device_ids == "cpu":
         dev = torch.device('cpu')
     elif device_ids is not None and len(device_ids) > 1:
         # create parallel model and move it to the main gpu
@@ -311,6 +366,8 @@ def cross_validate_experiment(
     history_num_epochs = [None] * len(num_folds)
 
     # split data into folds
+    np.random.seed(random_state)
+    torch.manual_seed(random_state)
     kf = sklearn.model_selection.KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
     for i, (train_idx, val_idx) in tqdm(enumerate(kf.split(X, y)), desc="Cross-validating model", total=num_folds):
         # get data
@@ -371,7 +428,12 @@ def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwa
                          device_ids = None):
     """
     TODO
+
+    This method is depracated. Use cross_validate_experiment instead.
     """
+    w = DeprecationWarning("This method is depracated. Use cross_validate_experiment instead.")
+    warnings.warn(w)
+
 
     history_metrics = {
             "train_loss"        : [None] * len(folds),
