@@ -207,7 +207,7 @@ if __name__ == '__main__':
 
     # TODO: include other parameters such as a and b for min-max
     msg = args.preprocessing_method
-    scaler_init_fn = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
+    preprocess_init_fn = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
     # TODO: add optional winsorization
     # TODO: add optinal time dimension removal (requires setting exp cfg time_series_length to 1)
 
@@ -216,13 +216,15 @@ if __name__ == '__main__':
         fit_kwargs = exp_cfg['edain_bijector_fit']
         fit_kwargs['device'] = dev
         scaler_init_fn = lambda : EDAINScalerTimeSeriesDecorator(
-            scaler=scaler_init_fn(),
+            scaler=preprocess_init_fn(),
             time_series_length=exp_cfg['time_series_length'],
             input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
             bijector_kwargs=exp_cfg['edain_bijector'],
             bijector_fit_kwargs=fit_kwargs,
         )
         msg = f"EDAIN-KL({msg})"
+    else:
+        scaler_init_fn = preprocess_init_fn
     print(f"Finished setting up preprocessing technique: {msg}")
 
     ################################################################
