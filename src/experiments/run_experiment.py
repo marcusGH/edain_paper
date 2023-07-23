@@ -54,7 +54,7 @@ parser.add_argument("--experiment-config",
 )
 parser.add_argument("--device",
     help="The device to run the experiment on",
-    choices=list(range(8)) + ['cpu'],
+    choices=[str(i) for i in range(8)] + ['cpu'],
     default=0,
     required=True,
 )
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     if args.device == 'cpu':
         dev = torch.device('cpu')
     else:
-        dev = torch.device('cuda', args.device)
+        dev = torch.device('cuda', int(args.device))
 
     start_time = time.time()
     optimizer_init_fn = None
@@ -149,18 +149,19 @@ if __name__ == '__main__':
     if args.dataset == 'amex':
         # TODO: refactor out dataset-specific config into amex_dataset.yaml file
         X, y = load_amex_numpy_data(
-            split_data_dir=main_cfg['data']['split_data_dir'],
-            fill_dict=main_cfg['data']['fill_dict'],
+            split_data_dir=os.path.join(main_cfg['dataset_directory'], 'derived', 'processed-splits'),
+            fill_dict=exp_cfg['fill'],
             corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, args.random_state),
-            num_categorical_features=11
+            num_categorical_features=exp_cfg['num_categorical_features']
         )
     else:
         raise ValueError(f"Dataset not supported: {args.dataset}")
+    print(f"Finished loading dataset with covariates of shape {X.shape} and responses of shape {y.shape}")
 
     # load model
     if args.model == 'gru-rnn' and args.adaptive_layer is None:
         model_init_fn = lambda : GRUNetBasic(
-            num_cat_columns=exp_cfg['num_categorical_columns'],
+            num_cat_columns=exp_cfg['num_categorical_features'],
             **exp_cfg['gru_model']
         )
     elif args.model == 'gru-rnn' and args.adaptive_layer is not None:
@@ -175,7 +176,7 @@ if __name__ == '__main__':
             adaptive_layer = None
 
             # set up optimizer
-            base_lr = exp_cfg['edain_bijector_fit']['lr']
+            base_lr = exp_cfg['edain_bijector_fit']['base_lr']
             optimizer_init_fn = lambda mod: torch.optim.Adam(
                 # the learning rate for each layer in EDAIN
                 mod.preprocess.get_optimizer_param_list(
@@ -198,12 +199,14 @@ if __name__ == '__main__':
         # )
     else:
         raise ValueError(f"Model not supported: {args.model}")
+    print(f"Finished loading model")
 
     ################################################################
     ###            Part 2: Setup preprocessing methods           ###
     ################################################################
 
     # TODO: include other parameters such as a and b for min-max
+    msg = args.preprocessing_method
     scaler_init_fn = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
     # TODO: add optional winsorization
     # TODO: add optinal time dimension removal (requires setting exp cfg time_series_length to 1)
@@ -215,17 +218,19 @@ if __name__ == '__main__':
         scaler_init_fn = lambda : EDAINScalerTimeSeriesDecorator(
             scaler=scaler_init_fn(),
             time_series_length=exp_cfg['time_series_length'],
-            input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_columns'],
+            input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
             bijector_kwargs=exp_cfg['edain_bijector'],
             bijector_fit_kwargs=fit_kwargs,
         )
+        msg = f"EDAIN-KL({msg})"
+    print(f"Finished setting up preprocessing technique: {msg}")
 
     ################################################################
     ###          Part 3: Run cross-validation experiment         ###
     ################################################################
 
     # set up loss function
-    if exp_cfg['loss'] == 'bce':
+    if exp_cfg['fit']['loss'] == 'bce':
         loss_fn = F.binary_cross_entropy
     else:
         raise ValueError(f"Loss not supported: {exp_cfg['loss']}")
@@ -235,7 +240,7 @@ if __name__ == '__main__':
         if exp_cfg['fit']['optimizer'] == 'adam':
             optimizer_init_fn = lambda mod : torch.optim.Adam(
                 mod.parameters(),
-                lr=exp_cfg['fit']['lr'],
+                lr=exp_cfg['fit']['base_lr'],
             )
         else:
             raise ValueError(f"Optimizer not supported: {args.optimizer}")
@@ -253,6 +258,7 @@ if __name__ == '__main__':
         min_delta=exp_cfg['fit']['early_stopper_min_delta'],
     )
 
+    print(f"Starting cross-validation experiment")
     history = cross_validate_experiment(
         model_init_fn=model_init_fn,
         preprocess_init_fn=scaler_init_fn,
@@ -263,23 +269,27 @@ if __name__ == '__main__':
         X=X,
         y=y,
         num_epochs=exp_cfg['fit']['num_epochs'],
-        dataloader_kwargs=exp_cfg['fit']['data_loader'],
+        dataloader_kwargs=exp_cfg['data_loader'],
         num_folds=args.num_cross_validation_folds,
         device=dev,
         random_state=args.random_state,
+        num_categorical_features=exp_cfg['num_categorical_features'],
     )
 
     ################################################################
     ###            Part 4: Save experiment results               ###
     ################################################################
 
+    # print time in minutes and seconds
+    elapsed_time = time.time() - start_time
+    print(f"Completed experiment: {args.experiment_name}.")
+    print(f"Experiment took {elapsed_time // 60} minutes and {elapsed_time % 60:.0f} seconds")
+
     # augment history with experiment metadata
     history['experiment_name'] = args.experiment_name
     history['experiment_config'] = exp_cfg
     history['cli_arguments'] = vars(args)
+    history['elapsed_time'] = elapsed_time
 
     save_path = os.path.join(main_cfg['experiment_directory'], f"{args.experiment_name}.npy")
     np.save(save_path, history)
-    # print time in minutes and seconds
-    print(f"Completed experiment: {args.experiment_name}.")
-    print(f"Experiment took {(time.time() - start_time) / 60:.0f} minutes and {(time.time() - start_time) % 60:.0f} seconds")

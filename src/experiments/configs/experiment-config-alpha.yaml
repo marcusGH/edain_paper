@@ -11,7 +11,7 @@ data_loader:
 # Configuration for fitting the amex dataset
 fit:
   train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
-  num_epochs: 50
+  num_epochs: 40
   early_stopper_patience: 5
   early_stopper_min_delta: 0.0
   optimizer: adam

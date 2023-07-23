@@ -1,4 +1,5 @@
 import torch
+import time
 import torch.nn as nn
 import warnings
 import torch.nn.functional as F
@@ -344,6 +345,7 @@ def cross_validate_experiment(
         num_folds,
         device,
         random_state,
+        num_categorical_features,
     ):
     """
     Cross-validates the provided model on provided data with provided preprocessing method
@@ -358,39 +360,44 @@ def cross_validate_experiment(
     :param random_state: random state to use for splitting data
     """
     history_metrics = {
-        "train_loss": [None] * len(num_folds),
-        "val_loss": [None] * len(num_folds),
-        "train_amex_metric": [None] * len(num_folds),
-        "val_amex_metric": [None] * len(num_folds),
+        "train_loss": [None] * num_folds,
+        "val_loss": [None] * num_folds,
+        "train_amex_metric": [None] * num_folds,
+        "val_amex_metric": [None] * num_folds,
     }
-    history_num_epochs = [None] * len(num_folds)
+    history_num_epochs = [None] * num_folds
+    history_preprocess_time = [None] * num_folds
+    history_train_time = [None] * num_folds
 
     # split data into folds
     np.random.seed(random_state)
     torch.manual_seed(random_state)
     kf = sklearn.model_selection.KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
-    for i, (train_idx, val_idx) in tqdm(enumerate(kf.split(X, y)), desc="Cross-validating model", total=num_folds):
+    for i, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+        print(f"Starting model training [{i+1} / {num_folds}]")
         # get data
         X_train, y_train = X[train_idx], y[train_idx]
         X_val, y_val = X[val_idx], y[val_idx]
 
         # preprocess data
+        start_time = time.time()
         preprocess = preprocess_init_fn()
-        X_train = preprocess.fit_transform(X_train)
-        X_val = preprocess.transform(X_val)
+        X_train[:, :, num_categorical_features:] = preprocess.fit_transform(X_train[:, :, num_categorical_features:], y_train)
+        X_val[:, :, num_categorical_features:] = preprocess.transform(X_val[:, :, num_categorical_features:])
+        preprocess_time = time.time() - start_time
 
         # create the data loaders
         train_loader = torch.utils.data.DataLoader(
             dataset=torch.utils.data.TensorDataset(
                 torch.from_numpy(X_train).float(),
-                torch.from_numpy(y_train).long(),
+                torch.from_numpy(y_train).float(),
             ),
             **dataloader_kwargs
         )
         val_loader = torch.utils.data.DataLoader(
             dataset=torch.utils.data.TensorDataset(
                 torch.from_numpy(X_val).float(),
-                torch.from_numpy(y_val).long(),
+                torch.from_numpy(y_val).float(),
             ),
             **dataloader_kwargs
         )
@@ -401,6 +408,7 @@ def cross_validate_experiment(
         scheduler = scheduler_init_fn(optimizer)
         early_stopper = early_stopper_init_fn()
 
+        start_time = time.time()
         history = fit_model(
             model, loss_fn,
             train_loader, val_loader,
@@ -408,19 +416,24 @@ def cross_validate_experiment(
             num_epochs, verbose=False,
             early_stopper=early_stopper, device_ids=device
         )
+        train_time = time.time() - start_time
 
         # save metrics
         for history_key in history_metrics.keys():
             history_metrics[history_key][i] = np.array(history[history_key])
         history_num_epochs[i] = len(history['train_loss'])
+        history_preprocess_time[i] = preprocess_time
+        history_train_time[i] = train_time
 
     hist_keys = list(history_metrics.keys())
     for history_key in hist_keys:
         # compute the mean and std of the final value, reducing over folds
-        final_values = [history_metrics[history_key][i][-1] for i in range(len(folds))]
+        final_values = [history_metrics[history_key][i][-1] for i in range(num_folds)]
         history_metrics[f"{history_key}_mean"] = np.mean(final_values)
         history_metrics[f"{history_key}_sd"] = np.std(final_values)
     history_metrics['num_epochs'] = history_num_epochs
+    history_metrics['preprocess_times'] = history_preprocess_time
+    history_metrics['train_times'] = history_train_time
     return history_metrics
 
 def cross_validate_model(model : nn.Module, loss_fn, data_loader_kwargs, fit_kwargs, fill_dict, corrupt_func, preprocess_init_fn,
