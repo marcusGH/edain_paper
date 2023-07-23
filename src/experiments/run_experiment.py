@@ -16,6 +16,10 @@ from src.preprocessing.static_transformations import (
     IgnoreTimeDecorator,
     MixedTransformsTimeSeries,
 )
+from src.preprocessing.adaptive_transformations import (
+    DAIN_Layer,
+    BiN_Layer,
+)
 from src.preprocessing.normalizing_flows import (
     EDAIN_Layer,
     EDAINScalerTimeSeries,
@@ -147,7 +151,7 @@ if __name__ == '__main__':
 
     # load dataset
     if args.dataset == 'amex':
-        # TODO: refactor out dataset-specific config into amex_dataset.yaml file
+        # minor TODO: refactor out dataset-specific config into amex_dataset.yaml file
         X, y = load_amex_numpy_data(
             split_data_dir=os.path.join(main_cfg['dataset_directory'], 'derived', 'processed-splits'),
             fill_dict=exp_cfg['fill'],
@@ -165,38 +169,64 @@ if __name__ == '__main__':
             **exp_cfg['gru_model']
         )
     elif args.model == 'gru-rnn' and args.adaptive_layer is not None:
-        # TODO: Do the following:
-        #       1. refactor adaptive grunet to not take time_series_length argument
-        #       2. refactor adaptive grunet to take adaptive layer instance instead of init function
+        ####################### DAIN layer #########################
         if args.adaptive_layer == 'dain':
-            adaptiver_layer_init_fn = None
+            dain_layer_kwargs = exp_cfg['dain']
+            dain_layer_kwargs['input_dim'] = exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features']
+            adaptiver_layer_init_fn = lambda : DAIN_Layer(**dain_layer_kwargs)
+            adaptive_layer_optim_args = {
+                'base_lr' : exp_cfg['fit']['base_lr']
+            }
+            # TODO: the averaging happens over time dimension now (???)
+            dim_first = True
+        ######################## BiN layer #########################
         elif args.adaptive_layer == 'bin':
-            adaptive_layer = None
+            adaptive_layer_init_fn = lambda : BiN_Layer(
+                input_shape=(exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'], exp_cfg['time_series_length']),
+            )
+            dim_first = True
+            adaptive_layer_optim_args = exp_cfg['bin']
+            adaptive_layer_optim_args['base_lr'] = exp_cfg['fit']['base_lr']
+        ######################## EDAIN layer #######################
         elif args.adaptive_layer == 'edain':
-            adaptive_layer = None
-
-            # set up optimizer
-            base_lr = exp_cfg['edain_bijector_fit']['base_lr']
-            optimizer_init_fn = lambda mod: torch.optim.Adam(
-                # the learning rate for each layer in EDAIN
-                mod.preprocess.get_optimizer_param_list(
-                    **{k : exp_cfg['edain_bijector_fit'][k] for k in exp_cfg['edain_bijector_fit'] if 'lr' in k}
-                ) +
-                # the rest of the parameters of the daptive gru model
-                [
-                    {'params' : mod.gru.parameters(), 'lr' : base_lr},
-                    {'params': mod.emb_layers.parameters(), 'lr': base_lr},
-                    {'params': mod.feed_forward.parameters(), 'lr': base_lr}
-                ], lr=0.001)
+            # TODO: currently, the time axis is broadcasted, so only learn for each dim, like in DAIN and BiN
+            #       add option to learn for each of the T * D dimensions?
+            adaptive_layer_init_fn = lambda : EDAIN_Layer(
+                # TODO: when added flatten_time_dim, make this multiply with time_series_length
+                input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
+                # when using it as adaptive layer, we do a forward pass, not inverse
+                invert_bijector=False,
+                **exp_cfg['edain_bijector'],
+            )
+            adaptive_layer_optim_args = {
+                k: exp_cfg['edain_bijector_fit'][k] for k in exp_cfg['edain_bijector_fit'] if 'lr' in k
+            }
+            dim_first = False
         else:
             raise ValueError(f"Adaptive layer not supported: {args.adaptive_layer}")
 
-        # TODO: refactor adaptive grunet as above (1) and (2)
-        # model_init_fn = lambda : AdaptiveGRUNet(
-        #     adaptive_layer=adaptive_layer_init_fn(),
-        #     num_cat_columns=exp_cfg['num_categorical_columns'],
-        #     **exp_cfg['gru_model'],
-        # )
+        # set up model
+        model_init_fn = lambda : AdaptiveGRUNet(
+            adaptive_layer=adaptive_layer_init_fn(),
+            num_cat_columns=exp_cfg['num_categorical_columns'],
+            time_series_length=exp_cfg['time_series_length'],
+            dim_first=dim_first,
+            **exp_cfg['gru_model'],
+        )
+
+        # set up optimizer
+        base_lr = exp_cfg['fit']['base_lr']
+        optimizer_init_fn = lambda mod: torch.optim.Adam(
+            # the learning rate for each layer in EDAIN, DAIN or BiN
+            mod.preprocess.get_optimizer_param_list(
+                **adaptive_layer_optim_args
+            ) +
+            # the rest of the parameters of the GRU RNN model
+            [
+                {'params': mod.gru.parameters(), 'lr' : base_lr},
+                {'params': mod.emb_layers.parameters(), 'lr': base_lr},
+                {'params': mod.feed_forward.parameters(), 'lr': base_lr}
+            ], lr=exp_cfg['fit']['base_lr'])
     else:
         raise ValueError(f"Model not supported: {args.model}")
     print(f"Finished loading model")
@@ -205,17 +235,20 @@ if __name__ == '__main__':
     ###            Part 2: Setup preprocessing methods           ###
     ################################################################
 
-    # TODO: include other parameters such as a and b for min-max
+    if args.ignore_time:
+        original_time_length = exp_cfg['time_series_length']
+        exp_cfg['time_series_length'] = 1
+
+    # minor TODO: include other parameters such as a and b for min-max
     msg = args.preprocessing_method
     preprocess_init_fn = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
     # TODO: add optional winsorization
-    # TODO: add optinal time dimension removal (requires setting exp cfg time_series_length to 1)
 
     # use the above scaler function to decorate our EDAIN-KL scaler
     if args.edain_kl:
         fit_kwargs = exp_cfg['edain_bijector_fit']
         fit_kwargs['device'] = dev
-        scaler_init_fn = lambda : EDAINScalerTimeSeriesDecorator(
+        _scaler_init_fn = lambda : EDAINScalerTimeSeriesDecorator(
             scaler=preprocess_init_fn(),
             time_series_length=exp_cfg['time_series_length'],
             input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
@@ -224,7 +257,17 @@ if __name__ == '__main__':
         )
         msg = f"EDAIN-KL({msg})"
     else:
-        scaler_init_fn = preprocess_init_fn
+        _scaler_init_fn = preprocess_init_fn
+
+    # check if scaler should be decorated with time-flatten scaler
+    if args.ignore_time:
+        scaler_init_fn = lambda : IgnoreTimeDecorator(
+            scaler=_scaler_init_fn(),
+            time_series_length=original_time_length,
+        )
+        msg = f"IgnoreTime({msg})"
+    else:
+        scaler_init_fn = _scaler_init_fn
     print(f"Finished setting up preprocessing technique: {msg}")
 
     ################################################################

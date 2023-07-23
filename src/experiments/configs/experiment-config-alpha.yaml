@@ -55,5 +55,18 @@ edain_bijector_fit:
   outlier_lr: 1
   power_lr: 0.0000001
 
+# Configuration for the DAIN layer
+dain:
+  mode: adaptive_avg
+  mean_lr: 0.00001
+  gate_lr: 0.001
+  scale_lr: 0.00001
+
+# Configuration for the BiN layer
+bin:
+  beta_lr: 0.1
+  gamma_lr: 0.1
+  lambda_lr: 0.1
+
 # End config
 ...

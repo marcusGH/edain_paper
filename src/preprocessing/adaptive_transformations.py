@@ -11,6 +11,7 @@ class FullDAIN_Layer(nn.Module):
         eps=1e-8, dev=torch.device('cuda'),
     ):
         super(FullDAIN_Layer, self).__init__()
+        raise DeprecationWarning("This class is deprecated. Use EDAIN_Layer from src.preprocessing.normalizing_flows instead.")
 
         # for getting the current device
         self.dummy_param = nn.Parameter(torch.empty(0))
@@ -182,3 +183,218 @@ class FullDAIN_Layer(nn.Module):
         if dim_first:
             x = x.transpose(1, 2)
         return x
+
+class DAIN_Layer(nn.Module):
+    """
+    Deep Adaptive Input Normalization for Time Series Forecasting
+
+    Copyright: 2019 Nikolaos Passalis 
+
+    References:
+        - https://github.com/passalis/dain/tree/master
+        - https://arxiv.org/abs/1902.07892
+        
+    Authors:
+        - Passalis, Nikolaos
+        - Tefas, Anastasios
+        - Kanniainen, Juho
+        - Gabbouj, Moncef
+        - Iosifidis, Alexandros
+    """
+    def __init__(self, mode='adaptive_avg', mean_lr=0.00001, gate_lr=0.001, scale_lr=0.00001, input_dim=144):
+        super(DAIN_Layer, self).__init__()
+        print("Mode = ", mode)
+
+        self.mode = mode
+        self.mean_lr = mean_lr
+        self.gate_lr = gate_lr
+        self.scale_lr = scale_lr
+
+        # Parameters for adaptive average
+        self.mean_layer = nn.Linear(input_dim, input_dim, bias=False)
+        self.mean_layer.weight.data = torch.FloatTensor(data=np.eye(input_dim, input_dim))
+
+        # Parameters for adaptive std
+        self.scaling_layer = nn.Linear(input_dim, input_dim, bias=False)
+        self.scaling_layer.weight.data = torch.FloatTensor(data=np.eye(input_dim, input_dim))
+
+        # Parameters for adaptive scaling
+        self.gating_layer = nn.Linear(input_dim, input_dim)
+
+        self.eps = 1e-8
+
+    def forward(self, x):
+        # Expecting  (n_samples, dim,  n_feature_vectors)
+
+        # Nothing to normalize
+        if self.mode == None:
+            pass
+
+        # Do simple average normalization
+        elif self.mode == 'avg':
+            avg = torch.mean(x, 2)
+            avg = avg.resize(avg.size(0), avg.size(1), 1)
+            x = x - avg
+
+        # Perform only the first step (adaptive averaging)
+        elif self.mode == 'adaptive_avg':
+            avg = torch.mean(x, 2)
+            adaptive_avg = self.mean_layer(avg)
+            adaptive_avg = adaptive_avg.resize(adaptive_avg.size(0), adaptive_avg.size(1), 1)
+            x = x - adaptive_avg
+
+        # Perform the first + second step (adaptive averaging + adaptive scaling )
+        elif self.mode == 'adaptive_scale':
+
+            # Step 1:
+            avg = torch.mean(x, 2)
+            adaptive_avg = self.mean_layer(avg)
+            adaptive_avg = adaptive_avg.resize(adaptive_avg.size(0), adaptive_avg.size(1), 1)
+            x = x - adaptive_avg
+
+            # Step 2:
+            std = torch.mean(x ** 2, 2)
+            std = torch.sqrt(std + self.eps)
+            adaptive_std = self.scaling_layer(std)
+            adaptive_std[adaptive_std <= self.eps] = 1
+
+            adaptive_std = adaptive_std.resize(adaptive_std.size(0), adaptive_std.size(1), 1)
+            x = x / (adaptive_std)
+
+        elif self.mode == 'full':
+
+            # Step 1:
+            avg = torch.mean(x, 2)
+            adaptive_avg = self.mean_layer(avg)
+            adaptive_avg = adaptive_avg.resize(adaptive_avg.size(0), adaptive_avg.size(1), 1)
+            x = x - adaptive_avg
+
+            # # Step 2:
+            std = torch.mean(x ** 2, 2)
+            std = torch.sqrt(std + self.eps)
+            adaptive_std = self.scaling_layer(std)
+            adaptive_std[adaptive_std <= self.eps] = 1
+
+            adaptive_std = adaptive_std.resize(adaptive_std.size(0), adaptive_std.size(1), 1)
+            x = x / adaptive_std
+
+            # Step 3: 
+            avg = torch.mean(x, 2)
+            gate = F.sigmoid(self.gating_layer(avg))
+            gate = gate.resize(gate.size(0), gate.size(1), 1)
+            x = x * gate
+
+        else:
+            assert False
+
+        return x
+
+    def get_optimizer_param_list(self, base_lr):
+        optim_param_list = [
+            {'params': self.mean_layer.parameters(), 'lr': self.mean_lr * base_lr},
+            {'params': self.scaling_layer.parameters(), 'lr': self.scale_lr * base_lr},
+            {'params': self.gating_layer.parameters(), 'lr': self.gate_lr * base_lr},
+        ]
+        return optim_param_list
+
+class BiN_Layer(nn.Module):
+    """
+    Bilinear Input Normalization (BiN) Layer
+    
+    * Copyright: 2022 Dat Tran
+    * Authors: Dat Tran (viebboy@gmail.com)
+    * Date: 2022-01-11
+    * Version: 0.0.1
+
+    This is part of the MLProject:
+        - https://github.com/viebboy/mlproject/tree/main
+
+    License
+    -------
+    Apache 2.0 License
+    """
+
+    def __init__(
+        self,
+        input_shape,
+        epsilon=1e-4,
+    ):
+
+        super(BiN_Layer, self).__init__()
+
+        self.dim1, self.dim2 = input_shape
+        self.epsilon = epsilon
+
+        self.gamma1 = nn.Parameter(
+            data=torch.Tensor(1, self.dim1, 1),
+            requires_grad=True,
+        )
+
+        self.beta1 = nn.Parameter(
+            data=torch.Tensor(1, self.dim1, 1),
+            requires_grad=True,
+        )
+
+        self.gamma2 = nn.Parameter(
+            data=torch.Tensor(1, 1, self.dim2),
+            requires_grad=True,
+        )
+
+        self.beta2 = nn.Parameter(
+            data=torch.Tensor(1, 1, self.dim2),
+            requires_grad=True,
+        )
+
+        self.lambda1 = nn.Parameter(
+            data=torch.Tensor(1,),
+            requires_grad=True,
+        )
+
+        self.lambda2 = nn.Parameter(
+            data=torch.Tensor(1,),
+            requires_grad=True,
+        )
+
+        # initialization
+        nn.init.ones_(self.gamma1)
+        nn.init.zeros_(self.beta1)
+        nn.init.ones_(self.gamma2)
+        nn.init.zeros_(self.beta2)
+        nn.init.ones_(self.lambda1)
+        nn.init.ones_(self.lambda2)
+
+    def forward(self, x):
+        # normalize temporal mode
+        # N x T x D ==> N x 1 x D or
+        # N x D x T ==> N x D x 1.
+        dim1_mean = torch.mean(x, 1, keepdims=True)
+
+        # N x T x D ==> N x 1 x D or
+        # N x D x T ==> N x D x 1.
+        dim1_std = torch.std(x, 1, keepdims=True)
+
+        # mask = tem_std >= self.epsilon
+        # tem_std = tem_std*mask + torch.logical_not(mask)*torch.ones(tem_std.size(), requires_grad=False)
+        dim1_std[dim1_std < self.epsilon] = 1.0
+        dim1 = (x - dim1_mean) / dim1_std
+
+        # N x T x D ==> N x T x 1 or
+        # N x D x T ==> N x 1 x T.
+        dim2_mean = torch.mean(x, 2, keepdims=True)
+        dim2_std = torch.std(x, 2, keepdims=True)
+
+        dim2_std[dim2_std < self.epsilon] = 1.0
+        dim2 = (x - dim2_mean) / dim2_std
+
+        outputs1 = self.gamma1 * dim1 + self.beta1
+        outputs2 = self.gamma2 * dim2 + self.beta2
+
+        return self.lambda1 * outputs1 + self.lambda2 * outputs2
+
+    def get_optimizer_param_list(self, base_lr, beta_lr, gamma_lr, lambda_lr):
+        optim_param_list = [
+            {'params': [self.beta1, self.beta2], 'lr': beta_lr * base_lr},
+            {'params': [self.gamma1, self.gamma2], 'lr': gamma_lr * base_lr},
+            {'params': [self.lambda1, self.lambda2], 'lr': lambda_lr * base_lr},
+        ]
+        return optim_param_list

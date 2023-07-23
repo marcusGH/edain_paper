@@ -1,27 +1,16 @@
 import yaml
 import os
-import importlib
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import sklearn
-import importlib.util
-import sys
-
-from src.models.basic_grunet import GRUNetBasic
-
-with open(os.path.join("config.yaml")) as f:
-    cfg = yaml.load(f, Loader=yaml.FullLoader)
 
 class AdaptiveGRUNet(nn.Module):
-    def __init__(self, adaptive_layer_init_fn, num_features, hidden_dim, layer_dim, embedding_dim, num_cat_columns = 11, time_series_length = 13, dropout_prob = 0.2):
+    def __init__(self, adaptive_layer, num_features, hidden_dim, layer_dim, embedding_dim, num_cat_columns=11, time_series_length=13, dropout_prob=0.2, dim_first=True):
         """
-        This model takes input of shape (N, T, D) and returns probabilities of shape (N,)
+        This model takes input of shape (N, D, T). It returns probabilities of shape (N,)
 
-        :param adaptive_layer_init_fn: A lambda function taking arguments T and D. It should return an adaptive
-        preprocessing layer with a forward method that takes a tensor of shape (N, D', T) and return tensor
-        of same shape (not the axis swap compared to this module). Here D' is the number of numeric features
+        :param adaptive_layer: a pytorch module that takes a tensor of
+        shape (N, D', T) if dim_first=True, otherwise (N, T, D') and returns a tensor of same shape,
+        where D' = D - num_cat_columns
         """
         super(AdaptiveGRUNet, self).__init__()
 
@@ -29,9 +18,6 @@ class AdaptiveGRUNet(nn.Module):
         self.layer_dim = layer_dim
         self.hidden_dim = hidden_dim
         self.num_cat_columns = num_cat_columns
-
-        # to get current device
-        self.dummy_param = nn.Parameter(torch.empty(0))
 
         # the layers we need
         emb_layers = []
@@ -56,10 +42,11 @@ class AdaptiveGRUNet(nn.Module):
             nn.Sigmoid()
         )
 
-        # DAIN preprocessing layer or other variant
+        # adaptive preprocessing layer
         self.D = num_features - num_cat_columns
         self.T = time_series_length
-        self.preprocess = adaptive_layer_init_fn(D=self.D, T=self.T)
+        self.dim_first = dim_first
+        self.preprocess = adaptive_layer
 
     def forward(self, x):
         # First 11 columns are categorical, next 177 are numerical
@@ -69,13 +56,17 @@ class AdaptiveGRUNet(nn.Module):
             col = x[:, :, k].type(torch.int32)
             embedding_outs.append(emb(col))
 
-        # apply DAIN preprocessing (or variant) just on the numeric columns
-        preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:].transpose(1, 2))
+        # apply adaptive preprocessing just on the numeric columns
+        if self.dim_first:
+            preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:])
+        else:
+            # reshape to (N, T, D'), then transpose back to (N, D', T)
+            preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:].transpose(1, 2)).transpose(1, 2)
 
-        x = torch.concat([preprocess_out.transpose(1, 2)] + embedding_outs, dim = -1)
+        x = torch.concat([preprocess_out] + embedding_outs, dim=-1)
 
         # Initializing hidden state for first input with zeros
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim, device = self.dummy_param.device).requires_grad_()
+        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim, device=x.device).requires_grad_()
 
         # Forward propagation by passing in the input and hidden state into the model
         out, _ = self.gru(x, h0.detach())
@@ -85,5 +76,4 @@ class AdaptiveGRUNet(nn.Module):
         out = out[:, -1, :]
 
         out = self.feed_forward(out)
-
         return out.squeeze(1)

@@ -429,6 +429,7 @@ class EDAIN_Layer(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
+    # TODO: add flatten_time_dim option that flattens the time dimension of the input, and then unflattens it at the end
     def __init__(self, input_dim, init_sigma=0.1, eps=1e-6, invert_bijector=True, adaptive_shift=True, adaptive_scale=True, adaptive_outlier_removal=True, adaptive_power_transform=True, outlier_removal_residual_connection=False, outlier_removal_mode='softplus'):
         super(EDAIN_Layer, self).__init__(cache_size=1)
 
