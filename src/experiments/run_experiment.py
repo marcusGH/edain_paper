@@ -173,7 +173,7 @@ if __name__ == '__main__':
         if args.adaptive_layer == 'dain':
             dain_layer_kwargs = exp_cfg['dain']
             dain_layer_kwargs['input_dim'] = exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features']
-            adaptiver_layer_init_fn = lambda : DAIN_Layer(**dain_layer_kwargs)
+            adaptive_layer_init_fn = lambda : DAIN_Layer(**dain_layer_kwargs)
             adaptive_layer_optim_args = {
                 'base_lr' : exp_cfg['fit']['base_lr']
             }
@@ -206,6 +206,7 @@ if __name__ == '__main__':
             raise ValueError(f"Adaptive layer not supported: {args.adaptive_layer}")
 
         # set up model
+        print(f"Setting up adaptive model using layer: {args.adaptive_layer}")
         model_init_fn = lambda : AdaptiveGRUNet(
             adaptive_layer=adaptive_layer_init_fn(),
             num_cat_columns=exp_cfg['num_categorical_columns'],
