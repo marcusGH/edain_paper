@@ -142,6 +142,7 @@ if __name__ == '__main__':
     optimizer_init_fn = None
 
     # set random seed
+    print(f"Using random seed = {args.random_state}")
     np.random.seed(args.random_state)
     torch.manual_seed(args.random_state)
 
@@ -209,7 +210,7 @@ if __name__ == '__main__':
         print(f"Setting up adaptive model using layer: {args.adaptive_layer}")
         model_init_fn = lambda : AdaptiveGRUNet(
             adaptive_layer=adaptive_layer_init_fn(),
-            num_cat_columns=exp_cfg['num_categorical_columns'],
+            num_cat_columns=exp_cfg['num_categorical_features'],
             time_series_length=exp_cfg['time_series_length'],
             dim_first=dim_first,
             **exp_cfg['gru_model'],

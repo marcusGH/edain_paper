@@ -6,7 +6,7 @@ import torch.nn as nn
 class AdaptiveGRUNet(nn.Module):
     def __init__(self, adaptive_layer, num_features, hidden_dim, layer_dim, embedding_dim, num_cat_columns=11, time_series_length=13, dropout_prob=0.2, dim_first=True):
         """
-        This model takes input of shape (N, D, T). It returns probabilities of shape (N,)
+        This model takes input of shape (N, T, D). It returns probabilities of shape (N,)
 
         :param adaptive_layer: a pytorch module that takes a tensor of
         shape (N, D', T) if dim_first=True, otherwise (N, T, D') and returns a tensor of same shape,
@@ -58,10 +58,10 @@ class AdaptiveGRUNet(nn.Module):
 
         # apply adaptive preprocessing just on the numeric columns
         if self.dim_first:
-            preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:])
-        else:
-            # reshape to (N, T, D'), then transpose back to (N, D', T)
+            # reshape to (N, D', T), then transpose back to (N, T, D')
             preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:].transpose(1, 2)).transpose(1, 2)
+        else:
+            preprocess_out = self.preprocess(x[:, :, self.num_cat_columns:])
 
         x = torch.concat([preprocess_out] + embedding_outs, dim=-1)
 
