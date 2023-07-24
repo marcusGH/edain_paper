@@ -140,42 +140,6 @@ class MinMaxTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator
         return X.reshape((X.shape[0], self.T, -1))
 
 
-class MixedTransformsTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
-    def __init__(self, transforms_list, time_series_length = 13):
-        """
-        :param transforms_list: List of tuples on the form (var_list, sklearn.base.BaseEstimator)
-        where var_list is a list of integers indicating which d in {0, 1, ..., D-1} along the third
-        dimension of X that provided preprocessing transformer should be applied to
-        Note that the transformations supplied should be able to fit (N, T, D)-dimensional data
-        """
-        self.vars = [x for (x, _) in transforms_list]
-        self.transforms = [y() for (_, y) in transforms_list]
-        self.all_vars = [j for sub in self.vars for j in sub]
-        self.T = time_series_length
-
-    def fit(self, X, y = None):
-        """
-        :param X: np.ndarray of shape (N, T, D)
-        """
-        # assert that initialised correctly
-        D = X.shape[2]
-        assert len(self.all_vars), len(list(set(self.all_vars))) == (D, D) and "No dupes"
-        assert list(sorted(self.all_vars)) == list(range(D)) and "All elements included"
-
-        for i in range(len(self.vars)):
-            # only use the subset of variables specified, and use in shape (N, T * D')
-            X_sub = X[:, :, self.vars[i]] #.reshape((X.shape[0], -1))
-            self.transforms[i].fit(X_sub, y)
-        return self
-
-    def transform(self, X):
-        for i in range(len(self.vars)):
-            # only use the subset of variables specified, and use in shape (N, D')
-            X_sub = X[:, :, self.vars[i]] #.reshape((X.shape[0], -1))
-            X[:, :, self.vars[i]] = self.transforms[i].transform(X_sub)
-        return X
-
-
 class TanhStandardScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
     def __init__(self, time_series_length : int = 13):
         self.ss = preprocessing.StandardScaler()

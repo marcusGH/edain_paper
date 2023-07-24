@@ -68,5 +68,13 @@ bin:
   gamma_lr: 0.1
   lambda_lr: 0.1
 
+# configuration for brute force clustering approach
+mixture:
+  num_epochs_brute_force: 15
+  transforms:
+    - standard-scaler
+    - min-max-scaler
+    - tanh-standard-scaler
+
 # End config
 ...
