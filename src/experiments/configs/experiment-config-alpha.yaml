@@ -70,11 +70,13 @@ bin:
 
 # configuration for brute force clustering approach
 mixture:
-  num_epochs_brute_force: 15
+  num_epochs_brute_force: 2
   transforms:
     - standard-scaler
     - min-max-scaler
     - tanh-standard-scaler
+  jobs_per_gpu: 8
+  cache_directory: /home/silo1/mas322/cache-files/
 
 # End config
 ...

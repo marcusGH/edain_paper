@@ -1,7 +1,7 @@
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from src.preprocessing.static_transformations import MinMaxTimeSeries, TanhStandardScalerTimeSeries
+from src.preprocessing.static_transformations import MinMaxTimeSeries, TanhStandardScalerTimeSeries, StandardScalerTimeSeries
 from threading import Thread
 from tqdm.auto import tqdm
 
@@ -12,6 +12,12 @@ import scipy
 import sklearn
 import torch
 import torch.nn.functional as F
+
+# Temporary import
+from src.models.basic_grunet import GRUNetBasic
+import torch
+from src.lib.experimentation import EarlyStopper, undo_min_max_corrupt_func, load_amex_numpy_data, fit_model
+import yaml
 
 _available_scalers = {
     'standard-scaler' : lambda : StandardScalerTimeSeries(),
@@ -151,6 +157,7 @@ def cluster_variables_with_kl_difference(X, y=None, **kwargs):
 def run_mixture_job(
         transform_list,
         dev,
+        save_file_name,
         model_init_fn,
         optimizer_init_fn,
         scheduler_init_fn,
@@ -158,7 +165,6 @@ def run_mixture_job(
         X,
         y,
         exp_cfg,
-        save_path,
         random_state=42,
     ):
     """
@@ -219,12 +225,15 @@ def run_mixture_job(
         device_ids=dev,
     )
 
-    np.save(save_path, hist)
+    np.save(os.path.join(exp_cfg['mixture']['cache_directory'], f"{save_file_name}.npy"), hist)
+    print(f"Saved results for: {save_file_name}")
 
 
 def create_mixture_job_args(variable_cluster_groups, exp_cfg):
     """
-    TODO: docs
+    Returns a list of tuples on the form:
+    (name_of_transform, transform_list) where name_of_transform is either "baseline"
+    or on the form "mixture-gid_<group ID>-scaler_<name of scaler>"
     """
     global _available_scalers
     config_scalers = exp_cfg['mixture']['transforms']
@@ -255,14 +264,51 @@ def create_mixture_job_args(variable_cluster_groups, exp_cfg):
     # sanity check
     assert len(jobs) == 1 + (len(config_scalers) - int('standard-scaler' in config_scalers)) * num_groups
 
-
-    # create the last one base on experiment config or something...
-    return list_of_transform_list, dict_of_rest_of_kwargs_excluding_dev
+    return jobs
 
 
-def run_parallel_mixture_jobs(**kwargs):
-    pass
+def run_parallel_mixture_jobs(
+        job_list,
+        devices_ids,
+        **job_kwargs
+    ):
+    """
+    The arguments to run_job are:
+      * transform_list,   --\
+      * dev,                | -- specified by positional args
+      * save_file_name,   --/
+      * model_init_fn,    -----\
+      * optimizer_init_fn,     |
+      * scheduler_init_fn,     |
+      * early_stopper_init_fn, | -- part of job_kwargs
+      * X,                     |
+      * y,                     |
+      * exp_cfg,               |
+      * random_state=42,  ----/
+    """
+    exp_cfg = job_kwargs['exp_cfg']
 
+    # keep track of all the threads spawned
+    threads = []
+    for i, (job_name, transform_list) in enumerate(job_list):
+        dev_id = devices_ids[((i // exp_cfg['jobs_per_gpu']) % len(devices_ids))]
+        threads.append(Thread(
+            target=run_mixture_job,
+            args=(transform_list, torch.device('cuda', dev_id), job_name),
+            kwargs=job_kwargs,
+        ))
+
+    i = 0
+    while i < len(threads):
+        # start of all the threads
+        for j in range(exp_cfg['jobs_per_gpu'] * len(devices_ids)):
+            threads[i + j].run()
+        # wait for them to finish
+        for j in range(exp_cfg['jobs_per_gpu'] * len(devices_ids)):
+            threads[i + j].join()
+            print(f"Finished running job {i+j} / {len(threads)}")
+        # then start of more jobs if any left
+        i += exp_cfg['jobs_per_gpu'] * len(devices_ids)
 
 def brute_force_preprocessing_mixture(**kwargs):
     # TODO: implement this
@@ -296,4 +342,49 @@ def get_optimal_mixture_transform_list(experiment_name):
 
 if __name__ == "__main__":
     print("Testing testing...")
+
+    with open("src/experiments/configs/experiment-config-alpha.yaml", "r") as f:
+        exp_cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    model_init_fn = lambda : GRUNetBasic(
+        num_cat_columns=exp_cfg['num_categorical_features'],
+        **exp_cfg['gru_model']
+    )
+    optimizer_init_fn = lambda mod : torch.optim.Adam(
+        mod.parameters(),
+        lr=1e-3
+    )
+    scheduler_init_fn = lambda optim : torch.optim.lr_scheduler.MultiStepLR(
+        optimizer=optim,
+        milestones=[3, 7],
+        gamma=0.1,
+    )
+    early_stopper_init_fn = lambda : EarlyStopper()
+    # load the data
+    X, y = load_amex_numpy_data(
+        split_data_dir=os.path.join("/home/silo1/mas322/amex-default-prediction/", 'derived', 'processed-splits'),
+        fill_dict=exp_cfg['fill'],
+        corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, 42),
+        num_categorical_features=exp_cfg['num_categorical_features']
+    )
+
+    transform_list = [
+        (list(range(100)), lambda : StandardScalerTimeSeries()),
+        (list(range(100, 177)), lambda : TanhStandardScalerTimeSeries()),
+    ]
+
+    # Test run mixture job
+    run_mixture_job(
+        transform_list,
+        torch.device('cuda', 3),
+        'test-filename',
+        model_init_fn,
+        optimizer_init_fn,
+        scheduler_init_fn,
+        early_stopper_init_fn,
+        X,
+        y,
+        exp_cfg,
+        random_state=42,
+    )
 
