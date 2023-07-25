@@ -82,7 +82,7 @@ def amex_metric_mod(y_true, y_pred):
 
     return 0.5 * (gini[1]/gini[0] + top_four)
 
-def load_amex_numpy_data(split_data_dir, fill_dict, corrupt_func=None, num_categorical_features=11):
+def load_amex_numpy_data(split_data_dir, fill_dict, corrupt_func=None, num_categorical_features=11, load_small_subset=False):
     """
     :param split_data_dir: should be the directory where the train data and targets are located.
     :param fill_dict: should contain the following keys:
@@ -101,6 +101,9 @@ def load_amex_numpy_data(split_data_dir, fill_dict, corrupt_func=None, num_categ
     for k in range(len(data_files) // 2):
         Xs.append(np.load(os.path.join(split_data_dir, f"train-data_{k}.npy")))
         ys.append(pd.read_parquet(os.path.join(split_data_dir, f"train-targets_{k}.parquet")))
+        # for testing, more efficient to just load one of the files
+        if load_small_subset:
+            break
 
     Xs = np.concatenate(Xs, axis = 0)
     ys = pd.concat(ys).target.values

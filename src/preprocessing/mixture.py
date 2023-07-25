@@ -14,6 +14,7 @@ import torch
 import torch.nn.functional as F
 
 # Temporary import
+import time
 from src.models.basic_grunet import GRUNetBasic
 import torch
 from src.lib.experimentation import EarlyStopper, undo_min_max_corrupt_func, load_amex_numpy_data, fit_model
@@ -74,13 +75,14 @@ def get_histogram(X, num_bins=1000):
     return hist
 
 
-def get_distribution_statistics(X, y=None, T=13, num_bins=1000):
+def get_distribution_statistics(X, y=None, num_bins=1000):
     """
     Takes input array of shape (N, T, D) and returns an array of shape (D, L),
     where L is the number of statistics computed by this function. Currently, L = 6
     """
-    scaler = MinMaxTimeSeries(time_series_length=T)
+    T = X.shape[1]
     D = X.shape[2]
+    scaler = MinMaxTimeSeries(time_series_length=T)
     X_scaled = scaler.fit_transform(X, y)
 
     # bin all the data, required for certain statistics
@@ -119,17 +121,15 @@ def get_distribution_statistics(X, y=None, T=13, num_bins=1000):
     return np.stack(X_statistics, axis=1)
 
 
-def cluster_variables_with_statistics(X, k, y=None, stat_kwargs=None, **kmeans_kwargs):
+def cluster_variables_with_statistics(X, k, y=None, num_bins=1000, **kmeans_kwargs):
     """
     Given an array of shape (N, T, D), returns a list of lists
     of k lists, constituting a partition of the {1, ..., D} variables
     """
-    if stat_kwargs is None:
-        stat_kwargs = {}
     D = X.shape[2]
 
     # get statistics for each variable, shape (D, L), where L number of statistics
-    dist_stats = get_distribution_statistics(X, y, **stat_kwargs)
+    dist_stats = get_distribution_statistics(X, y, num_bins=num_bins)
     # scale it before clustering
     feature_scaler = StandardScaler()
     dist_stats = feature_scaler.fit_transform(dist_stats)
@@ -175,6 +175,10 @@ def run_mixture_job(
     :param save_path: location to save the history after finishing the job
     """
     num_cat = exp_cfg['num_categorical_features']
+
+    print(f"Starting dummy mixture job on device {dev} with transform list:")
+    time.sleep(1)
+    return None
 
     # setup the dataset splits and fit and apply the scaler
     scaler = MixedTransformsTimeSeries(transform_list)
@@ -269,7 +273,7 @@ def create_mixture_job_args(variable_cluster_groups, exp_cfg):
 
 def run_parallel_mixture_jobs(
         job_list,
-        devices_ids,
+        device_ids,
         **job_kwargs
     ):
     """
@@ -291,44 +295,77 @@ def run_parallel_mixture_jobs(
     # keep track of all the threads spawned
     threads = []
     for i, (job_name, transform_list) in enumerate(job_list):
-        dev_id = devices_ids[((i // exp_cfg['jobs_per_gpu']) % len(devices_ids))]
+        dev_id = device_ids[((i // exp_cfg['mixture']['jobs_per_gpu']) % len(device_ids))]
         threads.append(Thread(
             target=run_mixture_job,
             args=(transform_list, torch.device('cuda', dev_id), job_name),
             kwargs=job_kwargs,
+            name=job_name,
         ))
 
     i = 0
+    max_concurrent_jobs = exp_cfg['mixture']['jobs_per_gpu'] * len(device_ids)
     while i < len(threads):
         # start of all the threads
-        for j in range(exp_cfg['jobs_per_gpu'] * len(devices_ids)):
-            threads[i + j].run()
+        for j in range(i, min(len(threads), i + max_concurrent_jobs)):
+            print(f"Starting running job [{j+1} / {len(threads)}]: {threads[j].name}")
+            threads[j].start()
         # wait for them to finish
-        for j in range(exp_cfg['jobs_per_gpu'] * len(devices_ids)):
-            threads[i + j].join()
-            print(f"Finished running job {i+j} / {len(threads)}")
+        for j in range(i, min(len(threads), i + max_concurrent_jobs)):
+            threads[j].join()
+            print(f"Finished running job [{j+1} / {len(threads)}]: {threads[j].name}")
         # then start of more jobs if any left
-        i += exp_cfg['jobs_per_gpu'] * len(devices_ids)
+        i += max_concurrent_jobs
 
-def brute_force_preprocessing_mixture(**kwargs):
-    # TODO: implement this
-    #       this is [1/2] of the main driver and should be called to train and cache the brute force model
+def find_optimal_preprocessing_mixture_with_brute_force(
+        device_ids,
+        **kwargs
+        # model_init_fn,
+        # optimizer_init_fn,
+        # scheduler_init_fn,
+        # early_stopper_init_fn,
+        # X,
+        # y,
+        # exp_cfg,
+        # random_state=42,
+    ):
     global _available_scalers
+    exp_cfg = kwargs['exp_cfg']
 
-    # setup the rest of the keyword arguments for the job runner method
-    mixture_job_runner_kwargs = {
-        'model_init_fn' : None,
-        'optimizer_init_fn' : None,
-        'scheduler_init_fn' : None,
-        'early_stopper_init_fn' : None,
-        'X' : None,
-        'y' : None,
-        'exp_cfg' : None,
-        'save_path' : None,
-        'random_state' : None,
-    }
-    raise NotImplementedError("Not implemented yet")
+    #############################################################################
+    ##################### Step 1: Cluster the variables #########################
+    #############################################################################
 
+    # get the cluster groups for the numerical entries only
+    num_cats = exp_cfg['num_categorical_features']
+    if exp_cfg['mixture']['cluster_method'] == "statistics":
+        cluster_groups = cluster_variables_with_statistics(
+            X=X[:, :, num_cats:],
+            y=y,
+            k=exp_cfg['mixture']['number_of_clusters'],
+            num_bins=exp_cfg['mixture']['statistics_cluster']['num_bins'],
+            **exp_cfg['mixture']['statistics_cluster']['kmeans']
+        )
+    elif exp_cfg['mixture']['cluster_method'] == "kl-divergence":
+        cluster_groups = cluster_variables_with_kl_difference(X[:, :, num_cats:], y=None)
+    else:
+        raise NotImplementedError("Unknown cluster method " + exp_cfg['mixture']['cluster_method'])
+
+    print(cluster_groups) # TODO: temp
+
+    #############################################################################
+    ################## Step 2: Create the job arguments #########################
+    #############################################################################
+
+    job_list = create_mixture_job_args(cluster_groups, exp_cfg)
+
+    run_parallel_mixture_jobs(
+        job_list,
+        device_ids,
+        **kwargs
+    )
+
+    print("DONE bestie!")
 
 def get_optimal_mixture_transform_list(experiment_name):
     # TODO: implement this
@@ -365,7 +402,8 @@ if __name__ == "__main__":
         split_data_dir=os.path.join("/home/silo1/mas322/amex-default-prediction/", 'derived', 'processed-splits'),
         fill_dict=exp_cfg['fill'],
         corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, 42),
-        num_categorical_features=exp_cfg['num_categorical_features']
+        num_categorical_features=exp_cfg['num_categorical_features'],
+        load_small_subset=True,
     )
 
     transform_list = [
@@ -374,17 +412,30 @@ if __name__ == "__main__":
     ]
 
     # Test run mixture job
-    run_mixture_job(
-        transform_list,
-        torch.device('cuda', 3),
-        'test-filename',
-        model_init_fn,
-        optimizer_init_fn,
-        scheduler_init_fn,
-        early_stopper_init_fn,
-        X,
-        y,
-        exp_cfg,
+    # run_mixture_job(
+    #     transform_list,
+    #     torch.device('cuda', 3),
+    #     'test-filename',
+    #     model_init_fn,
+    #     optimizer_init_fn,
+    #     scheduler_init_fn,
+    #     early_stopper_init_fn,
+    #     X,
+    #     y,
+    #     exp_cfg,
+    #     random_state=42,
+    # )
+
+    # Test driver 1
+    find_optimal_preprocessing_mixture_with_brute_force(
+        [2, 6],
+        model_init_fn=model_init_fn,
+        optimizer_init_fn=optimizer_init_fn,
+        scheduler_init_fn=scheduler_init_fn,
+        early_stopper_init_fn=early_stopper_init_fn,
+        X=X,
+        y=y,
+        exp_cfg=exp_cfg,
         random_state=42,
     )
 

@@ -77,6 +77,13 @@ mixture:
     - tanh-standard-scaler
   jobs_per_gpu: 8
   cache_directory: /home/silo1/mas322/cache-files/
+  cluster_method: statistics
+  number_of_clusters: 9
+  statistics_cluster:
+    kmeans:
+      n_init: auto
+      random_state: 42
+    num_bins: 1000
 
 # End config
 ...
