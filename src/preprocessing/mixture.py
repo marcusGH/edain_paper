@@ -174,11 +174,13 @@ def run_mixture_job(
 
     :param save_path: location to save the history after finishing the job
     """
-    num_cat = exp_cfg['num_categorical_features']
 
-    print(f"Starting dummy mixture job on device {dev} with transform list:")
-    time.sleep(1)
-    return None
+    save_path = os.path.join(exp_cfg['mixture']['cache_directory'], f"{save_file_name}.npy")
+    if os.path.isfile(save_path):
+        print(f"Experiment already computed, using cached result: '{save_file_name}'")
+        return
+
+    num_cat = exp_cfg['num_categorical_features']
 
     # setup the dataset splits and fit and apply the scaler
     scaler = MixedTransformsTimeSeries(transform_list)
@@ -228,8 +230,8 @@ def run_mixture_job(
         verbose=False,
         device_ids=dev,
     )
-
-    np.save(os.path.join(exp_cfg['mixture']['cache_directory'], f"{save_file_name}.npy"), hist)
+    
+    np.save(save_path, hist)
     print(f"Saved results for: {save_file_name}")
 
 
@@ -272,6 +274,7 @@ def create_mixture_job_args(variable_cluster_groups, exp_cfg):
 
 
 def run_parallel_mixture_jobs(
+        experiment_name,
         job_list,
         device_ids,
         **job_kwargs
@@ -298,7 +301,7 @@ def run_parallel_mixture_jobs(
         dev_id = device_ids[((i // exp_cfg['mixture']['jobs_per_gpu']) % len(device_ids))]
         threads.append(Thread(
             target=run_mixture_job,
-            args=(transform_list, torch.device('cuda', dev_id), job_name),
+            args=(transform_list, torch.device('cuda', dev_id), f"{experiment_name}_{job_name}"),
             kwargs=job_kwargs,
             name=job_name,
         ))
@@ -318,23 +321,14 @@ def run_parallel_mixture_jobs(
         i += max_concurrent_jobs
 
 def find_optimal_preprocessing_mixture_with_brute_force(
+        experiment_name,
         device_ids,
-        **kwargs
-        # model_init_fn,
-        # optimizer_init_fn,
-        # scheduler_init_fn,
-        # early_stopper_init_fn,
-        # X,
-        # y,
-        # exp_cfg,
-        # random_state=42,
+        **job_kwargs
     ):
     global _available_scalers
-    exp_cfg = kwargs['exp_cfg']
+    exp_cfg = job_kwargs['exp_cfg']
 
-    #############################################################################
-    ##################### Step 1: Cluster the variables #########################
-    #############################################################################
+    # Step 1: Cluster the variables
 
     # get the cluster groups for the numerical entries only
     num_cats = exp_cfg['num_categorical_features']
@@ -351,21 +345,21 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     else:
         raise NotImplementedError("Unknown cluster method " + exp_cfg['mixture']['cluster_method'])
 
-    print(cluster_groups) # TODO: temp
-
-    #############################################################################
-    ################## Step 2: Create the job arguments #########################
-    #############################################################################
-
+    # Step 2: Create the list of transforms_list to try
     job_list = create_mixture_job_args(cluster_groups, exp_cfg)
 
+    # Step 3: run all the experiments, saving results to file
     run_parallel_mixture_jobs(
+        experiment_name,
         job_list,
         device_ids,
-        **kwargs
+        **job_kwargs
     )
 
-    print("DONE bestie!")
+    # Step 4: analyse the result to determine the optimal mixture to use
+    optimal_transform_list = get_optimal_mixture_transform_list("test-experiment-1")
+
+    print("Completed mixture preprocessing search!")
 
 def get_optimal_mixture_transform_list(experiment_name):
     # TODO: implement this
@@ -378,8 +372,6 @@ def get_optimal_mixture_transform_list(experiment_name):
 
 
 if __name__ == "__main__":
-    print("Testing testing...")
-
     with open("src/experiments/configs/experiment-config-alpha.yaml", "r") as f:
         exp_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -428,6 +420,7 @@ if __name__ == "__main__":
 
     # Test driver 1
     find_optimal_preprocessing_mixture_with_brute_force(
+        "test-experiment-1",
         [2, 6],
         model_init_fn=model_init_fn,
         optimizer_init_fn=optimizer_init_fn,
