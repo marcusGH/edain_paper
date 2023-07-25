@@ -357,19 +357,54 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     )
 
     # Step 4: analyse the result to determine the optimal mixture to use
-    optimal_transform_list = get_optimal_mixture_transform_list("test-experiment-1")
+    transform_list = optimal_transform_list = get_optimal_mixture_transform_list(
+        experiment_name=experiment_name,
+        cluster_groups=cluster_groups,
+        exp_cfg=exp_cfg,
+    )
 
     print("Completed mixture preprocessing search!")
+    return transform_list
 
-def get_optimal_mixture_transform_list(experiment_name):
-    # TODO: implement this
-    #       this is [2/2] of the main driver, and looks up the caches result for everything in cache
-    #       folder matching experiment name prefix, then looks at the histories and constructs the
-    #       optimal transform list, which should then be returned.
-    #       (Note: this is the "conclude" block in the diagram)
+def get_optimal_mixture_transform_list(experiment_name, cluster_groups, exp_cfg):
     global _available_scalers
-    raise NotImplementedError("Not implemented yet")
 
+    config_scaler_list = exp_cfg['mixture']['transforms']
+    cache_dir = exp_cfg['mixture']['cache_directory']
+    baseline_filename = f"{experiment_name}_baseline.npy"
+    baseline_hist = np.load(os.path.join(cache_dir, baseline_filename), allow_pickle=True).item()
+    metric_key = exp_cfg['mixture']['metric']
+
+    optimal_transform_list = []
+
+    print("Found optimal transform list to be:")
+    for gid in range(len(cluster_groups)):
+        # keep track of best scaler found so far for each group, looking at final metric value (last epoch)
+        best_transform = "standard-scaler"
+        best_metric = baseline_hist[metric_key][-1]
+
+        # iterate all scalers experimented with
+        for scaler_name in _available_scalers.keys():
+            # not in the config, so skip this even if available
+            # also skip baseline scaler: standard-scaler, as we tried that for baseline experiment
+            if scaler_name not in config_scaler_list or scaler_name == 'standard-scaler':
+                continue
+
+            mixture_filename = f"{experiment_name}_mixture-gid_{gid}-scaler_{scaler_name}.npy"
+            mix_hist = np.load(os.path.join(cache_dir, mixture_filename), allow_pickle=True).item()
+
+            # better than what found so far
+            if mix_hist[metric_key][-1] < best_metric:
+                best_metric = mix_hist[metric_key][-1]
+                best_transform = scaler_name
+
+        # save to optimal transform list (and print reduction in loss)
+        print(f"    Group {gid} -> {best_transform} [-{(-baseline_hist[metric_key][-1] + best_metric):.4f}]")
+        optimal_transform_list.append(
+            (cluster_groups[gid], copy.deepcopy(_available_scalers[best_transform]))
+        )
+
+    return optimal_transform_list
 
 if __name__ == "__main__":
     with open("src/experiments/configs/experiment-config-alpha.yaml", "r") as f:
@@ -420,7 +455,7 @@ if __name__ == "__main__":
 
     # Test driver 1
     find_optimal_preprocessing_mixture_with_brute_force(
-        "test-experiment-1",
+        "test-experiment-2",
         [2, 6],
         model_init_fn=model_init_fn,
         optimizer_init_fn=optimizer_init_fn,
