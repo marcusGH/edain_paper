@@ -357,14 +357,14 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     )
 
     # Step 4: analyse the result to determine the optimal mixture to use
-    transform_list = optimal_transform_list = get_optimal_mixture_transform_list(
+    optimal_transform_list = get_optimal_mixture_transform_list(
         experiment_name=experiment_name,
         cluster_groups=cluster_groups,
         exp_cfg=exp_cfg,
     )
 
     print("Completed mixture preprocessing search!")
-    return transform_list
+    return optimal_transform_list
 
 def get_optimal_mixture_transform_list(experiment_name, cluster_groups, exp_cfg):
     global _available_scalers

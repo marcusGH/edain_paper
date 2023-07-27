@@ -14,7 +14,6 @@ from src.preprocessing.static_transformations import (
     TanhStandardScalerTimeSeries,
     WinsorizeDecorator,
     IgnoreTimeDecorator,
-    MixedTransformsTimeSeries,
 )
 from src.preprocessing.adaptive_transformations import (
     DAIN_Layer,
@@ -24,6 +23,10 @@ from src.preprocessing.normalizing_flows import (
     EDAIN_Layer,
     EDAINScalerTimeSeries,
     EDAINScalerTimeSeriesDecorator,
+)
+from src.preprocessing.mixture import (
+    MixedTransformsTimeSeries,
+    find_optimal_preprocessing_mixture_with_brute_force,
 )
 from src.models.basic_grunet import GRUNetBasic
 from src.models.adaptive_grunet import AdaptiveGRUNet
@@ -41,7 +44,6 @@ static_preprocessing_methods = {
     'log-standard-scaler' : LogStandardScalerTimeSeries,
     'min-max' : MinMaxTimeSeries,
     'tanh-standard-scaler' : TanhStandardScalerTimeSeries,
-    # 'edain-kl' : EDAINScalerTimeSeries,
 }
 
 parser = argparse.ArgumentParser(
@@ -61,6 +63,13 @@ parser.add_argument("--device",
     choices=[str(i) for i in range(8)] + ['cpu'],
     default=0,
     required=True,
+)
+parser.add_argument("--mixture-device-ids",
+    help="The device ids to use for the brute force mixture preprocessing search routine. Required if the '--preprocessing-method' argument is set to 'mixed'",
+    nargs='+',
+    type=int,
+    required=False,
+    dest='mixture_device_ids',
 )
 parser.add_argument("--dataset",
     help="The dataset to use for the experiment",
@@ -82,7 +91,7 @@ parser.add_argument("--adaptive-layer",
 parser.add_argument("--preprocessing-method",
     help="The preprocessing method to use",
     dest='preprocessing_method',
-    choices=list(static_preprocessing_methods.keys()),
+    choices=list(static_preprocessing_methods.keys()) + ["mixed"],
     required=True,
 )
 parser.add_argument("--edain-kl",
@@ -147,10 +156,9 @@ if __name__ == '__main__':
     torch.manual_seed(args.random_state)
 
     ################################################################
-    ###            Part 1: Loading dataset and model             ###
+    ###            Part 1: Load the dataset                      ###
     ################################################################
 
-    # load dataset
     if args.dataset == 'amex':
         # minor TODO: refactor out dataset-specific config into amex_dataset.yaml file
         X, y = load_amex_numpy_data(
@@ -161,9 +169,12 @@ if __name__ == '__main__':
         )
     else:
         raise ValueError(f"Dataset not supported: {args.dataset}")
-    print(f"Finished loading dataset with covariates of shape {X.shape} and responses of shape {y.shape}")
+    print(f"Finished loading dataset '{args.dataset}' with covariates of shape {X.shape} and responses of shape {y.shape}")
 
-    # load model
+    ################################################################
+    ###            Part 2: Setup the model initialisation        ###
+    ################################################################
+
     if args.model == 'gru-rnn' and args.adaptive_layer is None:
         model_init_fn = lambda : GRUNetBasic(
             num_cat_columns=exp_cfg['num_categorical_features'],
@@ -233,47 +244,9 @@ if __name__ == '__main__':
         raise ValueError(f"Model not supported: {args.model}")
     print(f"Finished loading model")
 
-    ################################################################
-    ###            Part 2: Setup preprocessing methods           ###
-    ################################################################
-
-    if args.ignore_time:
-        original_time_length = exp_cfg['time_series_length']
-        exp_cfg['time_series_length'] = 1
-
-    # minor TODO: include other parameters such as a and b for min-max
-    msg = args.preprocessing_method
-    preprocess_init_fn = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
-    # TODO: add optional winsorization
-
-    # use the above scaler function to decorate our EDAIN-KL scaler
-    if args.edain_kl:
-        fit_kwargs = exp_cfg['edain_bijector_fit']
-        fit_kwargs['device'] = dev
-        _scaler_init_fn = lambda : EDAINScalerTimeSeriesDecorator(
-            scaler=preprocess_init_fn(),
-            time_series_length=exp_cfg['time_series_length'],
-            input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
-            bijector_kwargs=exp_cfg['edain_bijector'],
-            bijector_fit_kwargs=fit_kwargs,
-        )
-        msg = f"EDAIN-KL({msg})"
-    else:
-        _scaler_init_fn = preprocess_init_fn
-
-    # check if scaler should be decorated with time-flatten scaler
-    if args.ignore_time:
-        scaler_init_fn = lambda : IgnoreTimeDecorator(
-            scaler=_scaler_init_fn(),
-            time_series_length=original_time_length,
-        )
-        msg = f"IgnoreTime({msg})"
-    else:
-        scaler_init_fn = _scaler_init_fn
-    print(f"Finished setting up preprocessing technique: {msg}")
 
     ################################################################
-    ###          Part 3: Run cross-validation experiment         ###
+    ###        Part 3: Setup optimizer related utilities         ###
     ################################################################
 
     # set up loss function
@@ -282,7 +255,7 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Loss not supported: {exp_cfg['loss']}")
 
-    # set up optimizer function
+    # set up optimizer function (some models have their own optimizers)
     if optimizer_init_fn is None:
         if exp_cfg['fit']['optimizer'] == 'adam':
             optimizer_init_fn = lambda mod : torch.optim.Adam(
@@ -305,6 +278,72 @@ if __name__ == '__main__':
         min_delta=exp_cfg['fit']['early_stopper_min_delta'],
     )
 
+    ################################################################
+    ###            Part 4: Setup preprocessing methods           ###
+    ################################################################
+
+    if args.ignore_time:
+        original_time_length = exp_cfg['time_series_length']
+        exp_cfg['time_series_length'] = 1
+
+    msg = args.preprocessing_method
+    if args.preprocessing_method == 'mixed':
+        assert args.mixture_device_ids is not None and "Device IDs for mixture not provided"
+        # start the brute force search
+        transform_list = find_optimal_preprocessing_mixture_with_brute_force(
+            args.experiment_name,
+            args.mixture_device_ids,
+            # the following are all the job kwargs required by `run_parallel_mixture_jobs`
+            model_init_fn=model_init_fn,
+            optimizer_init_fn=optimizer_init_fn,
+            scheduler_init_fn=scheduler_init_fn,
+            early_stopper_init_fn=early_stopper_init_fn,
+            X=X,
+            y=y,
+            exp_cfg=exp_cfg,
+            random_state=args.random_state,
+        )
+
+        # setup the mixed scaler based on result
+        _scaler_init_fn_1 = lambda : MixedTransformsTimeSeries(
+            transform_list,
+            time_series_length=exp_cfg['time_series_length']
+        )
+    else:
+        _scaler_init_fn_1 = lambda : static_preprocessing_methods[args.preprocessing_method](exp_cfg['time_series_length'])
+    # TODO: add optional winsorization
+
+    # use the above scaler function to decorate our EDAIN-KL scaler
+    if args.edain_kl:
+        fit_kwargs = exp_cfg['edain_bijector_fit']
+        fit_kwargs['device'] = dev
+        _scaler_init_fn_2 = lambda : EDAINScalerTimeSeriesDecorator(
+            scaler=_scaler_init_fn_1(),
+            time_series_length=exp_cfg['time_series_length'],
+            input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
+            bijector_kwargs=exp_cfg['edain_bijector'],
+            bijector_fit_kwargs=fit_kwargs,
+        )
+        msg = f"EDAIN-KL({msg})"
+    else:
+        _scaler_init_fn_2 = _scaler_init_fn_1
+
+    # check if scaler should be decorated with time-flatten scaler
+    if args.ignore_time:
+        scaler_init_fn = lambda : IgnoreTimeDecorator(
+            scaler=_scaler_init_fn_2(),
+            time_series_length=original_time_length,
+        )
+        msg = f"IgnoreTime({msg})"
+    else:
+        scaler_init_fn = _scaler_init_fn_2
+    print(f"Finished setting up preprocessing technique: {msg}")
+
+
+    ################################################################
+    ###            Part 5: Run the experiment                    ###
+    ################################################################
+
     print(f"Starting cross-validation experiment")
     history = cross_validate_experiment(
         model_init_fn=model_init_fn,
@@ -324,7 +363,7 @@ if __name__ == '__main__':
     )
 
     ################################################################
-    ###            Part 4: Save experiment results               ###
+    ###            Part 6: Save experiment results               ###
     ################################################################
 
     # print time in minutes and seconds
