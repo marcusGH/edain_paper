@@ -70,23 +70,22 @@ bin:
 
 # configuration for brute force clustering approach
 mixture:
-  num_epochs_brute_force: 6
+  num_epochs_brute_force: 10
   # the set of transformations to consider a mixture of (should always include "standard-scaler")
   transforms:
     - standard-scaler
-    - min-max-scaler
     - tanh-standard-scaler
-  jobs_per_gpu: 16
+  jobs_per_gpu: 1
   cache_directory: /home/silo1/mas322/cache-files/
   cluster_method: statistics
-  number_of_clusters: 9
+  number_of_clusters: 30
   statistics_cluster:
     # keyword argument to the KMeans clustering routine
     kmeans:
       n_init: auto
       random_state: 42
     # number of bins for the histogram, used as part of determining some statistics
-    num_bins: 1000
+    num_bins: 5000
   # the metric used to determine which mixture is best (lower is better)
   metric: val_loss
 

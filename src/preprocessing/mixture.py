@@ -303,7 +303,7 @@ def run_parallel_mixture_jobs(
             target=run_mixture_job,
             args=(transform_list, torch.device('cuda', dev_id), f"{experiment_name}_{job_name}"),
             kwargs=job_kwargs,
-            name=job_name,
+            name=f"{experiment_name}_{job_name}",
         ))
 
     i = 0
@@ -334,14 +334,14 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     num_cats = exp_cfg['num_categorical_features']
     if exp_cfg['mixture']['cluster_method'] == "statistics":
         cluster_groups = cluster_variables_with_statistics(
-            X=X[:, :, num_cats:],
-            y=y,
+            X=job_kwargs['X'][:, :, num_cats:],
+            y=job_kwargs['y'],
             k=exp_cfg['mixture']['number_of_clusters'],
             num_bins=exp_cfg['mixture']['statistics_cluster']['num_bins'],
             **exp_cfg['mixture']['statistics_cluster']['kmeans']
         )
     elif exp_cfg['mixture']['cluster_method'] == "kl-divergence":
-        cluster_groups = cluster_variables_with_kl_difference(X[:, :, num_cats:], y=None)
+        cluster_groups = cluster_variables_with_kl_difference(job_kwargs['X'][:, :, num_cats:], y=None)
     else:
         raise NotImplementedError("Unknown cluster method " + exp_cfg['mixture']['cluster_method'])
 
