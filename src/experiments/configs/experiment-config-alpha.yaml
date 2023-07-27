@@ -77,14 +77,19 @@ mixture:
     - tanh-standard-scaler
   jobs_per_gpu: 1
   cache_directory: /home/silo1/mas322/cache-files/
-  cluster_method: statistics
-  number_of_clusters: 30
+  # should be either "statistics" or "kl-divergence"
+  cluster_method: kl-divergence
+  number_of_clusters: 9
   statistics_cluster:
     # keyword argument to the KMeans clustering routine
     kmeans:
       n_init: auto
       random_state: 42
     # number of bins for the histogram, used as part of determining some statistics
+    num_bins: 5000
+  kl_cluster:
+    agglomerative_clustering:
+      linkage: average
     num_bins: 5000
   # the metric used to determine which mixture is best (lower is better)
   metric: val_loss
