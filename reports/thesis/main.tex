@@ -1,5 +1,9 @@
 \documentclass{statsmsc}
 
+% Vim note: zo, zc and zm to open and close folds, and close all folds
+
+% Commands {{{
+
 \title{Title of the Thesis}
 \author{FIRSTNAME LASTNAME}
 \CID{01234567}
@@ -17,7 +21,12 @@
 \newcommand{\EE}[1]{ \mathrm{E} [ #1 ] }
 \newcommand{\inparenth}[1]{\left( #1 \right)}
 
+% }}}
+
 \begin{document}
+
+%%%%% Heading %%%%%
+% Heading {{{
 
 % Generates the Title Page
 \maketitle
@@ -37,18 +46,38 @@
     ANY ACKNOWLEDGEMENTS GO HERE
 \end{acknowledgements}
 
-% add glossary?
+{\chapter*{Contents}\thispagestyle{plain}
+    % TODO: Load hyperref so that ToC items are clickable
+    \tableofcontents
+}
+
+% Glossary ?
+{\chapter*{Notation}\thispagestyle{plain}
+    $\boldsymbol{X}$ is a matrix
+}
+
+% Abbreviations
+{\chapter*{Abbreviations}\thispagestyle{plain}
+    % TODO: load the acronym package used in my undergrad thesis
+    EDAIN -- Extended DAIN
+}
+
+
 
 % VERY IMPORTANT
 % This command switches from Roman to Arabic numbering for main part of thesis
 \mainmatter
 
+% }}}
 
 \chapter{Introduction}
+% Introduction {{{
 
 The introduction section goes here\footnote{Tip: write this section last.}.
 
+% }}}
 \chapter{Background}
+% Background {{{
 
 Background chapter.
 
@@ -222,15 +251,29 @@ and the third line follows from linearity of expectation:
 
 
 
+% }}}
+\chapter{Methods}
+% Methods {{{
+
+
+% }}}
+\chapter{Results and Discussion}
+% Results and Discussion {{{
+
+
+% }}}
 \chapter{Conclusion}
+% Conclusion {{{
 
 
 Conclusion goes here. 
 
 
 
+% }}}
 
-
+% Appendix
+% Appendix {{{
 \clearpage
  %% reset page counter and start appendix pages with A
 \pagenumbering{arabic}
@@ -243,11 +286,15 @@ Conclusion goes here.
 %
 %Appendix goes here.
 
+% }}}
 
+% References {{{
 %%References part of appendices
 % References: modify the file refs.bib
 \bibliographystyle{plainnat}
 \bibliography{refs}
 
 
+% }}}
 \end{document}
+% vim: set foldmethod=marker:
