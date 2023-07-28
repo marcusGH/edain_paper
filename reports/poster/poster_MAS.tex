@@ -1,4 +1,4 @@
-\documentclass[portrait,final,x11names,a1paper,fontscale=0.4]{baposter}
+\documentclass[portrait,final,x11names,a1paper,fontscale=0.40]{baposter}
 \usepackage{calc}
 \usepackage{graphicx,caption}
 \usepackage{relsize}
@@ -93,7 +93,7 @@
   % Format of text header
   eyecatcher=true,
   headerborder=closed,
-  headerheight=0.15\textheight,
+  headerheight=0.1335\textheight,
   textfont=\bf,
   headershape=roundedright,
   % headershade=shadelr,
@@ -112,14 +112,18 @@
   {\centering\color{blue_icl2}{\bf{\huge Automating the selection of  preprocessing  \\[0.1cm]techniques for deep neural networks}}\vspace{0.5em}}
   % Authors
   {\vspace*{-.3cm}
-  \hspace*{1.9cm} 
+  \hspace*{0.1cm} 
   \leavevmode\hbox to \linewidth{ \color{blue_icl2}% 
   \centering
 \begin{tabular}[t]{c@{}}
-    {\Large{\textbf{Student:} Marcus September}} \\[.05cm]
-    {\Large{\textbf{Supervisor:} Francesco Sanna Passino}} \\[.05cm]
-\faUniversity\ {Department of Mathematics, Imperial College London} \\
-\faEnvelopeO\ {\tt marcus.september22@imperial.ac.uk} \\
+    {\Large{\textbf{Student:} Marcus Alexander Karmi September\footnotemark[1]} (\faEnvelopeO\ {\tt mas322@ic.ac.uk})} \\[.05cm]
+    {\Large{\textbf{Supervisors:} Francesco Sanna Passino\footnotemark[1]},
+        Anton Hinel\footnotemark[2], Leonie 
+        % Tabea
+        Goldmann\footnotemark[2]
+    } \\[.05cm]
+    \faUniversity\ {\footnotemark[1]{Department of Mathematics, Imperial College London}}; \\
+    \faBuilding\ {\footnotemark[2]Machine Learning Research, American Express} \\
 %{\large This work is funded by a {\bf Microsoft Security AI} research grant.}
 \end{tabular} 
 }}
@@ -134,8 +138,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent   
-Deep learning sequence models, such as Recurrent Neural Networks (RNNs) and
-transformers, are sensitive to input variable distributions. Both training
+Deep learning sequence models, such as Recurrent Neural Networks and
+transformers, are \icl{sensitive to input variable distributions}. Both training
 speed and performance can drop significantly for non-normal distributions, such
 as skewed distributions and those with outliers.
 % Real-world data also usually
@@ -145,8 +149,8 @@ as skewed distributions and those with outliers.
 Preprocessing includes all transformations applied to the data before feeding it into
 the neural network, and selecting the appropriate techniques is essential for
 optimising model performance.
-However, this is a time-consuming process. This project aims to automate this by
-automatically selecting the preprocessing methods to use for any given
+However, this is a time-consuming process. This project aims to \icl{automate} this by
+\icl{automatically selecting the preprocessing methods} to use for any given
 sequence dataset, increasing both model performance and training efficiency.
 }
 
@@ -156,7 +160,7 @@ sequence dataset, increasing both model performance and training efficiency.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent
 The default prediction dataset, provided by American Express,
-contains a multivariate time-series from $N\approx 460\;000$ different customers.
+contains \icl{multivariate time-series} from $N\approx 460\,000$ different customers.
 Each time-series has $P=188$ aggregated
 profile features recorded at up to $T=13$ different credit card statement
 dates.  For each multivariate time-series, the target label
@@ -188,8 +192,9 @@ Additionally, a small amount of uniform noise has been added to all the numeric 
 
     \noindent
     The default prediction dataset exhibits many traits
-    of real-world datasets, such as very skewed distributions, multiple modes, unusual peaks
-    and extreme values.
+    commonly observed in
+    real-world datasets, such as very \icl{skewed distributions, multiple modes, unusual peaks
+    and extreme values}.
     Across the whole dataset, 8.50\% of the numeric data points are missing.
     The 5 most incomplete variables are missing between 91.52\% and 92.62\% of the data points.
     Only 138 out of the 177 numeric variables have less than 1\% missing values. 
@@ -204,8 +209,8 @@ Additionally, a small amount of uniform noise has been added to all the numeric 
 
 \noindent
 With a custom-made synthetic data  generation procedure, I can generate new
-labelled multivariate time-series where the variables follow arbitrary distributions based on the
-unnormalized PDFs I provide. This allows synthesizing data with real-world-like distributions
+labelled multivariate time-series where the variables follow \icl{arbitrary distributions} based on provided
+unnormalized PDFs. This allows synthesizing data with real-world-like distributions
 in a controlled matter, which makes it easier and more efficient to experiment and learn
 which preprocessing method works best in each scenario. This insight will then be used to automate the
 preprocessing step.
@@ -244,27 +249,29 @@ techniques \\ applied on the American Express default prediction dataset, using 
 \vspace*{-.25cm}
 \end{minipage}
 \noindent
-Applying an appropriate preprocessing technique before training can significantly improve
-performance. Additionally, with the right preprocessing technique the number of epochs required for convergence is
-reduced, as seen in figure 2.
+Applying an appropriate preprocessing technique before training can \icl{significantly improve
+performance}. Additionally, with the right preprocessing technique the \icl{number of epochs required for convergence is
+reduced}, as seen in figure 2.
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{6. Preliminary result II: Using synthetic data}{name=results2,column=2,span=3,below=picture}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent
-Using the synthetic data generation procedure, two multivariate time-series datasets of dimensions $(N=10\;000,T=6,D=2)$ were
-generated. The first one was configured to generate data with very skewed and irregular distributions, containing outliers, while the
-variables in the second dataset were all normally distributed. 
+Using the same synthetic data generation procedure, two multivariate time-series datasets of dimensions $(N=10\;000,T=6,D=2)$ 
+with identical responses, $\boldsymbol{y}$, were generated. Only the \icl{input variable distributions} differ between the two datasets. The first dataset
+contains non-normally distributed data that is skewed and contains outliers, while the second dataset has input variables
+following a standard normal distribution.
+
 \noindent
 \begin{center}
     \vspace*{-.5cm}
-\captionof{table}{\textbf{Performance metrics after training a GRU RNN model on synthetic data with specified variable distributions (Sample size 50, and results presented with a 95\% CI)}}
+\captionof{table}{\textbf{Performance metrics after training a GRU RNN model on synthetic data with different variable distributions (Sample size 50, and results presented with a 90\% CI)}}
 \begin{tabular}{c|c|c|c}
     \toprule
     Variable distributions & Validation loss & AMEX metric & Binary accuracy \\
     \midrule
-    Non-normal & $0.2209 \pm 0.0183$ & $0.7907 \pm 0.0373$ & $90.53\% \pm 1.13\%$ \\
-    Normal & $ 0.1356 \pm 0.0176$ & $ 0.8683 \pm 0.0242$ & $ 94.19\% \pm 1.12\%$ \\
+    Non-normal & $0.3345 \pm 0.0233$ & $0.6858 \pm 0.0282$ & $85.03\% \pm 1.53\%$ \\
+    Standard normal & $0.2793 \pm 0.0221$ & $ 0.7420 \pm 0.0294$ & $87.58\% \pm 1.26\%$ \\
     \bottomrule
     % Using non-normal distributions
     % Average validation loss: 0.2209 +- 0.0183
@@ -284,36 +291,37 @@ variables in the second dataset were all normally distributed.
 % \bottomrule
 \end{tabular}
 \end{center}
-From table 1, we can conclude there exists suitable variable transformations that can be applied to the data to
-significantly increase performance.
+From table 1, we can conclude that there exists suitable \icl{variable transformations} that can be applied to the data to
+\icl{significantly increase performance}.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{7. Automating the preprocessing procedure}{name=results,column=2,span=3,below=results2,above=bottom}{
+\headerbox{7. Automating the preprocessing procedure}{name=results,column=2,span=3,below=results2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent
 \begin{minipage}{.975\textwidth}
     \captionof{figure}{\textbf{Proposition I: Automating preprocessing using heuristics and determining suitable static transformations for each variable based on these}}
-    \vspace*{-.3cm}
+    \vspace*{-.6cm}
     \begin{center}
     \includegraphics[width=0.975\textwidth]{Figures/automated-preprocessing-heuristics.pdf} 
     \end{center}
 \end{minipage}
 \begin{minipage}{.975\textwidth}
+    \vspace*{.4cm}
     \captionof{figure}{\textbf{Proposition II: Automating preprocessing using an adaptive preprocessing layer with weights that are
     learned during training}}
-    \vspace*{-.15cm}
+    \vspace*{-.6cm}
     \begin{center}
     \includegraphics[width=\textwidth]{Figures/automated-preprocessing-adaptive.pdf} 
     \end{center}
-    \vspace*{-.15cm}
+    \vspace*{.15cm}
 \end{minipage}
 
 \noindent
 To automate the selection of preprocessing techniques, there are two methods I propose to investigate
-further. One option, illustrated in figure 3, is based on heuristics. With the second option, as shown in figure 4,
-the preprocessing methods are parameterized and learned as part of the training procedure.
+further. One method, illustrated in figure 3, is based on \icl{heuristics}. In the second method, as shown in figure 4,
+the preprocessing operations \icl{are parameterized and learned as part of the training procedure}.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
