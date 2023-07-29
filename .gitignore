@@ -6,3 +6,6 @@ __pycache__
 .virtual_documents/
 .idea/*
 .idea/
+model-checkpoints/
+planning-notes/
+research-papers/
