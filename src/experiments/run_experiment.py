@@ -131,6 +131,12 @@ parser.add_argument("--experiment-name",
     type=str,
     required=True,
 )
+parser.add_argument("--override",
+    help="String with commands for overriding the experiment config",
+    type=str,
+    required=False,
+    default=None,
+)
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -154,6 +160,25 @@ if __name__ == '__main__':
     print(f"Using random seed = {args.random_state}")
     np.random.seed(args.random_state)
     torch.manual_seed(args.random_state)
+
+    ################## Parse override commands #####################
+
+    if args.override is not None:
+        # commands are separated by spaces
+        commands = args.override.split(" ")
+
+        for cmd_str in commands:
+            # key(s) and values are separated by colons
+            keys = cmd_str.split(":")[:-1]
+            val = cmd_str.split(":")[-1]
+
+            # find the value in the dictionary recursively
+            d = exp_cfg
+            for k in keys[:-1]:
+                d = d[k]
+            # then update the value after casting it to the appropriate type
+            d[keys[-1]] = type(d[keys[-1]])(val)
+
 
     ################################################################
     ###            Part 1: Load the dataset                      ###
@@ -208,6 +233,7 @@ if __name__ == '__main__':
                 input_dim=exp_cfg['gru_model']['num_features'] - exp_cfg['num_categorical_features'],
                 # when using it as adaptive layer, we do a forward pass, not inverse
                 invert_bijector=False,
+                outlier_removal_residual_connection=True,
                 **exp_cfg['edain_bijector'],
             )
             adaptive_layer_optim_args = {
