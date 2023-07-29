@@ -1,9 +1,10 @@
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from src.preprocessing.static_transformations import MinMaxTimeSeries, TanhStandardScalerTimeSeries, StandardScalerTimeSeries
 from threading import Thread
 from tqdm.auto import tqdm
+from scipy.stats import entropy
 
 import copy
 import numpy as np
@@ -146,12 +147,36 @@ def cluster_variables_with_statistics(X, k, y=None, num_bins=1000, **kmeans_kwar
     return groups
 
 
-def cluster_variables_with_kl_difference(X, y=None, **kwargs):
+def cluster_variables_with_kl_difference(X, k, y=None, num_bins=1000, **agglomerative_cluster_kwargs):
     """
     Given an array of shape (N, T, D), returns a list of lists
     of k lists, constituting a partition of the {1, ..., D} variables
     """
-    raise NotImplementedError("Not implemented yet...")
+    D = X.shape[2]
+    T = X.shape[1]
+
+    scaler = MinMaxTimeSeries(time_series_length=T)
+    X_scaled = scaler.fit_transform(X, y)
+
+    hist = get_histogram(X_scaled, num_bins) # (D, num_bins)
+
+    W = np.zeros((D, D))
+    # calculate pair-wise mutual information estimates
+    for i in range(D):
+        for j in range(i + 1, D):
+            # apply plus-1 smoothing to avoid divisions by zero
+            W[j, i] = entropy(hist[i] + 1, hist[j] + 1)
+    # make the matrix symmetric
+    # return W
+    W = np.tril(W) + np.triu(W.T, 1)
+
+    ac = AgglomerativeClustering(n_clusters=k, metric="precomputed", **agglomerative_cluster_kwargs)
+    ac.fit(W)
+
+    groups = []
+    for i in range(k):
+        groups.append(list(np.arange(D)[ac.labels_ == i]))
+    return groups
 
 
 def run_mixture_job(
@@ -230,7 +255,7 @@ def run_mixture_job(
         verbose=False,
         device_ids=dev,
     )
-    
+
     np.save(save_path, hist)
     print(f"Saved results for: {save_file_name}")
 
@@ -303,7 +328,7 @@ def run_parallel_mixture_jobs(
             target=run_mixture_job,
             args=(transform_list, torch.device('cuda', dev_id), f"{experiment_name}_{job_name}"),
             kwargs=job_kwargs,
-            name=job_name,
+            name=f"{experiment_name}_{job_name}",
         ))
 
     i = 0
@@ -333,15 +358,23 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     # get the cluster groups for the numerical entries only
     num_cats = exp_cfg['num_categorical_features']
     if exp_cfg['mixture']['cluster_method'] == "statistics":
+        print(f"Clustering based on statistics")
         cluster_groups = cluster_variables_with_statistics(
-            X=X[:, :, num_cats:],
-            y=y,
+            X=job_kwargs['X'][:, :, num_cats:],
+            y=job_kwargs['y'],
             k=exp_cfg['mixture']['number_of_clusters'],
             num_bins=exp_cfg['mixture']['statistics_cluster']['num_bins'],
             **exp_cfg['mixture']['statistics_cluster']['kmeans']
         )
     elif exp_cfg['mixture']['cluster_method'] == "kl-divergence":
-        cluster_groups = cluster_variables_with_kl_difference(X[:, :, num_cats:], y=None)
+        print(f"Clustering based on KL-divergence")
+        cluster_groups = cluster_variables_with_kl_difference(
+            X=job_kwargs['X'][:, :, num_cats:],
+            y=job_kwargs['y'],
+            k=exp_cfg['mixture']['number_of_clusters'],
+            num_bins=exp_cfg['mixture']['kl_cluster']['num_bins'],
+            **exp_cfg['mixture']['kl_cluster']['agglomerative_clustering'],
+        )
     else:
         raise NotImplementedError("Unknown cluster method " + exp_cfg['mixture']['cluster_method'])
 
