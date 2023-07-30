@@ -38,6 +38,19 @@
 %\usepackage[authoryear]{natbib}
 %\usepackage[numbers]{natbib}
 
+% for clickable table of content entries
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true, %set true if you want colored links
+    linktoc=all,     %set to all if you want both sections and subsections linked
+    linkcolor=black,  %choose some color if you want links to stand out
+}
+% For handling acronyms
+\usepackage{acronym} 
+% For not doing indent on new paragraphs
+\usepackage{parskip} 
+
 %% Theorem environment and numbering
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
