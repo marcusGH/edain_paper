@@ -179,6 +179,7 @@ if __name__ == '__main__':
             # then update the value after casting it to the appropriate type
             d[keys[-1]] = type(d[keys[-1]])(val)
 
+    print(f"Start experiment '{args.experiment_name}'.") 
 
     ################################################################
     ###            Part 1: Load the dataset                      ###
