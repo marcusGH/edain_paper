@@ -49,11 +49,12 @@ edain_bijector_fit:
   batch_size: 1024
   milestones: [3, 7]
   num_epochs: 20
+  num_fits: 1
   base_lr: 0.001
   scale_lr: 0.01
   shift_lr: 0.01
-  outlier_lr: 100
-  power_lr: 10
+  outlier_lr: 100.0
+  power_lr: 10.0
 
 # Configuration for the DAIN layer
 dain:
