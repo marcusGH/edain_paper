@@ -64,6 +64,7 @@
         \acro{DAIN}{Deep Adaptive Input Normalization}
         \acro{RDAIN}{Robust Deep Adaptive Input Normalization}
         \acro{EDAIN}{Extended Deep Adaptive Input Normalization}
+        \acro{BIN}{Bilinear Input Normalization}
     \end{acronym}
 }
 
@@ -157,7 +158,168 @@ TODO: introduction to this chapter
 % Methods: EDAIN {{{
 \label{sec:EDAIN}
 
-TODO: write details
+% Topics of this section:
+% * Illustrative diagram of the 4 layers, and the weights, justifying order of operations
+% * Differences to DAIN, explaining batch awareness, and specifics of (amex) dataset worked with
+% * Explaining the 3 parts:
+%   * outlier removal: Inspired by winsorization, plot of curve for different values,to show how work
+%   * scale&shift: able to generalise standard scaling
+%   * power transform: should also work for negative and positive values, while being numerically stable
+
+My first contribution is the \ac{EDAIN} layer. This adaptive preprocessing layer is inspired
+by the likes of DAIN\_REF and BIN\_REF, but unlike the aforementioned methods, the
+\ac{EDAIN} layer also supports normalizing the data in a \textit{batch-agnostic} fashion, whereas
+the \ac{DAIN}, \ac{RDAIN} and \ac{BIN} layers are all \textit{batch-aware}.
+Additionally, the \ac{EDAIN} layer extends the other layers with two new operations: An outlier
+removal operation that is designed to reduce the negative impact of high-tail observations,
+as well as a power-transform operation that is designed to transform non-normal data to be more
+normal.
+
+\subsubsection{Notation}%
+\label{ssub:Notation}
+
+
+Let $\{\bfX^{(i)} \in \R^{d \times T};i=1,\dots,N\}$ denote a set of $N$ multivariate time-series,
+each composed of $T$ $d$-dimensional feature vectors. We also let $\bfx_t^{(i)}\in \R^d$,
+where $t=1,\dots,T$, denote the $t$th feature vector at time-step $t$ in the time-series.
+
+\subsubsection{Architecture}%
+\label{ssub:Architecture}
+
+
+An overview of the layer's architecture is shown in figure TODO\_FIG.
+First, outlier removal. Then scale. Then shift. Then power transform.
+This order because TODO.
+
+TODO: explain comparison to DAIN, RDAIN and BIN, and how not batch-aware, but rather aims to
+learn characteristics of global distribution, as it's the global distribution that might be
+very irregular...
+
+% Outlier removal
+\subsubsection{Outlier removal}% {{{
+\label{ssub:Outlier removal}
+
+Handling outliers and extreme values in the dataset can increase predictive performance if done
+correctly (citation needed). Two common ways of doing this are omission and winsorization
+\citep{winsorization}. With the former, observations that are deemed to be extreme are simply
+removed during training. With the latter, all the data is still used, but observations lying
+outside a certain number of standard deviation from the mean, or below or above certain
+percentiles, are \textit{clamped down} to be closer to the mean or median of the data.
+For example, if winsorizing data using 3 standard deviation, all values less than
+$\mu-3\sigma$ are set to be exactly $\mu-3\sigma$. Similarly, the values above
+$\mu+3\sigma$ are \textit{clamped} to this value. Winsorization can also be done using percentiles,
+where common boundaries are the first and fifth percentiles \cite{winsorization}.
+However, the type of winsorization, as well as the number of standard deviation
+or percentiles to use, might depend on the dataset. Additionally, it might not
+be necessary to winsorize the data at all if the outliers turn out to not
+negatively affect performance. All this introduces more hyperparameters to tune
+during modelling. The outlier removal presented here aims to automatically both determine
+whether winsorization is necessary for a particular feature, and determine the threshold at
+which to apply winsorization.
+
+For input vector $\bfx \in \R^d$, the adaptive outlier removal operation is defined as:
+\begin{equation}\label{eq:adaptive-outlier-removal}
+    \bm\alpha' \odot \underbrace{\left(\bm\beta' \odot 
+        \tanh\left\{(\bfx-\hat{\bm\mu}) \oslash \bm\beta'  \right\}+\hat{\bm\mu}
+\right)}_{\text{smooth adaptive centred winsorization}}
+    +\underbrace{\left(1-\bm\alpha' \right) \odot \bfx}_{\text{residual connection}},
+\end{equation}
+where $\odot$ is the element-wise multiplication, $\oslash$ is element-wise division,
+$\bm\alpha' \in [0,1]^d$ is a parameter controlling how winsorization to apply to each feature,
+and $\bm\beta' \in [\beta_{\text{min}},\infty)^d$ controls the winsorization threshold for
+each feature. The $\hat{\bm\mu}$ parameter is an estimate of the mean of the data, and is used
+to ensure the winsorization is centred. When setting the \ac{EDAIN} layer in \textit{batch-aware}
+mode, it is simply the mean of the batch:
+\begin{equation}
+    \hat{\mu}_k=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T x_{j,k}^{(i)},
+\end{equation}
+while if using the \textit{batch-agnostic} mode, it is iteratively updated using a cumulative
+moving average estimate at each forward pass of the layer. This is to better approximate the
+global mean of the data.
+The unknown parameters of the model are $\bm\alpha \in \R^d$ and $\bm\beta \in \R^d$, and they
+are transformed into the constrained parameters $\bm\alpha'$ and $\bm\beta'$, as used in
+\cref{eq:adaptive-outlier-removal} through the following element-wise mappings:
+\begin{equation}
+    \bm\alpha'=\frac{e^{\bm\alpha}}{1+e^{\bm\alpha}} \;\;\;\;\;\;\;\;\;
+    \bm\beta'=\beta_{\text{min}}+e^{\bm\beta}.
+\end{equation}
+For ease of notation, we let $\mathbf{W}_1=(\bm\alpha, \bm\beta)$ denote the $2d$ unknown
+parameters that are optimised for the adaptive outlier removal layer.
+
+TODO: plots of curve for different parameters
+
+% }}}
+
+% Scale and shift
+\subsubsection{Scale and shift}% {{{
+\label{ssub:Scale and shift}
+
+% TODO: reformulate this section to combine both of the layers in the below equation,
+%       as that is more readable, then compare batch-aware and batch-agnostic versions,
+%       and as example, write how the batch-agnostic one can generalise standard scaling...
+
+The adaptive shift and scale layer, combined, simply performs the operation
+\begin{equation}\label{eq:adaptive-scale-shift}
+    (\bfx \oplus \bm\gamma) \odot \bm\lambda,
+\end{equation}
+with input $\bfx$ and unknown parameters $\bm\gamma \in \R^d$ and $\bm\lambda \in (0,\infty)^d$ when the \ac{EDAIN} is set
+to batch-agnostic mode. This makes the scale-and-shift layer a generalised version of
+Z-score scaling, or standard scaling, as setting
+\begin{equation}
+    \bm\gamma:=-\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
+\end{equation}
+and
+\begin{equation}
+    \bm\lambda:=\left( \frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}\oplus \bm\gamma\right)^2  \right)^{-1}
+\end{equation}
+makes the operation in \cref{eq:adaptive-scale-shift} equivalent to Z-score scaling.
+This \textit{batch-agnostic} mode is useful if the distribution is similar across batches
+and constitute a global unimodal distribution that should be centred.
+
+However, some datasets might have multiple modes arising from significantly different
+data generation mechanisms. Attempting to scale and shift each batch to a global mean and
+standard deviation might hurt performance in such cases. Instead, CITE\_AUTHOR\_DAIN propose
+basing the scale and shift on a \textit{summary representation} of the current batch, allowing
+each batch to be normalized according the specific mode that batch of data might have come from.
+This gives
+\begin{equation}
+    (\bfx \oplus [\bm\gamma \odot \mu_{\bfx}]) \odot [\bm\lambda \odot \sigma_{\bfx}],
+\end{equation}
+where the summary representations $\sigma_{\bfx}$ and $\mu_{\bfx}$ are computed through reduction
+of the temporal dimension for each observation:
+\begin{align}
+    \mu_\bfx^{(i)}&=\frac{1}{T} \sum^{T}_{t=1} \bfx^{(i)}_t \in \R^d \\
+    \sigma_\bfx^{(i)}&=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2} \in \R^d.
+\end{align}
+With this mode, it is difficult for the layer to generalise Z-score scaling, but it becomes more
+able to normalize in a \textit{mode-aware} fashion.
+
+% }}}
+
+\subsubsection{Power transform}%
+\label{ssub:Power transform}
+
+% TODO: start writing this next
+
+Yeo-Johnson, extension of Box-Cox transformation, also works for negative values
+
+equation
+
+
+\subsubsection{Optimising the parameters}%
+\label{ssub:Optimising the parameters}
+
+Can simply feed values forward through the 4 layers, as shown in TODO\_FIG.
+Additionally, weights are updated through standard gradient descent simultaneously while
+training the model
+
+\begin{equation}
+    \Delta (\mathbf{W}_\alpha,\mathbf{\beta})=-\eta\left( \eta_{pt} \frac{\partial \mathcal{L}}{\partial \mathbf{W}_a},\dots  \right)
+\end{equation}
+
+Similarly to DAIN\_REF, convergence is unstable if use same learning rate for RNN model and
+preprocessing layer weights, so seperate learning rates for each parameter, and these are
+set using hyperparameter tuning search, described later in section TODO.
 
 % }}}
 

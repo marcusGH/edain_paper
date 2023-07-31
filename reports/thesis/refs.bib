@@ -22,3 +22,18 @@
   year={1859},
   publisher={Chapman \& Hall}
 }
+
+% Outliers, winsorization
+@article{winsorization,
+    title = {The effects of handling outliers on the performance of bankruptcy prediction models},
+    journal = {Socio-Economic Planning Sciences},
+    volume = {67},
+    pages = {34-42},
+    year = {2019},
+    issn = {0038-0121},
+    doi = {https://doi.org/10.1016/j.seps.2018.08.004},
+    url = {https://www.sciencedirect.com/science/article/pii/S003801211730232X},
+    author = {Tamás Nyitrai and Miklós Virág},
+    keywords = {Bankruptcy prediction, Data preprocessing, Winsorizing, Decision trees, CHAID, CART, Neural networks},
+    abstract = {Ratio type financial indicators are the most popular explanatory variables in bankruptcy prediction models. These measures often exhibit heavily skewed distribution because of the presence of outliers. In the absence of clear definition of outliers, ad hoc approaches can be found in the literature for identifying and handling extreme values. However, it is not clear how these different approaches can affect the predictive power of models. There seems to be consensus in the literature on the necessity of handling outliers, at the same time, it is not clear how to define extreme values to be handled in order to maximize the predictive power of models. There are two possible ways to reduce the bias originating from outliers: omission and winsorization. Since the first approach has been examined previously in the literature, we turn our attention to the latter. We applied the most popular classification methodologies in this field: discriminant analysis, logistic regression, decision trees (CHAID and CART) and neural networks (multilayer perceptron). We assessed the predictive power of models in the framework of tenfold stratified crossvalidation and area under the ROC curve. We analyzed the effect of winsorization at 1, 3 and 5% and at 2 and 3 standard deviations, furthermore we discretized the range of each variable by the CHAID method and used the ordinal measures so obtained instead of the original financial ratios. We found that this latter data preprocessing approach is the most effective in the case of our dataset. In order to check the robustness of our results, we carried out the same empirical research on the publicly available Polish bankruptcy dataset from the UCI Machine Learning Repository. We obtained very similar results on both datasets, which indicates that the CHAID-based categorization of financial ratios is an effective way of handling outliers with respect to the predictive performance of bankruptcy prediction models.}
+}
