@@ -75,11 +75,15 @@ mixture:
   # the set of transformations to consider a mixture of (should always include "standard-scaler")
   transforms:
     - standard-scaler
+    - standard-scaler-no-time
     - tanh-standard-scaler
+    - tanh-standard-scaler-no-time
+    - min-max-scaler
+    - min-max-scaler-no-time
   jobs_per_gpu: 1
   cache_directory: /home/silo1/mas322/cache-files/
   # should be either "statistics" or "kl-divergence"
-  cluster_method: kl-divergence
+  cluster_method: statistics
   number_of_clusters: 9
   statistics_cluster:
     # keyword argument to the KMeans clustering routine
