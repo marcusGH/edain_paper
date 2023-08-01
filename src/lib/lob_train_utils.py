@@ -6,6 +6,8 @@
 ###    Limit Order Book Data", published in the "IEEE Transactions on Neural Networks and         #
 ###    Learning Systems" journal in 2019.                                                         #
 ###                                                                                               #
+###  The code has been modified to fit the needs of this project.                                 #
+###                                                                                               #
 ###  Authors of paper:                                                                            #
 ###  * Passalis, Nikolaos                                                                         #
 ###  * Tefas, Anastasios                                                                          #
@@ -23,23 +25,28 @@ from torch.nn import CrossEntropyLoss
 from sklearn.metrics import precision_recall_fscore_support, cohen_kappa_score
 
 
-def lob_epoch_trainer(model, loader, lr=0.0001, optimizer=optim.RMSprop):
+def lob_epoch_train_one_epoch(
+        model,
+        train_loader,
+        preprocess,
+        model_optimizer,
+        device,
+    ):
     model.train()
-
-    model_optimizer = optimizer([
-        {'params': model.base.parameters()},
-        {'params': model.dean.mean_layer.parameters(), 'lr': lr * model.dean.mean_lr},
-        {'params': model.dean.scaling_layer.parameters(), 'lr': lr * model.dean.scale_lr},
-        {'params': model.dean.gating_layer.parameters(), 'lr': lr * model.dean.gate_lr},
-    ], lr=lr)
 
     criterion = CrossEntropyLoss()
     train_loss, counter = 0, 0
 
-    for (inputs, targets) in loader:
+    for (inputs, targets) in train_loader:
+        # apply preprocesses to input
+        if preprocess is not None:
+            # Data is on form (N, T, D)
+            inputs = torch.from_numpy(preprocess.transform(inputs.numpy()))
+
         model_optimizer.zero_grad()
 
-        inputs, targets = Variable(inputs.cuda()), Variable(targets.cuda())
+        # move to GPU
+        inputs, targets = Variable(inputs.to(device)), Variable(targets.to(device))
         targets = torch.squeeze(targets)
 
         outputs = model(inputs)
@@ -49,25 +56,38 @@ def lob_epoch_trainer(model, loader, lr=0.0001, optimizer=optim.RMSprop):
         model_optimizer.step()
 
         train_loss += loss.item()
-        counter += inputs.size(0)
+        counter += 1.
 
-    loss = (loss / counter).cpu().data.numpy()
+    loss = (loss / counter).cpu().item()
     return loss
 
 
-def lob_evaluator(model, loader):
+def lob_evaluator(model, loader, preprocess, device):
     model.eval()
+
     true_labels = []
     predicted_labels = []
+    avg_val_loss, counter = 0, 0
+
+    criterion = CrossEntropyLoss(reduction='sum')
 
     for (inputs, targets) in tqdm(loader):
-        inputs, targets = inputs.cuda(), targets.cuda()
+        # apply preprocesses to input
+        if preprocess is not None:
+            # Data is on form (N, T, D)
+            inputs = torch.from_numpy(preprocess.transform(inputs.numpy()))
+
+        inputs, targets = inputs.to(device), targets.to(device)
         inputs, targets = Variable(inputs, volatile=True), Variable(targets)
         outputs = model(inputs)
         _, predicted = torch.max(outputs.data, 1)
 
+        val_loss = criterion(outputs, targets)
+
         predicted_labels.append(predicted.cpu().numpy())
         true_labels.append(targets.cpu().data.numpy())
+        avg_val_loss += val_loss.cpu().item()
+        counter += inputs.size(0)
 
     true_labels = np.squeeze(np.concatenate(true_labels))
     predicted_labels = np.squeeze(np.concatenate(predicted_labels))
@@ -76,6 +96,7 @@ def lob_evaluator(model, loader):
     precision_avg, recall_avg, f1_avg, _ = precision_recall_fscore_support(true_labels, predicted_labels,
                                                                            average='macro')
     kappa = cohen_kappa_score(true_labels, predicted_labels)
+    avg_val_loss /= counter
 
     metrics = {}
     metrics['accuracy'] = np.sum(true_labels == predicted_labels) / len(true_labels)
@@ -86,59 +107,6 @@ def lob_evaluator(model, loader):
 
     metrics['kappa'] = kappa
 
+    metrics['val_loss'] = avg_val_loss
+
     return metrics
-
-
-def train_evaluate_anchored(model, epoch_trainer=lob_epoch_trainer, evaluator=lob_evaluator,
-                            horizon=0, window=5, batch_size=128, train_epochs=20, verbose=True,
-                            use_resampling=True, learning_rate=0.0001, splits=[6, 7, 8], normalization='std'):
-    """
-    Trains and evaluates a model for using an anchored walk-forward setup
-    :param model: model to train
-    :param epoch_trainer: function to use for training the model (please refer to lob.model_utils.epoch_trainer() )
-    :param evaluator: function to use for evaluating the model (please refer to lob.model_utils.epoch_trainer() )
-    :param horizon: the prediction horizon for the evaluation (0, 5 or 10)
-    :param window: the window to use
-    :param batch_size: batch size to be used
-    :param train_epochs: number of epochs for training the model
-    :param verbose:
-    :return:
-    """
-
-    results = []
-
-    for i in splits:
-        print("Evaluating for split: ", i)
-        train_loader, test_loader = get_wf_lob_loaders(window=window, horizon=horizon, split=i, batch_size=batch_size,
-                                                       class_resample=use_resampling, normalization=normalization)
-        current_model = model()
-        current_model.cuda()
-        for epoch in range(train_epochs):
-            loss = epoch_trainer(model=current_model, loader=train_loader, lr=learning_rate)
-            if verbose:
-                print("Epoch ", epoch, "loss: ", loss)
-
-        test_results = evaluator(current_model, test_loader)
-        print(test_results)
-        results.append(test_results)
-
-    return results
-
-
-def get_average_metrics(results):
-    precision, recall, f1 = [], [], []
-    kappa = []
-    acc = []
-    for x in results:
-        acc.append(x['accuracy'])
-        precision.append(x['precision_avg'])
-        recall.append(x['recall_avg'])
-        f1.append(x['f1_avg'])
-        kappa.append(x['kappa'])
-
-    print("Precision = ", np.mean(precision))
-    print("Recall = ", np.mean(recall))
-    print("F1 = ", np.mean(f1))
-    print("Cohen = ", np.mean(kappa))
-
-    return acc, precision, recall, f1, kappa

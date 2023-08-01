@@ -16,6 +16,8 @@ import sklearn
 from datetime import datetime
 from tqdm.auto import tqdm
 from src.models import basic_grunet
+from src.lib.lob_train_utils import lob_epoch_train_one_epoch, lob_evaluator, get_average_metrics
+from src.lib.lob_loader import get_wf_lob_loaders, ImbalancedDatasetSampler
 
 class EarlyStopper:
     """
@@ -523,6 +525,7 @@ def reset_all_weights(model: nn.Module) -> None:
 
 
 def train_evaluate_lob_anchored(
+        h5_file_path,
         model_init_fn,
         preprocess_init_fn,
         optimizer_init_fn,
@@ -533,6 +536,8 @@ def train_evaluate_lob_anchored(
         random_state,
         horizon=2,
         windows=15,
+        batch_size=128,
+        use_resampling=True,
         splits=[0, 1, 2, 3, 4, 5, 6, 7, 8],
     ):
     """
@@ -546,5 +551,88 @@ def train_evaluate_lob_anchored(
     #       * call external training loop
     #       * call external validation function
     # TODO: at end of split loop, do the results averaging thing using external function
+    history = {
+        "split_results" : [],
+        "splits" : splits,
+        "train_time" : [],
+    }
+
+    for i in splits:
+        print(f"#### Evaluating model for split {i} ####")
+        np.random.seed(random_state)
+        torch.manual_seed(random_state)
+        # get the train and test data loaders
+        train_loader, val_loader = get_wf_lob_loaders(
+            h5_path=h5_file_path,
+            window=windows,
+            horizon=horizon,
+            split=i,
+            batch_size=batch_size,
+            class_resample=use_resampling,
+            normalization=None,
+        )
+
+        ###### Fitting the preprocessing object on train data ######
+
+        if preprocess_init_fn is not None:
+            print(f"Fitting preprocesser to data for split {i}")
+            preprocess = preprocess_init_fn()
+
+            # turn train loader into numpy array
+            X_train, y_train = [], []
+            for X, y in train_loader:
+                X_train.append(X.numpy())
+                y_train.append(y.numpy())
+            X_train = np.concatenate(X_train, axis=0)
+            y_train = np.concatenate(y_train, axis=0)
+
+            # fit the preprocessing object
+            preprocess.fit(X_train, y_train)
+            del X_train, y_train, X, y
+        else:
+            preprocess = None
+
+        ######        Setup the model, optimizer, etc.        ######
+
+        # setup mode
+        model = model_init_fn()
+        model.to(device)
+        # setup optimizer and scheduler
+        model_optimizer = optimizer_init_fn(model)
+        model_scheduler = scheduler_init_fn(model_optimizer)
+        # setup early stopper
+        early_stopper = early_stopper_init_fn()
+
+
+        ######               Start training loop              ######
+
+        results = []
+
+        start_time = time.time()
+        for epoch in (pbar := tqdm(range(num_epochs))):
+            # train one epoch
+            train_loss = lob_epoch_train_one_epoch(model, train_loader, preprocess, model_optimizer, device)
+
+            # evaluate on validation set, and save metrics
+            metrics = lob_evaluator(model, val_loader, preprocess, device)
+            metrics['train_loss'] = train_loss
+            results.append(metrics)
+
+            # update progress bar
+            pbar.set_description(f"Epoch {epoch} | Train loss: {train_loss:.4f} | Val loss: {metrics['val_loss']:.4f} | Val kappa: {metrics['kappa']:.4f}")
+
+            # update scheduler
+            if model_scheduler is not None:
+                model_scheduler.step()
+
+            # check early stopper
+            if early_stopper is not None and early_stopper.early_stop(metrics['val_loss']):
+                break
+        pbar.refresh()
+        pbar.close()
+
+        train_time = time.time() - start_time
+        history['split_results'].append(results)
+        history['train_time'].append(train_time)
 
     return None
