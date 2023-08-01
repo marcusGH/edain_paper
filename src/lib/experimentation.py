@@ -16,7 +16,7 @@ import sklearn
 from datetime import datetime
 from tqdm.auto import tqdm
 from src.models import basic_grunet
-from src.lib.lob_train_utils import lob_epoch_train_one_epoch, lob_evaluator, get_average_metrics
+from src.lib.lob_train_utils import lob_epoch_train_one_epoch, lob_evaluator
 from src.lib.lob_loader import get_wf_lob_loaders, ImbalancedDatasetSampler
 
 class EarlyStopper:
@@ -588,7 +588,6 @@ def train_evaluate_lob_anchored(
 
             # fit the preprocessing object
             preprocess.fit(X_train, y_train)
-            del X_train, y_train, X, y
         else:
             preprocess = None
 
@@ -626,7 +625,7 @@ def train_evaluate_lob_anchored(
                 model_scheduler.step()
 
             # check early stopper
-            if early_stopper is not None and early_stopper.early_stop(metrics['val_loss']):
+            if early_stopper is not None and early_stopper.early_stop(metrics['kappa']):
                 break
         pbar.refresh()
         pbar.close()
@@ -635,4 +634,4 @@ def train_evaluate_lob_anchored(
         history['split_results'].append(results)
         history['train_time'].append(train_time)
 
-    return None
+    return history

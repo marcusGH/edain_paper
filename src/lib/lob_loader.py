@@ -143,12 +143,12 @@ def get_wf_lob_loaders(h5_path='lob.h5', window=50,
                           epsilon=1e-15, horizon=horizon)
 
     if class_resample:
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=1,
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=0,
                                   sampler=ImbalancedDatasetSampler(train_dataset))
     else:
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=1, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=0, shuffle=True)
 
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
     return train_loader, test_loader
 

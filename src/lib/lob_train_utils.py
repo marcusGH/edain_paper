@@ -18,7 +18,7 @@
 import numpy as np
 import torch
 from torch.autograd import Variable
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import torch.optim as optim
 from src.lib.lob_loader import get_wf_lob_loaders
 from torch.nn import CrossEntropyLoss
@@ -69,7 +69,7 @@ def lob_evaluator(model, loader, preprocess, device):
     predicted_labels = []
     avg_val_loss, counter = 0, 0
 
-    criterion = CrossEntropyLoss(reduction='sum')
+    criterion = CrossEntropyLoss(reduction='mean')
 
     for (inputs, targets) in tqdm(loader):
         # apply preprocesses to input
@@ -77,17 +77,18 @@ def lob_evaluator(model, loader, preprocess, device):
             # Data is on form (N, T, D)
             inputs = torch.from_numpy(preprocess.transform(inputs.numpy()))
 
-        inputs, targets = inputs.to(device), targets.to(device)
-        inputs, targets = Variable(inputs, volatile=True), Variable(targets)
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs.data, 1)
+        with torch.no_grad():
+            inputs, targets = inputs.to(device), targets.to(device)
+            inputs, targets = Variable(inputs), Variable(targets)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
 
-        val_loss = criterion(outputs, targets)
+            val_loss = criterion(outputs, torch.squeeze(targets))
 
-        predicted_labels.append(predicted.cpu().numpy())
-        true_labels.append(targets.cpu().data.numpy())
-        avg_val_loss += val_loss.cpu().item()
-        counter += inputs.size(0)
+            predicted_labels.append(predicted.cpu().numpy())
+            true_labels.append(targets.cpu().data.numpy())
+            avg_val_loss += val_loss.cpu().item()
+            counter += 1.
 
     true_labels = np.squeeze(np.concatenate(true_labels))
     predicted_labels = np.squeeze(np.concatenate(predicted_labels))

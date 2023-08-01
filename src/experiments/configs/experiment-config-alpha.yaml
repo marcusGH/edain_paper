@@ -3,6 +3,7 @@
 # General dataset configuration
 num_categorical_features: 11
 time_series_length: 13
+# this is only used for the amex dataset
 data_loader:
   batch_size: 1024
   shuffle: false
@@ -19,6 +20,16 @@ fit:
   scheduler_milestones: [4, 7]
   verbose: False
   loss: bce
+
+# Configuration for fitting the LOB FI-2010 dataset
+lob_fit:
+  batch_size: 128
+  # look 10 timesteps ahead
+  horizon: 2
+  # get a window of 15 timesteps (= time series length)
+  window: 15
+  splits: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  use_resampling: true
 
 # configuration for handling missing values in amex dataset
 fill:
@@ -51,6 +62,7 @@ edain_bijector_fit:
   num_epochs: 20
   num_fits: 1
   base_lr: 0.001
+  # the below parameters also apply when optimising with backpropagation
   scale_lr: 0.01
   shift_lr: 0.01
   outlier_lr: 100.0

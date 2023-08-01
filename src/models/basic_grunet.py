@@ -64,7 +64,7 @@ class GRUNetBasic(nn.Module):
 
 class GRUNetLOB(nn.Module):
     def __init__(self, input_dim=144, linear_dim=512, gru_dim=256, num_gru_layers=1, dropout_prob=0.5):
-        super(GRUNetBasic, self).__init__()
+        super(GRUNetLOB, self).__init__()
 
         # save the params
         self.D = input_dim
@@ -78,7 +78,7 @@ class GRUNetLOB(nn.Module):
             hidden_size=gru_dim,
             num_layers=num_gru_layers,
             batch_first=True,
-            dropout=dropout_prob,
+            # dropout=dropout_prob, # require more than 0 layers
         )
 
         # the classifier head. We're using cross-entropy with 3 classes, so output

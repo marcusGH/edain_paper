@@ -33,6 +33,7 @@ from src.models.adaptive_grunet import AdaptiveGRUNet
 from src.lib.experimentation import (
     EarlyStopper,
     cross_validate_experiment,
+    train_evaluate_lob_anchored,
     load_amex_numpy_data,
     undo_min_max_corrupt_func,
 )
@@ -73,7 +74,7 @@ parser.add_argument("--mixture-device-ids",
 )
 parser.add_argument("--dataset",
     help="The dataset to use for the experiment",
-    choices=['amex'],
+    choices=['amex', 'lob'],
     required=True,
 )
 parser.add_argument("--model",
@@ -371,23 +372,43 @@ if __name__ == '__main__':
     ###            Part 5: Run the experiment                    ###
     ################################################################
 
-    print(f"Starting cross-validation experiment")
-    history = cross_validate_experiment(
-        model_init_fn=model_init_fn,
-        preprocess_init_fn=scaler_init_fn,
-        optimizer_init_fn=optimizer_init_fn,
-        scheduler_init_fn=scheduler_init_fn,
-        early_stopper_init_fn=early_stopper_init_fn,
-        loss_fn=loss_fn,
-        X=X,
-        y=y,
-        num_epochs=exp_cfg['fit']['num_epochs'],
-        dataloader_kwargs=exp_cfg['data_loader'],
-        num_folds=args.num_cross_validation_folds,
-        device=dev,
-        random_state=args.random_state,
-        num_categorical_features=exp_cfg['num_categorical_features'],
-    )
+    print(f"Starting cross-validation experiment on dataset {args.dataset}")
+    if args.dataset == "amex":
+        history = cross_validate_experiment(
+            model_init_fn=model_init_fn,
+            preprocess_init_fn=scaler_init_fn,
+            optimizer_init_fn=optimizer_init_fn,
+            scheduler_init_fn=scheduler_init_fn,
+            early_stopper_init_fn=early_stopper_init_fn,
+            loss_fn=loss_fn,
+            X=X,
+            y=y,
+            num_epochs=exp_cfg['fit']['num_epochs'],
+            dataloader_kwargs=exp_cfg['data_loader'],
+            num_folds=args.num_cross_validation_folds,
+            device=dev,
+            random_state=args.random_state,
+            num_categorical_features=exp_cfg['num_categorical_features'],
+        )
+    elif args.dataset == "lob":
+        history = train_evaluate_lob_anchored(
+            h5_file_path=os.path.join(main_cfg['lob_dataset_directory'], "lob.h5"),
+            model_init_fn=model_init_fn,
+            preprocess_init_fn=preprocess_init_fn,
+            optimizer_init_fn=optimizer_init_fn,
+            scheduler_init_fn=scheduler_init_fn,
+            early_stopper_init_fn=early_stopper_init_fn,
+            num_epochs=exp_cfg['fit']['num_epochs'],
+            device=dev,
+            random_state=args.random_state,
+            horizon=exp_cfg['lob_fit']['horizon'],
+            windows=exp_cfg['lob_fit']['window'],
+            batch_size=exp_cfg['lob_fit']['batch_size'],
+            use_resampling=exp_cfg['lob_fit']['use_resampling'],
+            splits=exp_cfg['lob_fit']['splits'],
+        )
+    else:
+        raise NotImplementedError(f"No experiment utilties for dataset: {args.dataset}")
 
     ################################################################
     ###            Part 6: Save experiment results               ###
