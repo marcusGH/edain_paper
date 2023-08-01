@@ -214,7 +214,7 @@ def run_mixture_job(
         print(f"Experiment already computed, using cached result: '{save_file_name}'")
         return
 
-    num_cat = exp_cfg['num_categorical_features']
+    num_cat = exp_cfg['amex_dataset']['num_categorical_features']
 
     # setup the dataset splits and fit and apply the scaler
     scaler = MixedTransformsTimeSeries(transform_list)
@@ -230,21 +230,18 @@ def run_mixture_job(
             torch.from_numpy(X_train).float(),
             torch.from_numpy(y_train).float(),
         ),
-        **exp_cfg['data_loader']
+        **exp_cfg['amex_dataset']['data_loader']
     )
     val_loader = torch.utils.data.DataLoader(
         dataset=torch.utils.data.TensorDataset(
             torch.from_numpy(X_val).float(),
             torch.from_numpy(y_val).float(),
             ),
-        **exp_cfg['data_loader']
+        **exp_cfg['amex_dataset']['data_loader']
     )
 
     # Setup loss function
-    if exp_cfg['fit']['loss'] != 'bce':
-        raise NotImplementedError("Loss not supported: " + exp_cfg['fit']['loss'])
-    else:
-        loss_fn = F.binary_cross_entropy
+    loss_fn = F.binary_cross_entropy
 
     # setup remaining objects
     model = model_init_fn()
@@ -365,7 +362,7 @@ def find_optimal_preprocessing_mixture_with_brute_force(
     # Step 1: Cluster the variables
 
     # get the cluster groups for the numerical entries only
-    num_cats = exp_cfg['num_categorical_features']
+    num_cats = exp_cfg['amex_dataset']['num_categorical_features']
     if exp_cfg['mixture']['cluster_method'] == "statistics":
         print(f"Clustering based on statistics")
         cluster_groups = cluster_variables_with_statistics(
@@ -453,7 +450,7 @@ if __name__ == "__main__":
         exp_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     model_init_fn = lambda : GRUNetBasic(
-        num_cat_columns=exp_cfg['num_categorical_features'],
+        num_cat_columns=exp_cfg['amex_dataset']['num_categorical_features'],
         **exp_cfg['gru_model']
     )
     optimizer_init_fn = lambda mod : torch.optim.Adam(
@@ -469,9 +466,9 @@ if __name__ == "__main__":
     # load the data
     X, y = load_amex_numpy_data(
         split_data_dir=os.path.join("/home/silo1/mas322/amex-default-prediction/", 'derived', 'processed-splits'),
-        fill_dict=exp_cfg['fill'],
+        fill_dict=exp_cfg['amex_dataset']['fill'],
         corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, 42),
-        num_categorical_features=exp_cfg['num_categorical_features'],
+        num_categorical_features=exp_cfg['amex_dataset']['num_categorical_features'],
         load_small_subset=True,
     )
 

@@ -544,13 +544,9 @@ def train_evaluate_lob_anchored(
     TODO: docstring
     """
 
-    # TODO: iterature splits and in each split:
-    #       * load train and test loader based on parameters
-    #       * Fit and apply pereprocessing model on data loaders
-    #       * initialise model
-    #       * call external training loop
-    #       * call external validation function
-    # TODO: at end of split loop, do the results averaging thing using external function
+    # to avoid errors with the data loader for opening to many files
+    torch.multiprocessing.set_sharing_strategy('file_system')
+
     history = {
         "split_results" : [],
         "splits" : splits,

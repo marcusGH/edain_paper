@@ -1,17 +1,44 @@
 # Experimentation configuration file alpha
 ---
 # General dataset configuration
-num_categorical_features: 11
-time_series_length: 13
-# this is only used for the amex dataset
-data_loader:
-  batch_size: 1024
-  shuffle: false
-  drop_last: true
+#num_categorical_features: 11
+#time_series_length: 13
+## this is only used for the amex dataset
+#data_loader:
+#  batch_size: 1024
+#  shuffle: false
+#  drop_last: true
+
+# Amex dataset configuration
+amex_dataset:
+  data_loader:
+    batch_size: 1024
+    shuffle: false
+    drop_last: true
+  time_series_length: 13
+  num_categorical_features: 11
+  train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
+  fill:
+    nan: -0.5
+    pad_categorical: -2
+    pad_numeric: -1
+  numeric_input_dim: 177
+
+# FI-2010 dataset configuration
+lob_dataset:
+  preprocessed_lob_path: /home/silo1/mas322/fi-2010-lob-preprocessed/lob.h5
+  batch_size: 128
+  # look 10 timesteps ahead
+  horizon: 2
+  # get a window of 15 timesteps (= time series length)
+  time_series_length: 15 # this can also be changed (see windows docs)
+  splits: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  use_resampling: true
+  numeric_input_dim: 144
 
 # Configuration for fitting the amex dataset
 fit:
-  train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
+#  train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
   num_epochs: 40
   early_stopper_patience: 5
   early_stopper_min_delta: 0.0
@@ -19,23 +46,13 @@ fit:
   base_lr: 0.001
   scheduler_milestones: [4, 7]
   verbose: False
-  loss: bce
-
-# Configuration for fitting the LOB FI-2010 dataset
-lob_fit:
-  batch_size: 128
-  # look 10 timesteps ahead
-  horizon: 2
-  # get a window of 15 timesteps (= time series length)
-  window: 15
-  splits: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-  use_resampling: true
+#  loss: bce
 
 # configuration for handling missing values in amex dataset
-fill:
-  nan: -0.5
-  pad_categorical: -2
-  pad_numeric: -1
+#fill:
+#  nan: -0.5
+#  pad_categorical: -2
+#  pad_numeric: -1
 
 # Configuration for GRU RNN model
 gru_model:
