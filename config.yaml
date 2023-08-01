@@ -1,6 +1,7 @@
 # Configuration file
 ---
 dataset_directory: /home/silo1/mas322/amex-default-prediction/
+lob_dataset_directory: /home/silo1/mas322/fi-2010-lob-preprocessed/
 checkpoint_directory: /home/silo1/mas322/model-checkpoints/
 experiment_directory: /home/silo1/mas322/experiment-results-2/
 dain_repo: /home/mas322/dain/
