@@ -1,7 +1,7 @@
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from src.preprocessing.static_transformations import MinMaxTimeSeries, TanhStandardScalerTimeSeries, StandardScalerTimeSeries
+from src.preprocessing.static_transformations import MinMaxTimeSeries, TanhStandardScalerTimeSeries, StandardScalerTimeSeries, IgnoreTimeDecorator
 from threading import Thread
 from tqdm.auto import tqdm
 from scipy.stats import entropy
@@ -22,9 +22,18 @@ from src.lib.experimentation import EarlyStopper, undo_min_max_corrupt_func, loa
 import yaml
 
 _available_scalers = {
-    'standard-scaler' : lambda : StandardScalerTimeSeries(),
-    'min-max-scaler' : lambda : MinMaxTimeSeries(),
-    'tanh-standard-scaler' : lambda : TanhStandardScalerTimeSeries(),
+    'standard-scaler' : lambda T: StandardScalerTimeSeries(time_series_length=T),
+    'standard-scaler-no-time' : lambda T: IgnoreTimeDecorator(
+        scaler=StandardScalerTimeSeries(time_series_length=1),
+        time_series_length=T),
+    'min-max-scaler' : lambda T: MinMaxTimeSeries(time_series_length=T),
+    'min-max-scaler-no-time' : lambda T: IgnoreTimeDecorator(
+        scaler=MinMaxTimeSeries(time_series_length=1),
+        time_series_length=T),
+    'tanh-standard-scaler' : lambda T: TanhStandardScalerTimeSeries(time_series_length=T),
+    'tanh-standard-scaler-no-time' : lambda T: IgnoreTimeDecorator(
+        scaler=TanhStandardScalerTimeSeries(time_series_length=1),
+        time_series_length=T),
 }
 
 class MixedTransformsTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
@@ -36,7 +45,7 @@ class MixedTransformsTimeSeries(sklearn.base.TransformerMixin, sklearn.base.Base
         Note that the transformations supplied should be able to fit (N, T, D)-dimensional data
         """
         self.vars = [x for (x, _) in transforms_list]
-        self.transforms = [y() for (_, y) in transforms_list]
+        self.transforms = [y(time_series_length) for (_, y) in transforms_list]
         self.all_vars = [j for sub in self.vars for j in sub]
         self.T = time_series_length
 
@@ -272,7 +281,7 @@ def create_mixture_job_args(variable_cluster_groups, exp_cfg):
 
     # as baseline, apply standard-scaling to all the variables
     base_transform_list = [
-        (g, lambda : StandardScalerTimeSeries()) for g in variable_cluster_groups
+        (g, lambda T: StandardScalerTimeSeries(time_series_length=T)) for g in variable_cluster_groups
     ]
 
     # setup all the job names and associated transform lists
@@ -432,7 +441,7 @@ def get_optimal_mixture_transform_list(experiment_name, cluster_groups, exp_cfg)
                 best_transform = scaler_name
 
         # save to optimal transform list (and print reduction in loss)
-        print(f"    Group {gid} -> {best_transform} [-{(-baseline_hist[metric_key][-1] + best_metric):.4f}]")
+        print(f"    Group {gid} -> {best_transform} [{(-baseline_hist[metric_key][-1] + best_metric):.4f}]")
         optimal_transform_list.append(
             (cluster_groups[gid], copy.deepcopy(_available_scalers[best_transform]))
         )

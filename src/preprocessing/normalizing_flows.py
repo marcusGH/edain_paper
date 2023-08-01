@@ -533,11 +533,12 @@ class EDAINScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEsti
         assert X.shape == (X.shape[0], self.T, self.D)
         # do a 80%-20% train-validation split
         batch_size = self.fit_kwargs['batch_size']
+        num_fits = self.fit_kwargs['num_fits']
         N = X.shape[0]
 
         best_bijector = None
         best_loss = float("inf")
-        for _ in range(4):
+        for _ in range(num_fits):
             X_train, X_val, y_train, y_val = train_test_split(
                 X, y, test_size=0.2, shuffle=True
             )

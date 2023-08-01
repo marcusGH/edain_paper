@@ -375,10 +375,13 @@ def cross_validate_experiment(
     # split data into folds
     np.random.seed(random_state)
     torch.manual_seed(random_state)
-    kf = sklearn.model_selection.KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
+    if num_folds > 1:
+        kf = sklearn.model_selection.KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
+    else:
+        # if only 1 fold, we instead do 80%-20% split and only train once
+        kf = sklearn.model_selection.KFold(n_splits=5, shuffle=True, random_state=random_state)
     for i, (train_idx, val_idx) in enumerate(kf.split(X, y)):
         print(f"Starting model training [{i+1} / {num_folds}]")
-        # get data
         X_train, y_train = X[train_idx], y[train_idx]
         X_val, y_val = X[val_idx], y[val_idx]
 
@@ -427,6 +430,9 @@ def cross_validate_experiment(
         history_num_epochs[i] = len(history['train_loss'])
         history_preprocess_time[i] = preprocess_time
         history_train_time[i] = train_time
+
+        if num_folds == 1:
+            break
 
     hist_keys = list(history_metrics.keys())
     for history_key in hist_keys:
