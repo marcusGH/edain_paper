@@ -46,7 +46,7 @@
     ANY ACKNOWLEDGEMENTS GO HERE
 \end{acknowledgements}
 
-{\chapter*{Contents}\thispagestyle{plain}
+{\thispagestyle{plain}
     % TODO: Load hyperref so that ToC items are clickable
     \tableofcontents
 }
@@ -54,12 +54,18 @@
 % Glossary ?
 {\chapter*{Notation}\thispagestyle{plain}
     $\boldsymbol{X}$ is a matrix
+
+    $y$ is a vector
 }
 
 % Abbreviations
 {\chapter*{Abbreviations}\thispagestyle{plain}
-    % TODO: load the acronym package used in my undergrad thesis
-    EDAIN -- Extended DAIN
+    \begin{acronym}[TDMA]
+        \acro{DAIN}{Deep Adaptive Input Normalization}
+        \acro{RDAIN}{Robust Deep Adaptive Input Normalization}
+        \acro{EDAIN}{Extended Deep Adaptive Input Normalization}
+        \acro{BIN}{Bilinear Input Normalization}
+    \end{acronym}
 }
 
 
@@ -70,205 +76,413 @@
 
 % }}}
 
-\chapter{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introduction} %%%%     Introduction      %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Introduction {{{
 
 The introduction section goes here\footnote{Tip: write this section last.}.
 
 % }}}
-\chapter{Background}
-% Background {{{
 
-Background chapter.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Background} %%%%        Background       %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{My section}
+TODO: introduction to this chapter
 
-Section content goes here. 
+\section{Deep learning}% Deep learning
+% Methods: Deep learning {{{
+\label{sec:Deep learning}
 
-\subsection{My subsection}
+TODO: write details
 
-A subsection.
-
-\subsubsection{My subsubsection}
-
-A subsubsection.
-
-\section{Figures}
-
-It is better to create figures in a vector-based format, such as PDF.
-
-\begin{figure}[!h]
-    \centering
-    \includegraphics[width=\textwidth]{figures/fig1.pdf}
-    \caption{Remember to make fonts in figures large enough (compare the two figures.)}
-    \label{fig:fig1}
-\end{figure}
-
-\section{Tables}
-
-\label{sec:tablesection}
-
-Here is an example of a table
-
-\begin{table}[ht]
-\centering
-\begin{tabular}{rr}
-  \hline
-    $z$& $\textrm{P}(Z < z)$ \\
-  \hline
-    1.281& 0.900\\
-    1.645& 0.950\\
-    1.960& 0.975\\
-    2.326& 0.990 \\
-    2.576& 0.995 \\
-   \hline
-\end{tabular}
-    \caption{Partial table showing values of $z$ for $\textrm{P}(Z < z)$, 
-    where $Z$ has a standard normal distribution.}
-    \label{tab:normal}
-\end{table}
+\subsection{Sequence models}%
+\label{sub:Sequence models}
 
 
+% }}}
 
-\section{Referencing sources, sections and items}
+\section{Data preprocessing}% Data preprocessing
+% Methods: Data preprocessing {{{
+\label{sec:Data preprocessing}
 
-A good book on the bootstrap is \cite{efrontib}, although the idea
-appeared in an earlier paper \citep{efron1979}.
+TODO: introduction
 
-Note that to make the references appear, you will need to compile
-the bibtex, otherwise you may just see question marks where the references
-should be.
-
-
-\subsection{Referencing sections, results and equations}
-
-Theorem~\ref{thm:theorem1} is proved in Section~\ref{sec:defnthms}; see 
-Equation~\eqref{eqn:second}.
+% Static distribution transformations
+\subsection{Static distribution transformations}% {{{
+\label{sub:Static distribution transformations}
 
 
+% }}}
 
-\subsubsection{Referencing tables and figures}
+% Adaptive distribution transformation
+\subsection{Adaptive distribution transformations}% {{{
+\label{sub:Adaptive distribution transformations}
 
-When labelling figures and tables, it is important that the label command
-\texttt{\textbackslash label\{LABELNAME\}} comes \textbf{after} the caption command.
-See Table~\ref{tab:normal} and Figure~\ref{fig:fig1} above.
+\subsubsection{DAIN}%
+\label{ssub:DAIN}
 
-\subsection{Quoting sources}
-If you wish to quote a source, be sure to use quotation marks and cite the
-reference. The \texttt{\textbackslash{usequote}} command is useful here:
+The \ac{DAIN} method...
 
-\usequote{It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us, we were all going direct to Heaven, we were all going direct the other way - in short, the period was so far like the present period, that some of its noisiest authorities insisted on its being received, for good or for evil, in the superlative degree of comparison only.} \citep{dickens1859}
-
-% forcing a page break
-\clearpage
+\subsubsection{RDAIN}%
+\label{ssub:RDAIN}
 
 
-\section{Definitions, theorems and examples}
-\label{sec:defnthms}
+\subsubsection{BiN}%
+\label{ssub:BiN}
 
-The following environments are supported:
-Definition, Theorem, Proof, Proposition, Lemma, Remark, Example.
 
-\begin{definition}
-    The \textbf{variance} of a random variable $X$ is defined as
-    \begin{equation}
-        \mathrm{Var}(X) = \mathrm{E}[(X - \mathrm{E}[X])^2].
-    \end{equation}
-\end{definition}
+% }}}
 
-\begin{theorem}
-    \label{thm:theorem1}
-Given a random variable $X$, over all values $a \in \mathbb{R}$, 
-\begin{equation}
-    \min_{a \in \mathbb{R}} \mathrm{E}[(X - a)^2] 
-    = \mathrm{E}[(X - \mathrm{E}[X])^2].
-    \label{eqn:second}
+
+% }}}
+
+
+\section{Normalizing flows}% Normalizing flows
+% Methods: Normalizing flows {{{
+\label{sec:Normalizing flows}
+
+TODO: write details
+
+% }}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Methods} %%%%       METHODS         %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TODO: introduction to this chapter
+
+\section{EDAIN}% EDAIN
+% Methods: EDAIN {{{
+\label{sec:EDAIN}
+
+% Topics of this section:
+% * Illustrative diagram of the 4 layers, and the weights, justifying order of operations
+% * Differences to DAIN, explaining batch awareness, and specifics of (amex) dataset worked with
+% * Explaining the 3 parts:
+%   * outlier removal: Inspired by winsorization, plot of curve for different values,to show how work
+%   * scale&shift: able to generalise standard scaling
+%   * power transform: should also work for negative and positive values, while being numerically stable
+
+My first contribution is the \ac{EDAIN} layer. This adaptive preprocessing layer is inspired
+by the likes of DAIN\_REF and BIN\_REF, but unlike the aforementioned methods, the
+\ac{EDAIN} layer also supports normalizing the data in a \textit{batch-agnostic} fashion, whereas
+the \ac{DAIN}, \ac{RDAIN} and \ac{BIN} layers are all \textit{batch-aware}.
+Additionally, the \ac{EDAIN} layer extends the other layers with two new operations: An outlier
+removal operation that is designed to reduce the negative impact of high-tail observations,
+as well as a power-transform operation that is designed to transform non-normal data to be more
+normal.
+
+\subsubsection{Notation}%
+\label{ssub:Notation}
+
+
+Let $\{\bfX^{(i)} \in \R^{d \times T};i=1,\dots,N\}$ denote a set of $N$ multivariate time-series,
+each composed of $T$ $d$-dimensional feature vectors. We also let $\bfx_t^{(i)}\in \R^d$,
+where $t=1,\dots,T$, denote the $t$th feature vector at time-step $t$ in the time-series.
+
+\subsubsection{Architecture}%
+\label{ssub:Architecture}
+
+
+An overview of the layer's architecture is shown in figure TODO\_FIG.
+First, outlier removal. Then scale. Then shift. Then power transform.
+This order because TODO.
+
+TODO: explain comparison to DAIN, RDAIN and BIN, and how not batch-aware, but rather aims to
+learn characteristics of global distribution, as it's the global distribution that might be
+very irregular...
+
+% Outlier removal
+\subsubsection{Outlier removal}% {{{
+\label{ssub:Outlier removal}
+
+Handling outliers and extreme values in the dataset can increase predictive performance if done
+correctly (citation needed). Two common ways of doing this are omission and winsorization
+\citep{winsorization}. With the former, observations that are deemed to be extreme are simply
+removed during training. With the latter, all the data is still used, but observations lying
+outside a certain number of standard deviation from the mean, or below or above certain
+percentiles, are \textit{clamped down} to be closer to the mean or median of the data.
+For example, if winsorizing data using 3 standard deviation, all values less than
+$\mu-3\sigma$ are set to be exactly $\mu-3\sigma$. Similarly, the values above
+$\mu+3\sigma$ are \textit{clamped} to this value. Winsorization can also be done using percentiles,
+where common boundaries are the first and fifth percentiles \cite{winsorization}.
+However, the type of winsorization, as well as the number of standard deviation
+or percentiles to use, might depend on the dataset. Additionally, it might not
+be necessary to winsorize the data at all if the outliers turn out to not
+negatively affect performance. All this introduces more hyperparameters to tune
+during modelling. The outlier removal presented here aims to automatically both determine
+whether winsorization is necessary for a particular feature, and determine the threshold at
+which to apply winsorization.
+
+For input vector $\bfx \in \R^d$, the adaptive outlier removal operation is defined as:
+\begin{equation}\label{eq:adaptive-outlier-removal}
+    \bm\alpha' \odot \underbrace{\left(\bm\beta' \odot 
+        \tanh\left\{(\bfx-\hat{\bm\mu}) \oslash \bm\beta'  \right\}+\hat{\bm\mu}
+\right)}_{\text{smooth adaptive centred winsorization}}
+    +\underbrace{\left(1-\bm\alpha' \right) \odot \bfx}_{\text{residual connection}},
 \end{equation}
-\end{theorem}
+where $\odot$ is the element-wise multiplication, $\oslash$ is element-wise division,
+$\bm\alpha' \in [0,1]^d$ is a parameter controlling how winsorization to apply to each feature,
+and $\bm\beta' \in [\beta_{\text{min}},\infty)^d$ controls the winsorization threshold for
+each feature. The $\hat{\bm\mu}$ parameter is an estimate of the mean of the data, and is used
+to ensure the winsorization is centred. When setting the \ac{EDAIN} layer in \textit{batch-aware}
+mode, it is simply the mean of the batch:
+\begin{equation}
+    \hat{\mu}_k=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T x_{j,k}^{(i)},
+\end{equation}
+while if using the \textit{batch-agnostic} mode, it is iteratively updated using a cumulative
+moving average estimate at each forward pass of the layer. This is to better approximate the
+global mean of the data.
+The unknown parameters of the model are $\bm\alpha \in \R^d$ and $\bm\beta \in \R^d$, and they
+are transformed into the constrained parameters $\bm\alpha'$ and $\bm\beta'$, as used in
+\cref{eq:adaptive-outlier-removal} through the following element-wise mappings:
+\begin{equation}
+    \bm\alpha'=\frac{e^{\bm\alpha}}{1+e^{\bm\alpha}} \;\;\;\;\;\;\;\;\;
+    \bm\beta'=\beta_{\text{min}}+e^{\bm\beta}.
+\end{equation}
+For ease of notation, we let $\mathbf{W}_1=(\bm\alpha, \bm\beta)$ denote the $2d$ unknown
+parameters that are optimised for the adaptive outlier removal layer.
 
-\begin{proof}   
-    Starting with the left-hand side,
+TODO: plots of curve for different parameters
+
+% }}}
+
+% Scale and shift
+\subsubsection{Scale and shift}% {{{
+\label{ssub:Scale and shift}
+
+% TODO: reformulate this section to combine both of the layers in the below equation,
+%       as that is more readable, then compare batch-aware and batch-agnostic versions,
+%       and as example, write how the batch-agnostic one can generalise standard scaling...
+
+The adaptive shift and scale layer, combined, simply performs the operation
+\begin{equation}\label{eq:adaptive-scale-shift}
+    (\bfx \oplus \bm\gamma) \odot \bm\lambda,
+\end{equation}
+with input $\bfx$ and unknown parameters $\bm\gamma \in \R^d$ and $\bm\lambda \in (0,\infty)^d$ when the \ac{EDAIN} is set
+to batch-agnostic mode. This makes the scale-and-shift layer a generalised version of
+Z-score scaling, or standard scaling, as setting
+\begin{equation}
+    \bm\gamma:=-\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
+\end{equation}
+and
+\begin{equation}
+    \bm\lambda:=\left( \frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}\oplus \bm\gamma\right)^2  \right)^{-1}
+\end{equation}
+makes the operation in \cref{eq:adaptive-scale-shift} equivalent to Z-score scaling.
+This \textit{batch-agnostic} mode is useful if the distribution is similar across batches
+and constitute a global unimodal distribution that should be centred.
+
+However, some datasets might have multiple modes arising from significantly different
+data generation mechanisms. Attempting to scale and shift each batch to a global mean and
+standard deviation might hurt performance in such cases. Instead, CITE\_AUTHOR\_DAIN propose
+basing the scale and shift on a \textit{summary representation} of the current batch, allowing
+each batch to be normalized according the specific mode that batch of data might have come from.
+This gives
+\begin{equation}
+    (\bfx \oplus [\bm\gamma \odot \mu_{\bfx}]) \odot [\bm\lambda \odot \sigma_{\bfx}],
+\end{equation}
+where the summary representations $\sigma_{\bfx}$ and $\mu_{\bfx}$ are computed through reduction
+of the temporal dimension for each observation:
 \begin{align}
-% Example of using \newcommands; see above
-\EE{ \inparenth{\X - \consta}^2 } 
-&=  \EE{  \inparenth{\X - \EE{\X} + \EE{\X} - \consta}^2 } 
-    \nonumber \\
-&=  \EE{  \inparenth{ \X - \EE{\X} }^2 } 
-    + 2 \EE{ \inparenth{ \X - \EE{\X} } \inparenth{ \EE{\X} - \consta} } +  
-  \EE{ \inparenth{ \EE{\X} - \consta}^2  }    
-    \nonumber \\
-&=  \EE{  \inparenth{ \X - \EE{\X} }^2 } +  \inparenth{ \EE{\X} - \consta}^2
-    \nonumber \\
-& \geq \EE{  \inparenth{ \X - \EE{\X} }^2 },  
-\nonumber 
+    \mu_\bfx^{(i)}&=\frac{1}{T} \sum^{T}_{t=1} \bfx^{(i)}_t \in \R^d \\
+    \sigma_\bfx^{(i)}&=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2} \in \R^d.
 \end{align}
-since $\EE{\X}$ is a real number and $\inparenth{ \EE{\X} - \consta}^2 \geq 0$,
-and the third line follows from linearity of expectation:
-\begin{align}
-    \EE{ \inparenth{ \X - \EE{\X} } \inparenth{ \EE{\X} - \consta} }
-    =
-    \inparenth{ \EE{\X} - \consta} \EE{ \inparenth{ \X - \EE{\X} } }
-    =
-    \inparenth{ \EE{\X} - \consta}  \inparenth{\EE{ \X} - \EE{\X} } 
-    =
-    0,
-    \nonumber
-\end{align}
-    since $\EE{\EE{\X}} = \EE{\X}$, which proves the result.
-\end{proof}
+With this mode, it is difficult for the layer to generalise Z-score scaling, but it becomes more
+able to normalize in a \textit{mode-aware} fashion.
 
-\begin{remark}
-    This theorem shows that that the minimum of the quantity
-    $\mathrm{E}[(X - a)^2]$ is equal to $\mathrm{Var}(X)$.
-    In some sense, this makes the variance a natural measure of dispersion if 
-    we are taking the metric to be the squared deviation of $X$.
-\end{remark}
+% }}}
+
+\subsubsection{Power transform}%
+\label{ssub:Power transform}
+
+% TODO: start writing this next
+
+Yeo-Johnson, extension of Box-Cox transformation, also works for negative values
+
+equation
 
 
-\begin{lemma}[Stein's Lemma]
-    Let $X \sim \mathrm{N}(\mu, \sigma^2)$, and let $g$ be a differentiable 
-    function satisfying $\mathrm{E}[|g'(X)|] < \infty$. Then
-    \begin{equation}
-        \mathrm{E}[g(X)(X-\mu)] = \sigma^2 \mathrm{E}[g'(X)].
-        \nonumber
-    \end{equation}
-\end{lemma}
+\subsubsection{Optimising the parameters}%
+\label{ssub:Optimising the parameters}
 
-\begin{proposition}[Popoviciu's inequality]
-    Suppose that the random variable $X$ is known to only take values in the 
-    bounded range $[a, b]$. Then  
-    \begin{align}
-        \mathrm{Var}[X] \leq \dfrac{(b-a)^2}{4}.
-        \nonumber
-    \end{align}
-\end{proposition}
+Can simply feed values forward through the 4 layers, as shown in TODO\_FIG.
+Additionally, weights are updated through standard gradient descent simultaneously while
+training the model
 
-\begin{example}
-    Suppose $X \sim \mathrm{Bern} (p)$, for some $p \in [0,1]$. Then, 
-    since $X \in \{0, 1\}$, $X$ is bounded between $0$ and $1$ and so
-    $\mathrm{Var}[X] \leq \tfrac{1}{4}$.
-\end{example}
+\begin{equation}
+    \Delta (\mathbf{W}_\alpha,\mathbf{\beta})=-\eta\left( \eta_{pt} \frac{\partial \mathcal{L}}{\partial \mathbf{W}_a},\dots  \right)
+\end{equation}
+
+Similarly to DAIN\_REF, convergence is unstable if use same learning rate for RNN model and
+preprocessing layer weights, so seperate learning rates for each parameter, and these are
+set using hyperparameter tuning search, described later in section TODO.
+
+% }}}
+
+\section{EDAIN-KL}% EDAIN-KL
+% Methods: EDAIN-KL {{{
+\label{sec:EDAIN-KL}
+
+TODO: write details
+
+% }}}
+
+\section{PREPMIX-CAPS}% PREPMIX-CAPS
+% Methods: PREPMIX-CAPS {{{
+\label{sec:PREPMIX-CAPS}
+
+TODO: write details
+
+% }}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Results} %%%%         Results        %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TODO: introduction to this chapter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Evaluation methodology}%%%  Evaluation methodology %%
+\label{sec:Evaluation methodology}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Small introduction
+
+% Sequence model architecture
+\subsection{Sequence model architecture}% {{{
+\label{sub:Sequence model architecture}
+
+% }}}
+
+% Fitting the models
+\subsection{Fitting the models}% {{{
+\label{sub:Fitting the models}
+
+Mention scheduling, early stopping, optimizer used, learning rate etc.
+% }}}
+
+% Tuning adaptive preprocessing model hyperparameters
+\subsection{Tuning adaptive preprocessing model hyperparameters}% {{{
+\label{sub:Tuning adaptive preprocessing model hyperparameters}
+
+Details on the tuning for all the methods presented
+% }}}
+
+% Evaluation metric
+\subsection{Evaluation metrics}% {{{
+\label{sub:Evaluation metrics}
+
+% }}}
+
+% Cross-validaiton
+\subsection{Cross-validation}% {{{
+\label{sub:Cross-validation}
+
+
+% }}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Simulation study}%%%  Simulation study   %%
+\label{sec:Simulation study}%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Small introduction, including motivation
+
+% Multivariate time-series data generation algorithm
+\subsection{Multivariate time-series data generation algorithm}% {{{
+\label{sub:Multivariate time-series data generation algorithm}
 
 
 
 % }}}
-\chapter{Methods}
-% Methods {{{
+
+% Negative effects of irregularly-distributed data
+\subsection{Negative effects of irregularly-distributed data}% {{{
+\label{sub:Negative effects of irregularly-distributed data}
 
 
 % }}}
-\chapter{Results and Discussion}
-% Results and Discussion {{{
+
+% Preprocessing method experiments
+\subsection{Preprocessing method experiments}% {{{
+\label{sub:Preprocessing method experiments}
+
 
 
 % }}}
-\chapter{Conclusion}
-% Conclusion {{{
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{American Express default prediction dataset}%%%  Amex dataset %%%
+\label{sec:American Express default prediction dataset}%%%%%%%%%%%%%%%%%%%%
+
+% Description
+\subsection{Description}% {{{
+\label{sub:Description}
+
+% }}}
+
+% Preprocessing method experiments
+\subsection{Preprocessing method experiments}% {{{
+\label{sub:Preprocessing method experiments}
+
+
+
+% }}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Discussion} %%%%    Discussion        %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TODO: introduction to this chapter
+
+% EDAIN
+\section{EDAIN}% {{{
+\label{sec:EDAIN}
+
+% }}}
+
+% EDAIN-KL
+\section{EDAIN-KL}% {{{
+\label{sec:EDAIN-KL}
+
+
+% }}}
+
+% PREPMIX-CAPS
+\section{PREPMIX-CAPS}% {{{
+\label{sec:PREPMIX-CAPS}
+
+
+% }}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Conclusion} %%%%     Conclusion      %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Summary
+\section{Summary}% {{{
+\label{sec:Summary}
+
 
 
 Conclusion goes here. 
 
 
+
+% }}}
+
+% Main contributions
+\section{Main contributions}% {{{
+\label{sec:Main contributions}
+
+% }}}
+
+
+% Future work
+\section{Future work}% {{{
+\label{sec:Future work}
 
 % }}}
 
