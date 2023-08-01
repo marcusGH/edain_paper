@@ -60,3 +60,49 @@ class GRUNetBasic(nn.Module):
         out = self.sigmoid(self.fc3(out))
 
         return out.squeeze(1)
+
+
+class GRUNetLOB(nn.Module):
+    def __init__(self, input_dim=144, linear_dim=512, gru_dim=256, num_gru_layers=1, dropout_prob=0.5):
+        super(GRUNetBasic, self).__init__()
+
+        # save the params
+        self.D = input_dim
+        self.linear_dim = linear_dim
+        self.gru_dim = gru_dim
+        self.num_gru_layers = num_gru_layers
+
+        # setup GRU RNN layer
+        self.gru = nn.GRU(
+            input_size=input_dim,
+            hidden_size=gru_dim,
+            num_layers=num_gru_layers,
+            batch_first=True,
+            dropout=dropout_prob,
+        )
+
+        # the classifier head. We're using cross-entropy with 3 classes, so output
+        # should be unnormalized logits
+        self.base = nn.Sequential(
+            nn.Linear(gru_dim, linear_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_prob),
+            nn.Linear(linear_dim, 3),
+        )
+
+    def forward(self, x):
+
+        # Initializing hidden state for first input with zeros
+        h0 = torch.zeros(self.num_gru_layers, x.size(0), self.gru_dim, device=x.device).requires_grad_()
+
+        # Forward propagation by passing in the input and hidden state into the model
+        x, _ = self.gru(x, h0.detach())
+
+        # Reshaping the outputs in the shape of (batch_size, seq_length, hidden_size)
+        # so that it can fit into the fully connected layer
+        x = x[:, -1, :]
+
+        # pass through classifier head
+        x = self.base(x)
+
+        return x

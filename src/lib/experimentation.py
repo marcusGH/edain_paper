@@ -520,3 +520,31 @@ def reset_all_weights(model: nn.Module) -> None:
 
     # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
     model.apply(fn=weight_reset)
+
+
+def train_evaluate_lob_anchored(
+        model_init_fn,
+        preprocess_init_fn,
+        optimizer_init_fn,
+        scheduler_init_fn,
+        early_stopper_init_fn,
+        num_epochs,
+        device,
+        random_state,
+        horizon=2,
+        windows=15,
+        splits=[0, 1, 2, 3, 4, 5, 6, 7, 8],
+    ):
+    """
+    TODO: docstring
+    """
+
+    # TODO: iterature splits and in each split:
+    #       * load train and test loader based on parameters
+    #       * Fit and apply pereprocessing model on data loaders
+    #       * initialise model
+    #       * call external training loop
+    #       * call external validation function
+    # TODO: at end of split loop, do the results averaging thing using external function
+
+    return None
