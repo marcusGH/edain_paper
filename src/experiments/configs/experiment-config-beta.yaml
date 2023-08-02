@@ -29,12 +29,12 @@ lob_dataset:
 
 # Configuration for fitting the amex dataset
 fit:
-  num_epochs: 20
-  early_stopper_patience: 30
-  early_stopper_min_delta: 0.0
+  num_epochs: 30
+  early_stopper_patience: 5
+  early_stopper_min_delta: 0
   optimizer: rmsprop
   base_lr: 0.0001
-  scheduler_milestones: [6, 15]
+  scheduler_milestones: [4, 8]
   verbose: False
 
 # Configuration for GRU RNN model
@@ -86,8 +86,8 @@ dain:
 
 # Configuration for the BiN layer
 bin:
-  beta_lr: 0.01
-  gamma_lr: 0.0001
+  beta_lr: 0.1
+  gamma_lr: 0.000001
   lambda_lr: 0.1
 
 # configuration for brute force clustering approach
