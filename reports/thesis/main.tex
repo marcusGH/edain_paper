@@ -186,6 +186,7 @@ where $t=1,\dots,T$, denote the $t$th feature vector at time-step $t$ in the tim
 \subsubsection{Architecture}%
 \label{ssub:Architecture}
 
+% TODO: make figure, then finish this section...
 
 An overview of the layer's architecture is shown in figure TODO\_FIG.
 First, outlier removal. Then scale. Then shift. Then power transform.
@@ -194,6 +195,11 @@ This order because TODO.
 TODO: explain comparison to DAIN, RDAIN and BIN, and how not batch-aware, but rather aims to
 learn characteristics of global distribution, as it's the global distribution that might be
 very irregular...
+
+% TODO: should somewhere clearly specify that x is 3-dimensional, and all the
+%       element-wise operations happen over the dimension axis
+%       this can nicely be done by always writing x_t^{(i)} in the equations, since then
+%       it's a 1D vector of dimensions d
 
 % Outlier removal
 \subsubsection{Outlier removal}% {{{
@@ -296,17 +302,39 @@ able to normalize in a \textit{mode-aware} fashion.
 
 % }}}
 
-\subsubsection{Power transform}%
+% Power transform
+\subsubsection{Power transform}% {{{
 \label{ssub:Power transform}
 
-% TODO: start writing this next
+Many real-world datasets exhibit significant skewness, which is often treated using power
+transformations (citation needed). The most common transformation is the Box-Cox transformation,
+but this is only valid for positive values, so it is not applicable to most real-world datasets
+TODO\_CITE\_BOX\_COX. An alternative is a transformation proposed by TODO\_CITE\_YEO\_Johnson,
+who proposed to following transformation:
+\begin{equation}\label{eq:yeo-johnson}
+    f_{\textrm{YJ}}(x)= \left\{
+        \begin{array}{ll}
+            \frac{(x+1)^\lambda-1}{\lambda}, & \textrm{if } \lambda \neq 0, x \geq 0; \\
+            \log(x + 1), & \textrm{if } \lambda = 0, x \geq 0;  \\
+            \frac{(1-x)^{2-\lambda}-1}{\lambda-2} , & \textrm{if } \lambda \neq 2, x < 0; \\
+            -\log(1-x), & \textrm{if } \lambda=2, x < 0.
+        \end{array}
+    \right.
+\end{equation}
+Like the Box-Cox transformation, transformation $f_{\textrm{YJ}}$ only has one unknown parameter, $\lambda$, but
+it works for any $x \in \R$, not just positive values.
 
-Yeo-Johnson, extension of Box-Cox transformation, also works for negative values
+The power transform layer simply applies the transformation in \cref{eq:yeo-johnson} along each dimension of the input, that is for each $i=1,\dots,N$ and $t=1,\dots,T$,
+\begin{equation}
+\left[\textrm{power\_transform}\left(\bfx_t^{(i)}\right)\right]_j=f_{\textrm{YJ}}(x_{t,j}^{(i)}), \;\;\; j=1,\dots,d.
+\end{equation}
+The unknown parameters is the vector $\bm\lambda \in \R^d$.
 
-equation
 
+% }}}
 
-\subsubsection{Optimising the parameters}%
+% Optimising the parameters
+\subsubsection{Optimising the parameters}% {{{
 \label{ssub:Optimising the parameters}
 
 Can simply feed values forward through the 4 layers, as shown in TODO\_FIG.
@@ -320,6 +348,8 @@ training the model
 Similarly to DAIN\_REF, convergence is unstable if use same learning rate for RNN model and
 preprocessing layer weights, so seperate learning rates for each parameter, and these are
 set using hyperparameter tuning search, described later in section TODO.
+
+% }}}
 
 % }}}
 
