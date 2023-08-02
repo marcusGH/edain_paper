@@ -187,10 +187,9 @@ if __name__ == '__main__':
     ################################################################
 
     if args.dataset == 'amex':
-        # minor TODO: refactor out dataset-specific config into amex_dataset.yaml file
         X, y = load_amex_numpy_data(
             split_data_dir=os.path.join(main_cfg['dataset_directory'], 'derived', 'processed-splits'),
-            fill_dict=exp_cfg['fill'],
+            fill_dict=exp_cfg['amex_dataset']['fill'],
             corrupt_func=lambda X, y: undo_min_max_corrupt_func(X, y, args.random_state),
             num_categorical_features=exp_cfg['amex_dataset']['num_categorical_features']
         )
@@ -211,11 +210,11 @@ if __name__ == '__main__':
         if args.dataset == 'amex':
             model_init_fn = lambda : GRUNetBasic(
                 num_cat_columns=exp_cfg['amex_dataset']['num_categorical_features'],
-                **exp_cfg['gru_model']
+                **exp_cfg['gru_model_amex']
             )
         elif args.dataset == 'lob':
             model_init_fn = lambda : GRUNetLOB(
-                **exp_cfg['gru_model']
+                **exp_cfg['gru_model_lob']
             )
         else:
             raise ValueError(f"Dataset not supported: {args.dataset}")
@@ -262,14 +261,14 @@ if __name__ == '__main__':
                 num_cat_columns=exp_cfg['amex_dataset']['num_categorical_features'],
                 time_series_length=time_series_length,
                 dim_first=dim_first,
-                **exp_cfg['gru_model'],
+                **exp_cfg['gru_model_amex'],
             )
         elif args.dataset == 'lob':
             model_init_fn = lambda : AdaptiveGRUNetLOB(
                 adaptive_layer=adaptive_layer_init_fn(),
                 time_series_length=time_series_length,
                 dim_first=dim_first,
-                **exp_cfg['gru_model'],
+                **exp_cfg['gru_model_lob'],
             )
         else:
             raise ValueError(f"Dataset not supported: {args.dataset}")
@@ -419,7 +418,7 @@ if __name__ == '__main__':
             X=X,
             y=y,
             num_epochs=exp_cfg['fit']['num_epochs'],
-            dataloader_kwargs=exp_cfg['data_loader'],
+            dataloader_kwargs=exp_cfg['amex_dataset']['data_loader'],
             num_folds=args.num_cross_validation_folds,
             device=dev,
             random_state=args.random_state,

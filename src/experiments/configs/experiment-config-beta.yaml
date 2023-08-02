@@ -29,12 +29,12 @@ lob_dataset:
 
 # Configuration for fitting the amex dataset
 fit:
-  num_epochs: 40
-  early_stopper_patience: 5
+  num_epochs: 20
+  early_stopper_patience: 30
   early_stopper_min_delta: 0.0
-  optimizer: adam
-  base_lr: 0.001
-  scheduler_milestones: [4, 7]
+  optimizer: rmsprop
+  base_lr: 0.0001
+  scheduler_milestones: [6, 15]
   verbose: False
 
 # Configuration for GRU RNN model
@@ -78,15 +78,16 @@ edain_bijector_fit:
 
 # Configuration for the DAIN layer
 dain:
+  # the learning rates found to work best according to DAIN paper
   mode: adaptive_scale
-  mean_lr: 0.00001
-  scale_lr: 0.00001
-  gate_lr: 0.001
+  mean_lr: 0.01
+  scale_lr: 0.00000001
+  gate_lr: 10
 
 # Configuration for the BiN layer
 bin:
-  beta_lr: 0.1
-  gamma_lr: 0.1
+  beta_lr: 0.01
+  gamma_lr: 0.0001
   lambda_lr: 0.1
 
 # configuration for brute force clustering approach
@@ -104,7 +105,7 @@ mixture:
   cache_directory: /home/silo1/mas322/cache-files/
   # should be either "statistics" or "kl-divergence"
   cluster_method: statistics
-  number_of_clusters: 3
+  number_of_clusters: 9
   statistics_cluster:
     # keyword argument to the KMeans clustering routine
     kmeans:
