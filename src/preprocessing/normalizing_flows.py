@@ -21,10 +21,12 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    def __init__(self, input_dim, init_sigma=0.1):
+    def __init__(self, input_dim, init_sigma=0.1, batch_aware=False, eps=1e-8):
         super(AdaptiveScale, self).__init__(cache_size=1)
 
         self.input_dim = input_dim
+        self.batch_aware = batch_aware
+        self.eps = eps
         # learned standard deviation should be positive
         self.log_scale = nn.Parameter(
             torch.randn(self.input_dim) * init_sigma
@@ -36,9 +38,18 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
 
     def _call(self, x):
         # apply scale
-        return x * torch.exp(self.log_scale)
+        if self.batch_aware:
+            std = torch.mean(x ** 2, 1, keepdim=True)
+            std = torch.sqrt(std + self.eps)
+            adaptive_std = torch.exp(-self.log_scale) * std
+            adaptive_std[adaptive_std <= self.eps] = 1
+            return x / adaptive_std
+        else:
+            return x * torch.exp(self.log_scale)
 
     def _inverse(self, y):
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         x = y * torch.exp(-self.log_scale)
         return x
 
@@ -46,9 +57,13 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
         """
         Calculates the elementwise determinant of the log Jacobian
         """
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         return torch.sum(self.log_scale)
 
     def _inverse_log_abs_det_jacobian(self, x, y):
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         return torch.sum(-self.log_scale)
 
 
@@ -62,9 +77,10 @@ class AdaptiveShift(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    def __init__(self, input_dim, init_sigma=0.1):
+    def __init__(self, input_dim, init_sigma=0.1, batch_aware=False):
         super(AdaptiveShift, self).__init__(cache_size=1)
 
+        self.batch_aware = batch_aware
         self.input_dim = input_dim
         # learned shift can be any real
         self.shift = nn.Parameter(
@@ -75,18 +91,28 @@ class AdaptiveShift(dist.torch_transform.TransformModule):
         return self.shift
 
     def _call(self, x):
-        return x + self.shift
+        if self.batch_aware:
+            adaptive_avg = self.shift * torch.mean(x, 1, keepdim=True)
+            return x + adaptive_avg
+        else:
+            return x + self.shift
 
     def _inverse(self, y):
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         return y - self.shift
 
     def log_abs_det_jacobian(self, x, y):
         """
         Calculates the elementwise determinant of the log Jacobian
         """
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         return torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
 
     def _inverse_log_abs_det_jacobian(self, x, y):
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
         return torch.zeros(y.size(0), device=y.device, dtype=y.dtype)
 
 
@@ -106,9 +132,10 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    def __init__(self, input_dim, init_sigma=0.1, residual_connection=True, mode='exp', min_beta=1.):
+    def __init__(self, input_dim, init_sigma=0.1, residual_connection=True, mode='exp', min_beta=1., batch_aware=False):
         super(AdaptiveOutlierRemoval, self).__init__(cache_size=1)
 
+        self.batch_aware = batch_aware
         self.input_dim = input_dim
         # learned b' in above equation should be positive, which we either constrain with softplus
         # or an exponential function, depending on the mode
@@ -159,8 +186,9 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
             self.running_n += x.size(0)
             self.running_mean = sum_x / self.running_n
 
-            # TODO: temporary experiment, remove later
-            # self.running_mean = torch.mean(x.detach(), 0)
+        # override running average if running in batch_aware mode
+        if self.batch_aware:
+            self.running_mean = torch.mean(x, 1, keepdim=True)
 
         if self.mode == 'exp':
             beta = self.min_beta + torch.exp(self.log_cutoff)
@@ -182,6 +210,8 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
     def _inverse(self, y):
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for inverting adaptive outlier removal transformation when using a residual connection")
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
 
         if self.mode == 'exp':
             beta = self.min_beta + torch.exp(self.log_cutoff)
@@ -202,6 +232,8 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
 
         if self.mode == 'exp':
             beta = self.min_beta + torch.exp(self.log_cutoff)
@@ -222,6 +254,8 @@ class AdaptiveOutlierRemoval(dist.torch_transform.TransformModule):
         """
         if self.alpha is not None:
             raise NotImplementedError("There is not analytical expression for inverse log abs det jacobian for the adaptive outlier removal transformation when using a residual connection")
+        if self.batch_aware:
+            raise NotImplementedError("Unable to invert batch_aware transformation.")
 
         if self.mode == 'exp':
             beta = self.min_beta + torch.exp(self.log_cutoff)
@@ -429,8 +463,7 @@ class EDAIN_Layer(dist.torch_transform.TransformModule):
     codomain = dist.transforms.constraints.real_vector
     bijective = True
 
-    # TODO: add flatten_time_dim option that flattens the time dimension of the input, and then unflattens it at the end
-    def __init__(self, input_dim, init_sigma=0.1, eps=1e-6, invert_bijector=True, adaptive_shift=True, adaptive_scale=True, adaptive_outlier_removal=True, adaptive_power_transform=True, outlier_removal_residual_connection=False, outlier_removal_mode='softplus'):
+    def __init__(self, input_dim, init_sigma=0.1, eps=1e-6, invert_bijector=True, adaptive_shift=True, adaptive_scale=True, adaptive_outlier_removal=True, adaptive_power_transform=True, outlier_removal_residual_connection=False, outlier_removal_mode='softplus', batch_aware=False):
         super(EDAIN_Layer, self).__init__(cache_size=1)
 
         self.input_dim = input_dim
@@ -438,11 +471,11 @@ class EDAIN_Layer(dist.torch_transform.TransformModule):
         # initialise all the layers
         self.shift, self.scale, self.outlier_removal, self.power_transform = None, None, None, None
         if adaptive_shift:
-            self.shift = AdaptiveShift(input_dim, init_sigma)
+            self.shift = AdaptiveShift(input_dim, init_sigma, batch_aware)
         if adaptive_scale:
-            self.scale = AdaptiveScale(input_dim, init_sigma)
+            self.scale = AdaptiveScale(input_dim, init_sigma, batch_aware)
         if adaptive_outlier_removal:
-            self.outlier_removal = AdaptiveOutlierRemoval(input_dim, init_sigma, outlier_removal_residual_connection, outlier_removal_mode)
+            self.outlier_removal = AdaptiveOutlierRemoval(input_dim, init_sigma, outlier_removal_residual_connection, outlier_removal_mode, batch_aware=batch_aware)
         if adaptive_power_transform:
             self.power_transform = AdaptivePowerTransform(input_dim, init_sigma, eps)
 
