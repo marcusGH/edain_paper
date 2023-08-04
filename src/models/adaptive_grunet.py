@@ -102,8 +102,8 @@ class AdaptiveGRUNetLOB(nn.Module):
             # dropout=dropout_prob, # require more than 0 layers
         )
 
-        # dummy parameter
-        self.emb_layers = nn.Parameter(torch.empty(0))
+        # dummy parameter to allow the optimiser init in run_experiment.py to work for both datasets
+        self.emb_layers = nn.ModuleList()
 
         # the classifier head. We're using cross-entropy with 3 classes, so output
         # should be unnormalized logits

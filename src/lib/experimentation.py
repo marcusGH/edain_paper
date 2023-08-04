@@ -620,8 +620,8 @@ def train_evaluate_lob_anchored(
             if model_scheduler is not None:
                 model_scheduler.step()
 
-            # check early stopper
-            if early_stopper is not None and early_stopper.early_stop(metrics['kappa']):
+            # check early stopper (not high kappa is good, so invert)
+            if early_stopper is not None and early_stopper.early_stop(metrics['val_loss']):
                 break
         pbar.refresh()
         pbar.close()
