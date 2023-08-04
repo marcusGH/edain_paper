@@ -60,7 +60,7 @@ edain_bijector:
   adaptive_shift: true
   adaptive_scale: true
   adaptive_outlier_removal: true
-  adaptive_power_transform: true
+  adaptive_power_transform: false
   outlier_removal_mode: exp
 
 # Configuration for EDAIN layer, when optimised with KL-divergence
@@ -79,15 +79,15 @@ edain_bijector_fit:
 # Configuration for the DAIN layer
 dain:
   mode: adaptive_scale
-  mean_lr: 0.00001
-  scale_lr: 0.00001
+  mean_lr: 1.0
+  scale_lr: 1.0
   gate_lr: 0.001
 
 # Configuration for the BiN layer
 bin:
-  beta_lr: 0.1
-  gamma_lr: 0.1
-  lambda_lr: 0.1
+  beta_lr: 10.0
+  gamma_lr: 1.0
+  lambda_lr: 0.000001
 
 # configuration for brute force clustering approach
 mixture:
