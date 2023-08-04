@@ -238,6 +238,13 @@ otherwise stated.
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\bfX}{\mathbf{X}}
 \newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfY}{\mathbf{Y}}
 \newcommand{\bfy}{\mathbf{y}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bftheta}{\mathbf{\theta}}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
