@@ -27,10 +27,10 @@ lob_dataset:
   use_resampling: true
   numeric_input_dim: 144
 
-# Configuration for fitting the amex dataset
+# Configuration for fitting the LOB dataset
 fit:
   num_epochs: 30
-  early_stopper_patience: 5
+  early_stopper_patience: 10
   early_stopper_min_delta: 0
   optimizer: rmsprop
   base_lr: 0.0001
@@ -55,14 +55,14 @@ gru_model_lob:
 
 # Configuration for the EDAIN Layer
 edain_bijector:
-  init_sigma: 0.3
+  init_sigma: 0.00001
   eps: 0.000001
   adaptive_shift: true
   adaptive_scale: true
   adaptive_outlier_removal: true
   adaptive_power_transform: true
   outlier_removal_mode: exp
-  batch_aware: false
+  batch_aware: true
 
 # Configuration for EDAIN layer, when optimised with KL-divergence
 edain_bijector_fit:
@@ -72,10 +72,10 @@ edain_bijector_fit:
   num_fits: 1
   base_lr: 0.001
   # the below parameters also apply when optimising with backpropagation
-  scale_lr: 0.01
+  scale_lr: 0.00000001
   shift_lr: 0.01
-  outlier_lr: 100.0
-  power_lr: 10.0
+  outlier_lr: 0.01
+  power_lr: 0.01
 
 # Configuration for the DAIN layer
 dain:

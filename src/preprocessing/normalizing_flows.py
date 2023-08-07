@@ -41,16 +41,16 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
         if self.batch_aware:
             std = torch.mean(x ** 2, 1, keepdim=True)
             std = torch.sqrt(std + self.eps)
-            adaptive_std = torch.exp(-self.log_scale) * std
+            adaptive_std = torch.exp(self.log_scale) * std
             adaptive_std[adaptive_std <= self.eps] = 1
             return x / adaptive_std
         else:
-            return x * torch.exp(self.log_scale)
+            return x * torch.exp(-self.log_scale)
 
     def _inverse(self, y):
         if self.batch_aware:
             raise NotImplementedError("Unable to invert batch_aware transformation.")
-        x = y * torch.exp(-self.log_scale)
+        x = y * torch.exp(self.log_scale)
         return x
 
     def log_abs_det_jacobian(self, x, y):
@@ -59,12 +59,12 @@ class AdaptiveScale(dist.torch_transform.TransformModule):
         """
         if self.batch_aware:
             raise NotImplementedError("Unable to invert batch_aware transformation.")
-        return torch.sum(self.log_scale)
+        return torch.sum(-self.log_scale)
 
     def _inverse_log_abs_det_jacobian(self, x, y):
         if self.batch_aware:
             raise NotImplementedError("Unable to invert batch_aware transformation.")
-        return torch.sum(-self.log_scale)
+        return torch.sum(self.log_scale)
 
 
 class AdaptiveShift(dist.torch_transform.TransformModule):
@@ -92,15 +92,15 @@ class AdaptiveShift(dist.torch_transform.TransformModule):
 
     def _call(self, x):
         if self.batch_aware:
-            adaptive_avg = self.shift * torch.mean(x, 1, keepdim=True)
-            return x + adaptive_avg
+            adaptive_avg = (1. + self.shift) * torch.mean(x, 1, keepdim=True)
+            return x - adaptive_avg
         else:
-            return x + self.shift
+            return x - self.shift
 
     def _inverse(self, y):
         if self.batch_aware:
             raise NotImplementedError("Unable to invert batch_aware transformation.")
-        return y - self.shift
+        return y + self.shift
 
     def log_abs_det_jacobian(self, x, y):
         """
