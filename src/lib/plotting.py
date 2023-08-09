@@ -12,6 +12,47 @@ elif os.path.isfile(os.path.join("..", "config.yaml")):
 else:
     raise FileNotFoundError("Unable to locate configuration file: config.yaml")
 
+def update_plot_params(**kwargs):
+    params = {
+        "text.usetex": True,
+        "font.family": "serif",
+        "axes.labelsize": 9,
+        "font.size": 11,
+        "legend.fontsize": 7,
+        "legend.title_fontsize": 9,
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8
+    }
+    # replace specified key-word arguments before updating
+    for k, v in kwargs.items():
+        params[k] = v
+    plt.rcParams.update(params)
+
+def get_figsize(width=418.25555, fraction=1.0, height_width_ratio=(5 ** .5 - 1)/2):
+    """
+    Set figure dimensions to avoid scaling in LaTeX.
+
+    Doing \the\textwidth in Latex gives textwidth=418.25555pt
+    """
+    # Width of figure (in pts)
+    fig_width_pt = width * fraction
+
+    # Convert from pt to inches
+    inches_per_pt = 1 / 72.27
+
+    # Figure width in inches
+    fig_width_in = fig_width_pt * inches_per_pt
+    # Figure height in inches
+    fig_height_in = fig_width_in * height_width_ratio
+
+    fig_dim = (fig_width_in, fig_height_in)
+    return fig_dim
+
+def save_plot(fig, plot_name):
+    global _cfg
+    save_path = os.path.join(__file__.split("src")[0], _cfg["plot_output_dir"], f"{plot_name}.pdf")
+    fig.savefig(save_path, bbox_inches='tight')
+
 def get_average(history, key):
     """
     Given a historu object and metric key, returns a list

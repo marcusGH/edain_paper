@@ -1,27 +1,6 @@
-@article{efron1979,
-  title={Bootstrap Methods: Another Look at the Jackknife},
-  author={Efron, Bradley},
-  journal={Annals of Statistics},
-  volume={7},
-  number={1},
-  pages={1--26},
-  year={1979}
-}
-
-@book{efrontib,
-  title={An introduction to the bootstrap},
-  author={Efron, Bradley and Tibshirani, Robert J},
-  year={1994},
-  publisher={CRC press}
-}
-
-
-@book{dickens1859,
-  title={A Tale of Two Cities},
-  author={Dickens, Charles},
-  year={1859},
-  publisher={Chapman \& Hall}
-}
+% List of all references:
+% 
+%
 
 % Outliers, winsorization
 @article{winsorization,
@@ -34,6 +13,149 @@
     doi = {https://doi.org/10.1016/j.seps.2018.08.004},
     url = {https://www.sciencedirect.com/science/article/pii/S003801211730232X},
     author = {Tamás Nyitrai and Miklós Virág},
-    keywords = {Bankruptcy prediction, Data preprocessing, Winsorizing, Decision trees, CHAID, CART, Neural networks},
-    abstract = {Ratio type financial indicators are the most popular explanatory variables in bankruptcy prediction models. These measures often exhibit heavily skewed distribution because of the presence of outliers. In the absence of clear definition of outliers, ad hoc approaches can be found in the literature for identifying and handling extreme values. However, it is not clear how these different approaches can affect the predictive power of models. There seems to be consensus in the literature on the necessity of handling outliers, at the same time, it is not clear how to define extreme values to be handled in order to maximize the predictive power of models. There are two possible ways to reduce the bias originating from outliers: omission and winsorization. Since the first approach has been examined previously in the literature, we turn our attention to the latter. We applied the most popular classification methodologies in this field: discriminant analysis, logistic regression, decision trees (CHAID and CART) and neural networks (multilayer perceptron). We assessed the predictive power of models in the framework of tenfold stratified crossvalidation and area under the ROC curve. We analyzed the effect of winsorization at 1, 3 and 5% and at 2 and 3 standard deviations, furthermore we discretized the range of each variable by the CHAID method and used the ordinal measures so obtained instead of the original financial ratios. We found that this latter data preprocessing approach is the most effective in the case of our dataset. In order to check the robustness of our results, we carried out the same empirical research on the publicly available Polish bankruptcy dataset from the UCI Machine Learning Repository. We obtained very similar results on both datasets, which indicates that the CHAID-based categorization of financial ratios is an effective way of handling outliers with respect to the predictive performance of bankruptcy prediction models.}
+    keywords = {Bankruptcy prediction, Data preprocessing, Winsorizing, Decision trees, CHAID, CART, Neural networks}
+}
+
+% For the change of variables formula
+@book{murphy,
+    added-at = {2017-02-27T11:22:42.000+0100},
+    address = {Cambridge, Mass. [u.a.]},
+    author = {Murphy, Kevin P.},
+    biburl = {https://www.bibsonomy.org/bibtex/270148d65a6a66e0ae962bf22c5f66148/hotho},
+    description = {Machine Learning: A Probabilistic Perspective (Adaptive Computation and Machine Learning series): Kevin P. Murphy: 9780262018029: Amazon.com: Books},
+    interhash = {e99d8a06cc36507b05c38192ab80573e},
+    intrahash = {70148d65a6a66e0ae962bf22c5f66148},
+    isbn = {9780262018029 0262018020},
+    keywords = {hmm lda learning machine statistics},
+    publisher = {MIT Press},
+    refid = {904442949},
+    timestamp = {2017-02-27T11:22:42.000+0100},
+    title = {Machine learning : a probabilistic perspective},
+    url = {https://www.amazon.com/Machine-Learning-Probabilistic-Perspective-Computation/dp/0262018020/ref=sr_1_2?ie=UTF8&qid=1336857747&sr=8-2},
+    year = 2013
+}
+@article{normalizing_flows,
+    doi = {10.1109/tpami.2020.2992934},
+    url = {https://doi.org/10.1109%2Ftpami.2020.2992934},
+    year = 2021,
+    month = {nov},
+    publisher = {Institute of Electrical and Electronics Engineers ({IEEE})},
+    volume = {43},
+    number = {11},
+    pages = {3964--3979},
+    author = {Ivan Kobyzev and Simon J.D. Prince and Marcus A. Brubaker},
+    title = {Normalizing Flows: An Introduction and Review of Current Methods},
+    journal = {{IEEE} Transactions on Pattern Analysis and Machine Intelligence}
+}
+
+@article{yeoJohnson,
+    ISSN = {00063444},
+    URL = {http://www.jstor.org/stable/2673623},
+    abstract = {We introduce a new power transformation family which is well defined on the whole real line and which is appropriate for reducing skewness and to approximate normality. It has properties similar to those of the Box-Cox transformation for positive variables. The large-sample properties of the transformation are investigated in the contect of a single random sample},
+    author = {In-Kwon Yeo and Richard A. Johnson},
+    journal = {Biometrika},
+    number = {4},
+    pages = {954--959},
+    publisher = {[Oxford University Press, Biometrika Trust]},
+    title = {A New Family of Power Transformations to Improve Normality or Symmetry},
+    urldate = {2023-08-04},
+    volume = {87},
+    year = {2000}
+}
+
+@article{rdain,
+    author={Passalis, Nikolaos
+            and Kanniainen, Juho
+            and Gabbouj, Moncef
+            and Iosifidis, Alexandros
+            and Tefas, Anastasios},
+    title={Forecasting Financial Time Series Using Robust Deep Adaptive Input Normalization},
+    journal={Journal of Signal Processing Systems},
+    year={2021},
+    month={Oct},
+    day={01},
+    volume={93},
+    number={10},
+    pages={1235-1251},
+    issn={1939-8115},
+    doi={10.1007/s11265-020-01624-0},
+    url={https://doi.org/10.1007/s11265-020-01624-0}
+}
+
+@article{dain,
+    title={Deep Adaptive Input Normalization for Time Series Forecasting}, 
+    author={Nikolaos Passalis and Anastasios Tefas and Juho Kanniainen and Moncef Gabbouj and Alexandros Iosifidis},
+    year={2019},
+    eprint={1902.07892},
+    journal={arXiv preprint arXiv:1902.07892},
+    archivePrefix={arXiv},
+    primaryClass={q-fin.CP}
+}
+
+@article{bin,
+    title={Bilinear Input Normalization for Neural Networks in Financial Forecasting}, 
+    author={Dat Thanh Tran and Juho Kanniainen and Moncef Gabbouj and Alexandros Iosifidis},
+    year={2021},
+    journal={arXiv preprint arXiv:2109.00983},
+    archivePrefix={arXiv},
+    primaryClass={q-fin.ST}
+}
+
+@article{mixture_ct,
+    author = {Cao, Zheng and Gao, Xiang and Chang, Yankui and Liu, Gongfa and Pei, Yuanji},
+    year = {2023},
+    month = {04},
+    pages = {e14004},
+    title = {Improving synthetic CT accuracy by combining the benefits of multiple normalized preprocesses},
+    journal = {Journal of applied clinical medical physics},
+    doi = {10.1002/acm2.14004}
+}
+
+@article{preprocess_origin,
+    author = {Sola, J. and Sevilla, Joaquin},
+    year = {1997},
+    month = {07},
+    pages = {1464 - 1468},
+    title = {Importance of input data normalization for the application of neural networks to complex industrial problems},
+    volume = {44},
+    journal = {Nuclear Science, IEEE Transactions on},
+    doi = {10.1109/23.589532}
+}
+
+@article{singh,
+    title = {Investigating the impact of data normalization on classification performance},
+    journal = {Applied Soft Computing},
+    volume = {97},
+    pages = {105524},
+    year = {2020},
+    issn = {1568-4946},
+    doi = {https://doi.org/10.1016/j.asoc.2019.105524},
+    url = {https://www.sciencedirect.com/science/article/pii/S1568494619302947},
+    author = {Dalwinder Singh and Birmohan Singh},
+    keywords = {Ant lion optimization, Data normalization, Feature selection, Feature weighting, -NN classifier}
+}
+
+@article{nawi,
+    title = {The Effect of Data Pre-processing on Optimized Training of Artificial Neural Networks},
+    journal = {Procedia Technology},
+    volume = {11},
+    pages = {32-39},
+    year = {2013},
+    note = {4th International Conference on Electrical Engineering and Informatics, ICEEI 2013},
+    issn = {2212-0173},
+    doi = {https://doi.org/10.1016/j.protcy.2013.12.159},
+    url = {https://www.sciencedirect.com/science/article/pii/S2212017313003137},
+    author = {Nazri Mohd Nawi and Walid Hasen Atomi and M.Z. Rehman},
+    keywords = {Artificial neural networks, back propagation, gradient descent, gain value, pre-processing data}
+}
+
+@inproceedings{stanislav,
+    author={Koval, Stanislav I.},
+    booktitle={2018 IEEE Conference of Russian Young Researchers in Electrical and Electronic Engineering (EIConRus)}, 
+    title={Data preparation for neural network data analysis}, 
+    year={2018},
+    volume={},
+    number={},
+    pages={898-901},
+    doi={10.1109/EIConRus.2018.8317233}
 }
