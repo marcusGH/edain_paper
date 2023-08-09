@@ -62,7 +62,7 @@ edain_bijector:
   adaptive_outlier_removal: true
   adaptive_power_transform: true
   outlier_removal_mode: exp
-  batch_aware: true
+  batch_aware: false
 
 # Configuration for EDAIN layer, when optimised with KL-divergence
 edain_bijector_fit:
@@ -72,10 +72,15 @@ edain_bijector_fit:
   num_fits: 1
   base_lr: 0.001
   # the below parameters also apply when optimising with backpropagation
-  scale_lr: 0.0001
-  shift_lr: 0.01
-  outlier_lr: 10.0
-  power_lr: 0.1 # changed from 10 because it gave errors...
+  # scale_lr: 0.0001
+  # shift_lr: 0.01
+  # outlier_lr: 10.0
+  # power_lr: 0.1 # changed from 10 because it gave errors...
+  # below for global-aware
+  scale_lr: 10.0
+  shift_lr: 10.0
+  outlier_lr: 0.000001
+  power_lr: 0.001
 
 # Configuration for the DAIN layer
 dain:
