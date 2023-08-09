@@ -27,14 +27,14 @@ lob_dataset:
   use_resampling: true
   numeric_input_dim: 144
 
-# Configuration for fitting the amex dataset
+# Configuration for fitting the LOB dataset
 fit:
-  num_epochs: 30
-  early_stopper_patience: 5
+  num_epochs: 20
+  early_stopper_patience: 100
   early_stopper_min_delta: 0
   optimizer: rmsprop
   base_lr: 0.0001
-  scheduler_milestones: [4, 8]
+  scheduler_milestones: [40, 80]
   verbose: False
 
 # Configuration for GRU RNN model
@@ -55,7 +55,7 @@ gru_model_lob:
 
 # Configuration for the EDAIN Layer
 edain_bijector:
-  init_sigma: 0.3
+  init_sigma: 0.00001
   eps: 0.000001
   adaptive_shift: true
   adaptive_scale: true
@@ -72,10 +72,15 @@ edain_bijector_fit:
   num_fits: 1
   base_lr: 0.001
   # the below parameters also apply when optimising with backpropagation
-  scale_lr: 0.01
-  shift_lr: 0.01
-  outlier_lr: 100.0
-  power_lr: 10.0
+  # scale_lr: 0.0001
+  # shift_lr: 0.01
+  # outlier_lr: 10.0
+  # power_lr: 0.1 # changed from 10 because it gave errors...
+  # below for global-aware
+  scale_lr: 10.0
+  shift_lr: 10.0
+  outlier_lr: 0.000001
+  power_lr: 0.001
 
 # Configuration for the DAIN layer
 dain:
@@ -87,8 +92,8 @@ dain:
 
 # Configuration for the BiN layer
 bin:
-  beta_lr: 0.1
-  gamma_lr: 0.000001
+  beta_lr: 1.0
+  gamma_lr: 0.00000001
   lambda_lr: 0.1
 
 # configuration for brute force clustering approach

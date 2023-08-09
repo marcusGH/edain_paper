@@ -60,7 +60,7 @@ edain_bijector:
   adaptive_shift: true
   adaptive_scale: true
   adaptive_outlier_removal: true
-  adaptive_power_transform: false
+  adaptive_power_transform: true
   outlier_removal_mode: exp
 
 # Configuration for EDAIN layer, when optimised with KL-divergence
