@@ -47,7 +47,6 @@
 \end{acknowledgements}
 
 {\thispagestyle{plain}
-    % TODO: Load hyperref so that ToC items are clickable
     \tableofcontents
 }
 
@@ -68,6 +67,7 @@
         \acro{BIN}{Bilinear Input Normalization}
         \acro{pdf}{probability density function}
         \acro{KL-divergence}{Kullbeck-Leibler divergence}
+        \acro{PREPMIX-CAPS}{Preprocessing Mixture, optimised with Clustering and Parallel Seearch}
     \end{acronym}
 }
 
@@ -176,15 +176,18 @@ TODO: introduction to this chapter
 %   * scale&shift: able to generalise standard scaling
 %   * power transform: should also work for negative and positive values, while being numerically stable
 
+
+% TODO: Replace this introduction with the architecture subsection
 My first contribution is the \ac{EDAIN} layer. This adaptive preprocessing layer is inspired
-by the likes of DAIN\_REF and BIN\_REF, but unlike the aforementioned methods, the
-\ac{EDAIN} layer also supports normalizing the data in a \textit{batch-agnostic} fashion, whereas
-the \ac{DAIN}, \ac{RDAIN} and \ac{BIN} layers are all \textit{batch-aware}.
+by the likes of \citep{dain}  and \citep{bin} but unlike the aforementioned methods, the
+\ac{EDAIN} layer also supports normalizing the data in a \textit{global-aware} fashion, whereas
+the \ac{DAIN}, \ac{RDAIN} and \ac{BIN} layers are all \textit{local-aware}.
 Additionally, the \ac{EDAIN} layer extends the other layers with two new operations: An outlier
 removal operation that is designed to reduce the negative impact of high-tail observations,
-as well as a power-transform operation that is designed to transform non-normal data to be more
+as well as a power-transform operation that is designed to transform skewed data to be more
 normal.
 
+% TODO: move notation out of EDAIN section
 \subsection{Notation}%
 \label{sub:Notation}
 
@@ -192,24 +195,50 @@ normal.
 Let $\{\bfX^{(i)} \in \R^{d \times T};i=1,\dots,N\}$ denote a set of $N$ multivariate time-series,
 each composed of $T$ $d$-dimensional feature vectors. We also let $\bfx_t^{(i)}\in \R^d$,
 where $t=1,\dots,T$, denote the $t$th feature vector at time-step $t$ in the time-series.
+When talking about applying operations on feature vectors of the form $\bfx_t^{(i)}$, the time index and data index might
+be dropped for notational clarity, giving $\bfx \in \R^d$. Furthermore, the vector operations
+$\oplus, \ominus, \odot, \oslash$ refer to the element-wise
+application of addition, subtraction, multiplication and division, respectively.
+
+Something something vector function with vector input and vector output, is denoted with bold
+letter such as $\mathbf{f}(\bfx)$, and functions applied elementwise is denoted $f(x)$.
 
 \subsection{Architecture}%
 \label{sub:Architecture}
 
-% TODO: make figure, then finish this section...
+% Latex equations used:
+% \(\mathbf{\alpha}' \odot \left(\mathbf{\beta}' \odot \tanh\left\{(\mathbf{x}_t^{(i)}-\hat{\mathbf\mu}) \oslash \mathbf{\beta}'  \right\}+\hat{\mathbf\mu} \right)+\left(1-\mathbf{\alpha}' \right) \odot \mathbf{x}_t^{(i)}\)
+% \((\mathbf{\tilde{x}}_t^{(i)}  - \mathbf{\gamma} \mathbf{\mu}_{\mathbf{\tilde{x}}_t^{(i)}}) \oslash \mathbf{\lambda} \sigma_{\mathbf{\tilde{x}}_t^{(i)}}, \textrm{ if local-aware} \)
+% TODO: add w=(alpha, beta) above the red boxes to highlight which parameters are optimized...
+\begin{figure}
+\begin{center}
+    \includegraphics[width=\textwidth]{diagrams/edain-diagram.pdf}
+\end{center}
+\caption{An overview of the architecture of the proposed \ac{EDAIN} normalization layer.}
+\label{fig:edain-arch}
+\end{figure}
 
-An overview of the layer's architecture is shown in figure TODO\_FIG.
-First, outlier removal. Then scale. Then shift. Then power transform.
-This order because TODO.
+An overview of the layer's architecture is shown in figure \cref{fig:edain-arch}.
+Given some input time-series $\bfX^{(i)} \in \R^{d \times T}$, each temporal segment
+$\bfx^{(i)}_t$ is passed through an adaptive outlier removal layer, followed by an adaptive shift
+and scale operation, and then finally passed through an adaptive power transformation layer.
+The architecture also has two modes, \textit{local-aware} and \textit{global-aware}. In
+global-aware mode, the \ac{EDAIN} layer aims to normalize each input such that the resulting
+distribution of all the samples in the dataset resemble a unimodal normal distribution, that is
+a ``global normalization''. In local-aware mode, 
+the \ac{EDAIN} layer's normalization operations
+also depend on summary statistics of each input sample $\bfX^{(i)}$, and the goal is to transform
+all the data into a common normalized representation space, independent of where in the
+``global distribution'' the sample originated from. This mode is most suitable for
+multi-modal input data, as samples from different modes can all be transformed into one common
+normalized unimodal distribution. On the other hand, the global-aware mode
+is most suitable if all the data comes from a similar data generation mechanism,
+and works best if the input data has few modes.
 
-TODO: explain comparison to DAIN, RDAIN and BIN, and how not batch-aware, but rather aims to
-learn characteristics of global distribution, as it's the global distribution that might be
-very irregular...
-
-% TODO: should somewhere clearly specify that x is 3-dimensional, and all the
-%       element-wise operations happen over the dimension axis
-%       this can nicely be done by always writing x_t^{(i)} in the equations, since then
-%       it's a 1D vector of dimensions d
+In local-aware mode, the \ac{EDAIN} architecture is similar to the
+\ac{DAIN} architecture proposed by \citeauthor{dain}, but it
+extends it with both a global-aware mode as well as an adaptive outlier removal sublayer and 
+an adaptive power transform sublayer.
 
 % Outlier removal
 \subsubsection{Outlier removal}% {{{
@@ -224,45 +253,48 @@ percentiles, are \textit{clamped down} to be closer to the mean or median of the
 For example, if winsorizing data using 3 standard deviation, all values less than
 $\mu-3\sigma$ are set to be exactly $\mu-3\sigma$. Similarly, the values above
 $\mu+3\sigma$ are \textit{clamped} to this value. Winsorization can also be done using percentiles,
-where common boundaries are the first and fifth percentiles \cite{winsorization}.
+where common boundaries are the first and fifth percentiles \citep{winsorization}.
 However, the type of winsorization, as well as the number of standard deviation
 or percentiles to use, might depend on the dataset. Additionally, it might not
 be necessary to winsorize the data at all if the outliers turn out to not
 negatively affect performance. All this introduces more hyperparameters to tune
-during modelling. The outlier removal presented here aims to automatically both determine
+during modelling. The outlier removal operation presented here aims to automatically  determine both
 whether winsorization is necessary for a particular feature, and determine the threshold at
 which to apply winsorization.
 
-For input vector $\bfx \in \R^d$, the adaptive outlier removal operation is defined as:
+For input vector $\bfx_t^{(i)} \in \R^d$, the adaptive outlier removal operation is defined as:
 \begin{equation}\label{eq:adaptive-outlier-removal}
-    \bm\alpha' \odot \underbrace{\left(\bm\beta' \odot 
-        \tanh\left\{(\bfx-\hat{\bm\mu}) \oslash \bm\beta'  \right\}+\hat{\bm\mu}
+    \mathbf{h}_1(\bfx_t^{(i)})=\bm\alpha' \odot \underbrace{\left(\bm\beta' \odot 
+        \tanh\left\{(\bfx_t^{(i)}-\hat{\bm\mu}) \oslash \bm\beta'  \right\}+\hat{\bm\mu}
 \right)}_{\text{smooth adaptive centred winsorization}}
     +\underbrace{\left(1-\bm\alpha' \right) \odot \bfx}_{\text{residual connection}},
 \end{equation}
-where $\odot$ is the element-wise multiplication, $\oslash$ is element-wise division,
+where
 $\bm\alpha' \in [0,1]^d$ is a parameter controlling how much winsorization to apply to each feature,
 and $\bm\beta' \in [\beta_{\text{min}},\infty)^d$ controls the winsorization threshold for
 each feature, that is, the maximum absolute value of the output, thus controlling the range of the
 output. The effect of the two parameters is illustrated in \cref{fig:adaptive_outlier}.
-The $\hat{\bm\mu}$ parameter is an estimate of the mean of the data, and is used
-to ensure the winsorization is centred. When setting the \ac{EDAIN} layer in \textit{batch-aware}
-mode, it is simply the mean of the batch:
-\begin{equation}
-    \hat{\mu}_k=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T x_{j,k}^{(i)},
-\end{equation}
-while if using the \textit{batch-agnostic} mode, it is iteratively updated using a cumulative
-moving average estimate at each forward pass of the layer. This is to better approximate the
-global mean of the data.
 The unknown parameters of the model are $\bm\alpha \in \R^d$ and $\bm\beta \in \R^d$, and they
 are transformed into the constrained parameters $\bm\alpha'$ and $\bm\beta'$, as used in
 \cref{eq:adaptive-outlier-removal} through the following element-wise mappings:
 \begin{equation}
-    \bm\alpha'=\frac{e^{\bm\alpha}}{1+e^{\bm\alpha}} \;\;\;\;\;\;\;\;\;
-    \bm\beta'=\beta_{\text{min}}+e^{\bm\beta}.
+    \bm\alpha'=\frac{e^{\bm\alpha}}{1\oplus e^{\bm\alpha}} \qquad\qquad
+    \bm\beta'=\beta_{\text{min}}\oplus e^{\bm\beta},
 \end{equation}
-For ease of notation, we let $\mathbf{W}_1=(\bm\alpha, \bm\beta)$ denote the $2d$ unknown
-parameters that are optimised for the adaptive outlier removal layer.
+where $\beta_{\textrm{min}} \in \R$ is a hyperparameter that can be tuned, but a suitable value is $\beta_{\textrm{min}}=1$.
+
+
+The $\hat{\bm\mu}\in \R^d$ parameter in \cref{eq:adaptive-outlier-removal} is an estimate of the mean of the data, and is used
+to ensure the winsorization is centred. When setting the \ac{EDAIN} layer in \textit{local-aware}
+mode, it is simply the mean of the current batch of data points, $\mathcal{B}$:
+\begin{equation}
+    \hat{\mu}_k=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{j=1}^T x_{j,k}^{(i)}, \qquad k=1,\dots,d
+\end{equation}
+while if using the \textit{global-aware} mode, it is iteratively updated using a cumulative
+moving average estimate at each forward pass of the layer. This is to better approximate the
+global mean of the data.
+% For ease of notation, we let $\mathbf{W}_1=(\bm\alpha, \bm\beta)$ denote the $2d$ unknown
+% parameters that are optimised for the adaptive outlier removal layer.
 
 \begin{figure}
 \begin{center}
@@ -280,36 +312,43 @@ values for $\alpha'$ and $\beta'$.}
 \subsubsection{Scale and shift}% {{{
 \label{ssub:Scale and shift}
 
-% TODO: reformulate this section to combine both of the layers in the below equation,
-%       as that is more readable, then compare batch-aware and batch-agnostic versions,
-%       and as example, write how the batch-agnostic one can generalise standard scaling...
+Depending on the dataset, one might want to aim for a \textit{global
+normalization}, in which case a \textit{global-aware} scale and shift operation is most
+suitable. If the dataset has many different modes, with significantly different distribution characteristics, a \textit{local normalization} based on the specific mode each data point comes from is more suitable, in which case a \textit{local-ware} scale and shift
+operation works best. This gives two different approaches and scaling and shifting the data in an adaptive fashion.
 
-The adaptive shift and scale layer, combined, simply performs the operation
+\paragraph{Global-aware}%
+\label{par:Global-aware}
+
+In global-aware mode, the adaptive shift and scale layer, combined, simply performs the operation
 \begin{equation}\label{eq:adaptive-scale-shift}
-    (\bfx \oplus \bm\gamma) \odot \bm\lambda,
+    \mathbf{h}_3(\mathbf{h}_2(\bfx_t^{(i)})):=(\bfx_t^{(i)} - \bm\gamma) \oslash \bm\lambda,
 \end{equation}
-with input $\bfx$ and unknown parameters $\bm\gamma \in \R^d$ and $\bm\lambda \in (0,\infty)^d$ when the \ac{EDAIN} is set
-to batch-agnostic mode. This makes the scale-and-shift layer a generalised version of
+with input $\bfx \in \R^d$ and unknown parameters $\bm\gamma \in \R^d$ and $\bm\lambda \in (0,\infty)^d$.
+This makes the scale-and-shift layer a generalised version of
 Z-score scaling, or standard scaling, as setting
 \begin{equation}
-    \bm\gamma:=-\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
+    \bm\gamma:=\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
 \end{equation}
 and
 \begin{equation}
-    \bm\lambda:=\left( \frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}\oplus \bm\gamma\right)^2  \right)^{-1}
+    \bm\lambda:=\frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}- \bm\gamma\right)^2
 \end{equation}
 makes the operation in \cref{eq:adaptive-scale-shift} equivalent to Z-score scaling.
-This \textit{batch-agnostic} mode is useful if the distribution is similar across batches
-and constitute a global unimodal distribution that should be centred.
+This \textit{global-ware} mode is useful if the distribution is similar across batches
+and constitute a global unimodal distribution that should be centred, as the operation can generalise Z-score scaling.
 
-However, some datasets might have multiple modes arising from significantly different
+\paragraph{Local-aware}%
+\label{par:Local-aware}
+
+Some datasets might have multiple modes arising from significantly different
 data generation mechanisms. Attempting to scale and shift each batch to a global mean and
-standard deviation might hurt performance in such cases. Instead, CITE\_AUTHOR\_DAIN propose
-basing the scale and shift on a \textit{summary representation} of the current batch, allowing
-each batch to be normalized according the specific mode that batch of data might have come from.
+standard deviation might hurt performance in such cases. Instead, \citeauthor{dain} propose
+basing the scale and shift on a \textit{summary representation} of each data point, allowing
+each sample to be normalized according the specific mode  of the data it might have come from.
 This gives
 \begin{equation}
-    (\bfx \oplus [\bm\gamma \odot \mu_{\bfx}]) \odot [\bm\lambda \odot \sigma_{\bfx}],
+    \mathbf{h}_3(\mathbf{h}_2(\bfx_t^{(i)})):=  (\bfx_t^{(i)} - [\bm\gamma \odot \mu_{\bfx}]) \oslash [\bm\lambda \odot \sigma_{\bfx}],
 \end{equation}
 where the summary representations $\sigma_{\bfx}$ and $\mu_{\bfx}$ are computed through reduction
 of the temporal dimension for each observation:
@@ -317,8 +356,8 @@ of the temporal dimension for each observation:
     \mu_\bfx^{(i)}&=\frac{1}{T} \sum^{T}_{t=1} \bfx^{(i)}_t \in \R^d \\
     \sigma_\bfx^{(i)}&=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2} \in \R^d.
 \end{align}
-With this mode, it is difficult for the layer to generalise Z-score scaling, but it becomes more
-able to normalize in a \textit{mode-aware} fashion.
+With this mode, it is difficult for the layer to generalise Z-score scaling, but it allows
+discarding mode information such that highly multimodal distributions appear unimodal.
 
 % }}}
 
@@ -329,26 +368,25 @@ able to normalize in a \textit{mode-aware} fashion.
 Many real-world datasets exhibit significant skewness, which is often treated using power
 transformations (citation needed). The most common transformation is the Box-Cox transformation,
 but this is only valid for positive values, so it is not applicable to most real-world datasets
-TODO\_CITE\_BOX\_COX. An alternative is a transformation proposed by TODO\_CITE\_YEO\_Johnson,
+\citep{boxcox}. An alternative is a transformation proposed by \citeauthor{yeoJohnson}
 who proposed to following transformation:
 \begin{equation}\label{eq:yeo-johnson}
     f_{\textrm{YJ}}(x)= \left\{
         \begin{array}{ll}
-            \frac{(x+1)^\lambda-1}{\lambda}, & \textrm{if } \lambda \neq 0, x \geq 0; \\
-            \log(x + 1), & \textrm{if } \lambda = 0, x \geq 0;  \\
-            \frac{(1-x)^{2-\lambda}-1}{\lambda-2} , & \textrm{if } \lambda \neq 2, x < 0; \\
-            -\log(1-x), & \textrm{if } \lambda=2, x < 0.
+            \frac{(x+1)^{\lambda^{(\textrm{YJ})}}-1}{\lambda^{(\textrm{YJ})}}, & \textrm{if } \lambda^{(\textrm{YJ})} \neq 0, x \geq 0; \\
+            \log(x + 1), & \textrm{if } \lambda^{(\textrm{YJ})} = 0, x \geq 0;  \\
+            \frac{(1-x)^{2-\lambda^{(\textrm{YJ})}}-1}{\lambda^{(\textrm{YJ})}-2} , & \textrm{if } \lambda^{(\textrm{YJ})} \neq 2, x < 0; \\
+            -\log(1-x), & \textrm{if } \lambda^{(\textrm{YJ})}=2, x < 0.
         \end{array}
     \right.
 \end{equation}
-Like the Box-Cox transformation, transformation $f_{\textrm{YJ}}$ only has one unknown parameter, $\lambda$, but
-it works for any $x \in \R$, not just positive values.
-
+Like the Box-Cox transformation, transformation $f_{\textrm{YJ}}$ only has one unknown parameter, $\lambda^{(\textrm{YJ})}$, but
+it works for any $x \in \R$, not just positive values \citep{yeoJohnson}.
 The power transform layer simply applies the transformation in \cref{eq:yeo-johnson} along each dimension of the input, that is for each $i=1,\dots,N$ and $t=1,\dots,T$,
 \begin{equation}
-\left[\textrm{power\_transform}\left(\bfx_t^{(i)}\right)\right]_j=f_{\textrm{YJ}}(x_{t,j}^{(i)}), \;\;\; j=1,\dots,d.
+    \left[\mathbf{h}_4\left(\bfx_t^{(i)}\right)\right]_j:=f_{\textrm{YJ}}(x_{t,j}^{(i)}), \;\;\; j=1,\dots,d.
 \end{equation}
-The unknown parameters is the vector $\bm\lambda \in \R^d$.
+The unknown parameters is the vector $\bm\lambda^{(\textrm{YJ})} \in \R^d$.
 
 
 % }}}
@@ -357,17 +395,32 @@ The unknown parameters is the vector $\bm\lambda \in \R^d$.
 \subsection{Optimisation through back-propagation}% {{{
 \label{sub:Optimising the parameters}
 
-Can simply feed values forward through the 4 layers, as shown in TODO\_FIG.
-Additionally, weights are updated through standard gradient descent simultaneously while
-training the model
-
+To optimise the unknown parameters
+$\left( \bm{\alpha}, \bm{\beta}, \bm{\gamma}, \bm{\lambda}, \bm{\lambda}^{(\textrm{YJ})}\right)$,
+the deep neural network is augmented by prepending the \ac{EDAIN} layer, as shown in
+\cref{fig:edain-arch}. Then the input data is fed into the augmented model in batches,
+as when training a neural network, and after each forward pass of the model, the weights
+are updated through gradient descent while training the neural network.
+As observed by \citeauthor{dain}, the model convergence is unstable if the same learning rate
+$\eta \in \R$ that is used for training the deep neural network is also used for training all
+the sublayers of the \ac{EDAIN} layer. Therefore, separate learning rate modifiers
+$\eta_{\textrm{out}}$,
+$\eta_{\textrm{shift}}$,
+$\eta_{\textrm{scale}}$ and
+$\eta_{\textrm{pow}}$ for the outlier removal, shift, scale and power transform sublayers are
+introduced as additional hyperparameters and the weight updates happen according to the equation:
 \begin{equation}
-    \Delta (\mathbf{W}_\alpha,\mathbf{\beta})=-\eta\left( \eta_{pt} \frac{\partial \mathcal{L}}{\partial \mathbf{W}_a},\dots  \right)
+    \Delta \left( \bm{\alpha}, \bm{\beta}, \bm{\gamma}, \bm{\lambda}, \bm{\lambda}^{(\textrm{YJ})}\right)
+    =
+    -\eta\left( 
+        \eta_{\textrm{out}} \frac{\partial \mathcal{L}}{\partial \bm\alpha},
+        \eta_{\textrm{out}} \frac{\partial \mathcal{L}}{\partial \bm\beta},
+        \eta_{\textrm{shift}} \frac{\partial \mathcal{L}}{\partial \bm\gamma},
+        \eta_{\textrm{scale}} \frac{\partial \mathcal{L}}{\partial \bm\lambda},
+        \eta_{\textrm{pow}} \frac{\partial \mathcal{L}}{\partial \bm{\lambda}^{(\textrm{YJ})}}
+    \right).
 \end{equation}
 
-Similarly to DAIN\_REF, convergence is unstable if use same learning rate for RNN model and
-preprocessing layer weights, so seperate learning rates for each parameter, and these are
-set using hyperparameter tuning search, described later in section TODO.
 
 % }}}
 
@@ -383,16 +436,15 @@ something something alterative inspired by normalizing flow, and mention bijecto
 \subsection{Architecture}%
 \label{sub:Architecture}
 
-% TODO: change the below list to all be h's in mathbf mode, and also write somewhere what notion I will be using, mathbf for vector function and unbold for the same functions, when they are applied to a specific element, e.g. h_1(x_j ; beta_j) or something???
 The \ac{EDAIN-KL} layer has a very similar architecture to the \ac{EDAIN} layer, described in
 \cref{sec:EDAIN-method}, but the outlier removal transformation has been simplified to ensure its
-inverse is tractable. Additionally, the scale and shift can no longer be in batch-aware mode, as this
+inverse is tractable. Additionally, the layer no longer supports local-aware mode, as this
 would make the inverse intractable. The \ac{EDAIN-KL} transformations are:
 \begin{align}
-    \textrm{(Outlier removal)} \qquad& h_1\left(\bfx^{(i)}_t\right)=\bm\beta' \odot \tanh\left\{(\bfx^{(i)}_t - \hat{\bm\mu}) \oslash \bm\beta' \right\}+\hat{\bm\mu} \label{eq:kl1}\\
-    \textrm{(shift)} \qquad& h_2\left(\bfx^{(i)}_t\right)=\bfx^{(i)}_t\oplus \bm\gamma \label{eq:kl2}\\
-    \textrm{(scale)} \qquad& h_3\left(\bfx^{(i)}_t\right)=\bfx^{(i)}_t \odot \bm\lambda  \label{eq:kl3}\\
-    \textrm{(power transform)} \qquad& h_4\left(\bfx^{(i)}_t\right)=\left[
+    \textrm{(Outlier removal)} \qquad& \mathbf{h}_1\left(\bfx^{(i)}_t\right)=\bm\beta' \odot \tanh\left\{(\bfx^{(i)}_t - \hat{\bm\mu}) \oslash \bm\beta' \right\}+\hat{\bm\mu} \label{eq:kl1}\\
+    \textrm{(shift)} \qquad& \mathbf{h}_2\left(\bfx^{(i)}_t\right)=\bfx^{(i)}_t\oplus \bm\gamma \label{eq:kl2}\\
+    \textrm{(scale)} \qquad& \mathbf{h}_3\left(\bfx^{(i)}_t\right)=\bfx^{(i)}_t \odot \bm\lambda  \label{eq:kl3}\\
+    \textrm{(power transform)} \qquad& \mathbf{h}_4\left(\bfx^{(i)}_t\right)=\left[
         f^{\lambda_1}_{\textrm{YJ}}\left(x^{(i)}_{t,0}\right)
         \quad f^{\lambda_2}_{\textrm{YJ}}\left(x^{(i)}_{t,1}\right)
         \quad \cdots
@@ -637,7 +689,40 @@ which we use as the expression for $\log \left| \frac{\partial h_4^{-1}(z_j;\lam
 % Methods: PREPMIX-CAPS {{{
 \label{sec:PREPMIX-CAPS}
 
-TODO: write details
+TODO: introduction to this method, and overview of how all the below subsections tie together
+in the final method
+
+
+\subsection{Clustering the predictor variables}%
+\label{sub:prepmix-clustering}
+
+% TODO: describe the two methods of clustering here...
+
+
+\subsection{Determining the optimal preprocessing method for each cluster}%
+\label{sub:Determining the optimal preprocessing method for each clusterch cluster}
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=\textwidth]{diagrams/prepmix-diagram.pdf}
+    \end{center}
+    \caption{Illustration of ``ablation studies'' done for finding the optimal preprocessing method
+    for each cluster, as part of the \ac{PREPMIX-CAPS} routine.}
+    \label{fig:prepmix}
+\end{figure}
+
+% TODO: reference the figure, and explain the "ablation study" done, and how results combined
+% TODO: also describe the set of preprocessing methods considered, with reference to background???
+In \cref{fig:prepmix}, see overview.
+
+
+
+\subsubsection{Optimisations}%
+\label{ssub:Optimisations}
+
+% TODO:Write about parallel search here, and how distribute jobs in round-robin fashion
+
+
 
 % }}}
 
