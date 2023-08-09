@@ -696,7 +696,86 @@ in the final method
 \subsection{Clustering the predictor variables}%
 \label{sub:prepmix-clustering}
 
-% TODO: describe the two methods of clustering here...
+% TODO: rephrase motivation of this paragraph
+The input to this procedure is a tensor $\bfX \in \R^{N \times T \times d}$, containing $N$
+multivariate time-series, each of length $T$ and containing $d$ numeric features.
+In the clustering step, we want to cluster the features $\{1,2,3,\dots,d\}$ into $k$ disjoint groups,
+such that the distribution of variables in each cluster has as similar characteristics as possible.
+That way, applying the same preprocessing method to these variables might increase performance.
+To achieve a clustering where the distribution characteristics within each clusters is as similar
+as possible, I propose two approaches: One based on distribution statistics, and one information
+theoretic approach.
+
+\subsubsection{Clustering based on statistics}%
+\label{sub:Clustering based on statistics}
+
+% TODO: clean up writing, as this is not very nice to read...
+The first clustering approach is based on statistics. With this approach, we first compute
+$d_{\textrm{stats}}$ different statistics for each of the $d$ predictor variables in the tensor
+$\bfX$. This then gives a $\bfX' \in \R^{d \times d_{\textrm{stats}}}$ matrix that can be used
+to cluster the predictor variables later. The first statistic used is the Fisher's moment
+coefficient of skewness \citep{shape}, which for $k=1,2,\dots,d$ is computed as
+\begin{equation}\label{eq:fglkhy809s}
+    \gamma_k=\frac{m_3}{m_2^{3/2}}, \quad \textrm{where }
+    m_i=  \frac{1}{NT} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(x^{(i)}_{t,k}-\mu_k \right)^i,
+\end{equation}
+where $\bm{\mu}=\frac{1}{NT}\sum^{N}_{i=1} \sum^{T}_{t=1} \bfx^{(i)}_t$ is the mean for each dimension. The second statistic used is the kurtosis \citep{shape}, which for $k=1,2,\dots,d$ is computed as
+\begin{equation}
+    \alpha_k=\frac{m_4}{m_2^2},
+\end{equation}
+where $m_i$ for $i\in \{2,4\}$ is defined in  \cref{eq:fglkhy809s}.
+The third statistic used is the standard deviation, computed as
+\begin{equation}
+    \sigma_k=\sqrt{m_2},
+\end{equation}
+where $m_2$ is defined in \cref{eq:fglkhy809s}.
+
+The next three statistics are based on binning, $\mathbf{B} \in \R^{d \times \textrm{num. bins}}$,
+where $B_{k,i}$ denotes the number of samples from the set corresponding to the
+$k$th predictor, $\left\{x_{t,k}^{(i)} \right\}_{i=1,\dots,N,\;t=1,\dots,T}$
+that fall into the $i$th bin, all after applying min-max scaling of $[0,1]$ on the feature
+space. The fourth statistic is computed as
+\begin{equation}
+    \frac{1}{n_{\textrm{num. bins}}}  \argmax_{i} B_{k,i},
+\end{equation}
+which models the location of the highest mode.
+The fifth static is computed as
+\begin{equation}
+    \frac{1}{n_{\textrm{num. bins}}}  \sum^{n_{\textrm{num. bins}}}_{i=1} \mathbb{I}\left\{ 
+        B_{k,i} > 0
+    \right\},
+\end{equation}
+approximating how many unique values the distribution has. The sixth statistic is computed as
+\begin{equation}
+     \max_{i} B_{k,i},
+\end{equation}
+denoting the density in the highest mode.
+After computing all the statistics and compiling the $\bfX' \in \R^{d \times d_{\textrm{stats}}}$,
+here with $d_{\textrm{stats}}=6$, we apply $K$-means clustering on the matrix to get $k$ clusters
+of the $d$ predictor \citep{kmeans}.
+
+\subsubsection{Clustering based on KL-divergence}%
+\label{sub:Clustering based on KL-divergence}
+
+The second clustering method is based on information theory. We want to minimize the KL-divergence
+between variables within the same cluster, which we can do by constructing a
+distance matrix $\mathbf{W} \in \R^{d \times d}$ where $W_{i,j}$ denotes the
+\ac{KL-divergence} between variable $j$ and $i$ for $j > i$, that is
+from \citep{mackay} we set
+\begin{equation}
+    W_{i,j}= \sum^{n_{\textrm{num. bins}}}_{k=1} \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins}}}  \right)
+    \log\left\{ 
+    \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins}}}  \right) \bigg/
+    \mathbb{P}_{X_j}\left( \frac{k}{n_{\textrm{num. bins}}}  \right)
+\right\},
+\end{equation}
+where $\mathbb{P}_{X_i}(\cdot)$ is an approximation of the \ac{pdf} of the $i$th predictor variable,
+which is approximated on support $[0,1]$ using a histogram of the $N \cdot T$ samples.
+
+This distance matrix $\mathbf{W}$ is then used together with an agglomerative clustering approach
+to cluster the $d$ variables into $k$ clusters
+\citep{hierarchical_clustering}. Since the distance matrix $\mathbf{W}$ is
+non-Euclidean, the linkage criteria used was selected to be ``average''.
 
 
 \subsection{Determining the optimal preprocessing method for each cluster}%
@@ -713,9 +792,43 @@ in the final method
 
 % TODO: reference the figure, and explain the "ablation study" done, and how results combined
 % TODO: also describe the set of preprocessing methods considered, with reference to background???
-In \cref{fig:prepmix}, see overview.
 
+The goal of the \ac{PREPMIX-CAPS} preprocessing approach is preprocessing the
+data using the mixture of preprocessing technique that gives the best
+performance according to some validation metric. Usually, this is the
+validation loss of the neural network being trained. As such, to select which
+of the $f_0, f_1,\dots,f_{m-1}$ preprocessing techniques to apply to each
+cluster, we try different combinations of preprocessing techniques and select
+the transformation that gives the lowest validation loss for each cluster,
+which requires training the model on the training data for each combination of
+preprocessing techniques.  After clustering, we have $m$ different
+preprocessing methods we consider for each cluster. Trying all of the possible
+combinations would require training the neural network $m^k$ times, which is
+computationally infeasible for large $k$ or $m$, especially of model training
+is slow. Instead, we iteratively look at the isolated effect each of the
+different preprocessing techniques have on a particular cluster, and repeat
+this $k$ times, similar to an ablation study. For the clusters not being
+considered in a particular experiment, a baseline preprocessing technique such
+as standard scaling is applied to that cluster, as this technique in general
+works well for most datasets (citation needed). This scheme reduces the number
+of experiments from $m^k$ to $(m-1)k+1$, as we also do one experiment where the
+baseline preprocessing technique is applied to all clusters. The scheme is
+illustrated in \cref{fig:prepmix}, where we picked standard scaling as the
+baseline preprocessing technique.
 
+After these $(m-1)k+1$ experiments have been run, and the final validation loss has be recorded
+for each experiment, say let $\mathcal{L}_{C_{i},f_j}$ denote the validation loss when running
+the experiment for cluster $C_i$ where preprocessing method $f_j$ is used with $j>0$.
+See \cref{fig:prepmix} for reference. For $C_1,\dots,C_k$, the validation loss
+$\mathcal{L}_{C_i,f_0}$ is the validation loss from experiment 0, the baseline experiment.
+Then, the preprocessing method for cluster $C_i$ is set to be $f_{\widehat{j}}$, where
+\begin{equation}
+    \widehat{j}=\argmin_{0 \leq j < m}  \mathcal{L}_{C_i,f_j}.
+\end{equation}
+This way of selecting the overall mixture based on local optimally techniques makes the assumption
+that an isolated improvement in performance for a subset of the features generalise to overall
+improvement in performance when combined with other features that might be preprocessing in a
+different way.
 
 \subsubsection{Optimisations}%
 \label{ssub:Optimisations}
@@ -723,6 +836,16 @@ In \cref{fig:prepmix}, see overview.
 % TODO:Write about parallel search here, and how distribute jobs in round-robin fashion
 
 
+\subsection{Hyperparameters}%
+\label{sub:Hyperparameters}
+
+For my experiments, I used the following selection of preprocessing techniques.
+
+% TODO: list these
+
+Additionally,
+
+% TODO: list other hyperparaemters, such as the number of bins, number of cluster $k$ etc. with some justification?
 
 % }}}
 
