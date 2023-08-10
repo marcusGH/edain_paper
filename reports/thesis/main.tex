@@ -100,7 +100,79 @@ TODO: introduction to this chapter
 % Methods: Deep learning {{{
 \label{sec:Deep learning}
 
-TODO: write details
+The standard neural network consists of $L$ \textit{linear} layers, each containing
+$n_1,n_2,\dots,n_L$ perceptrons \citep{dnn}. An input sample $\bfx \in \R^d$ can be fed
+through the neural network, producing \textit{post-activations} at each layer, denotes
+$\bfz^{(1)}, \dots, \bfz^{(L)}$. The post-activations are produced through weighted
+connections between each neuron and all the neurons in the previous layer. If we let
+$\bfz^{(0)}=\bfx \in \R^d$ denote the input and let $n_0=d$, we have for $\ell=1,\dots,L$
+\begin{equation}\label{eq:nn_update}
+    z_j^{(\ell)} = \sigma \left(\left[ \boldsymbol{W}^{(\ell)} \bfz^{(\ell-1)} + \boldsymbol{b}^{(\ell)} \right]_j \right),\qquad j=1,\dots,n_\ell,
+\end{equation}
+where $\boldsymbol{W}^{(\ell)} \in \R^{n_{\ell} \times n_{\ell-1}}$ is the \textit{weight matrix},
+$\boldsymbol{b}^{(\ell)} \in \R^{n_{\ell}}$ is a \textit{bias} term and
+$\sigma : \R \rightarrow {\R}$ is some deterministic \textit{activation function}.
+To get the output of the neural network, we iteratively calculate the post-activations
+$\bfz^{(1)},\bfz^{(2)},\dots$ until we get to $\bfz^{(L)}$, which we denote as the output
+$\hat{\bfy}$. The dimensionality of $\hat{\bfy}=\bfz^{(L)} \in \R^{n_L}$
+depends on the problem one wants
+to apply the neural network to. For example, if doing regression, one typically sets
+$n_L=1$, giving $\hat{\bfy} \in \R$. If one wants to classify some inputs in one of three classes,
+one could set $n_L=3$ and interpret $\hat{\bfy} \in \R^3$ as unnormalized log-probabilities of
+the sample $\bfx \in \R^d$ belonging to each of the 3 classes.
+
+During training of the neural network, we want to optimise the \textit{unknown
+parameters} $\bm{\theta}=(\mathbf{W}, \mathbf{b})$, where
+$\mathbf{W}=\left(\boldsymbol{W}^{(1)},\dots,\boldsymbol{W}^{(L)}\right)$ and
+$\mathbf{b}=\left(\boldsymbol{b}^{(1)},\dots,\boldsymbol{b}^{(L)}\right)$, in
+order to minimize some \textit{criterion} $\mathcal{L}: \R^{n_L} \times \R^{n_L}
+\rightarrow {\R}$. Some common criteria are the mean squared error and the
+cross-entropy loss function.
+More concretely, given a \textit{training dataset }
+$\mathcal{D}=\{(\bfx^{(i)}, \bfy^{(i)})\}_{i=1,2,\dots,N}$ of inputs
+$\bfx^{(i)} \in \R^d$ and \textit{targets} $\bfy \in \R^{n_L}$, we want to find
+\begin{equation}\label{eq:nn_loss}
+    \widehat{\bm\theta}= \argmin_{\bm\theta}
+    \frac{1}{N}  \sum^{N}_{i=1} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}),
+\end{equation}
+where as evident from \cref{eq:nn_update}, $\hat{\bfy}^{(i)}$ is a function of
+$\bfx^{(i)}$ and the unknown parameters $\bm\theta$.
+In most situations, there is no analytic solution to \cref{eq:nn_loss}, so
+the parameters $\bm\theta$ are optimised through \textit{stochastic gradient descent},
+where the gradients are computed with \textit{backpropagation}.
+The backpropagation algorithm is an efficient method of computing the gradients
+$\frac{\partial }{\partial \bm\theta} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}) $
+using the chain-rule. A more comprehensive description of the algorithm can be
+found in \citep{backprop}.
+After computing the gradients, the weights and biases $\bm\theta$ are updated through
+stochastic gradient descent, which involves estimating
+the full gradient using only a \textit{sample batch} of the training data,
+$\mathcal{B}=\{i_1,i_2,\dots,i_B\}$, where $B$ is the \textit{batch-size} and
+$1\leq i_1,i_2,\dots,i_B \leq N$ are indices into the training dataset $\mathcal{D}$.
+If let $J(\bm\theta)$ denote the \textit{objective} to minimize in \cref{eq:nn_loss}, that is
+\begin{equation}
+    J(\bm\theta)=\frac{1}{N} \sum^{N}_{i=1} \mathcal{L}(\hat{\bfy}^{(i)}, {\bfy}^{(i)}),
+\end{equation}
+then we estimate its gradient with
+\begin{equation}
+    \widehat{\nabla_{\bm\theta} J(\bm\theta)} = \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} 
+    \nabla_{\bftheta} \mathcal{L}(\hat{\bfy}^{(i)}, {\bfy}^{(i)}).
+\end{equation}
+After computing this estimate, we update the unknown parameters by setting a \textit{stepsize}
+$\eta \in \R$ and setting
+\begin{equation}
+    \bm\theta \leftarrow \bm\theta - \eta \widehat{\nabla_{\bm\theta} J(\bm\theta)}.
+\end{equation}
+
+% TODO: mention "epochs", going through all "batches" in training data, "initialisation" of neural network, and "validation"
+% TODO: also mention "learning rate scheduling" and "early stopping", as all of that is used in later seciton when training Amex dataset...
+
+
+During both the forward- and backwards-pass, a lot of matrix multiplications are performed.
+This can efficiently be parallelised on \acp{GPU}, so deep learning is typically done using
+libraries built to execute on the computer's \ac{GPU}, as this reduces computation time during both
+training and inference.
+
 
 % TODO: stuff to mention
 % * Backpropogation, weights
@@ -113,6 +185,14 @@ TODO: write details
 \subsection{Sequence models}%
 \label{sub:Sequence models}
 
+We have as input some rank-3 tensor $\bfX \in \R^{N \times T \times d}$. Each sample, can be
+represented as a $T \times d$ matrix, $\bfX^{(i)} \in \R^{T \times d}$, or more conviently
+as a sequence of $d$-dimensional vectors,
+$\bfx^{(i)}=\left(\bfx^{(i)}_1,\bfx^{(i)}_2,\cdots, \bfx^{(i)}_T\right)$, where
+for $t=1,2,\dots,T$, we have $\bfx^{(i)}_t \in \R^d$.
+
+Good background in \citep{gru}.
+
 
 % }}}
 
@@ -120,12 +200,11 @@ TODO: write details
 % Methods: Data preprocessing {{{
 \label{sec:Data preprocessing}
 
-Origin pa
-
 \cite{stanislav} does some data preprocessing for neural networks, and
 \cite{nawi} also investigate the effect of data preprocessing on neural network.
 Also looked at effect on classification performance by \cite{singh}.
 Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
+% TODO: write more overview above...
 
 % Static distribution transformations
 \subsection{Static distribution transformations}% {{{
@@ -143,6 +222,16 @@ Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
 
 The \ac{DAIN} method, proposed by \cite{dain}.
 
+\begin{figure}
+\begin{center}
+    \includegraphics[width=\textwidth]{diagrams/dain-diagram.pdf}
+\end{center}
+\caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
+is taken from page 2 of \citep{dain}.}
+\label{fig:dain-arch}
+\end{figure}
+
+
 \subsubsection{RDAIN}%
 \label{ssub:RDAIN}
 
@@ -157,16 +246,6 @@ We have \cite{bin}
 
 
 % }}}
-
-
-\section{Normalizing flows}% Normalizing flows
-% Methods: Normalizing flows {{{
-\label{sec:Normalizing flows}
-
-TODO: write details
-
-% }}}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Methods} %%%%       METHODS         %%%%
