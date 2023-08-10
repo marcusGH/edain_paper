@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import yaml
+import pathlib
 
 if os.path.isfile("config.yaml"):
     with open("config.yaml") as f:
@@ -10,7 +11,12 @@ elif os.path.isfile(os.path.join("..", "config.yaml")):
     with open(os.path.join("..", "config.yaml")) as f:
         _cfg = yaml.load(f, Loader=yaml.FullLoader)
 else:
-    raise FileNotFoundError("Unable to locate configuration file: config.yaml")
+    f = os.path.join(pathlib.Path(__file__).parent.parent.parent.resolve(), "config.yaml")
+    if os.path.isfile(f):
+        with open(f) as f:
+            _cfg = yaml.load(f, Loader=yaml.FullLoader)
+    else:
+        raise FileNotFoundError("Unable to locate configuration file: config.yaml")
 
 def update_plot_params(**kwargs):
     params = {
@@ -78,6 +84,35 @@ def get_average(history, key):
             vals.append(avg_val / num_folds)
             epoch += 1
     return np.array(vals)
+
+def get_confidence_interval(history, key, min_val='val_loss', get_vals=False):
+    """
+    Returns a tuple of the mean, and plus/minus 95% confidence interval
+    Picks the epoch with the lowest validation loss to determine
+    what epoch to stop at
+    """
+    # the input is a history from the LOB dataset
+    if 'split_results' in history.keys():
+        vals = []
+        for i in range(len(history['split_results'])):
+            min_key_vals = [v[min_val] for v in history['split_results'][i]]
+            min_val_idx = np.argmin(min_key_vals)
+            # fetch the value
+            vals.append(history['split_results'][i][min_val_idx][key])
+
+    # the history comes from the Amex dataset
+    else:
+        num_folds = len(history[key])
+        vals = []
+        for i in range(num_folds):
+            vals.append(history[key][i][np.argmin(history[min_val][i])])
+    # convert to numpy array and compute CI
+    vals = np.array(vals)
+    if get_vals:
+        return vals
+    else:
+        return np.mean(vals), np.std(vals) * 1.96
+
 
 def plot_cv(history, suffix, ax, cols = ['tab:blue', 'tab:orange'], **kwargs):
     train_mean = get_average(history, f"train_{suffix}")

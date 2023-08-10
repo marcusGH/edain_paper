@@ -29,6 +29,11 @@
 
 % Graphics, importing figures
 \RequirePackage{graphicx}
+\RequirePackage{caption}
+\RequirePackage{subcaption}
+
+% for tables
+\RequirePackage{booktabs}
 
 % for positioning Imperial logo
 \RequirePackage[absolute]{textpos}

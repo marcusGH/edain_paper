@@ -35,7 +35,7 @@
 % Generates plagiarism declaration
 \declarationname{STUDENT'S NAME}
 \declarationdate{DATE}
-\declaration 
+\declaration
 
 
 \begin{abstract}
@@ -68,6 +68,8 @@
         \acro{pdf}{probability density function}
         \acro{KL-divergence}{Kullbeck-Leibler divergence}
         \acro{PREPMIX-CAPS}{Preprocessing Mixture, optimised with Clustering and Parallel Seearch}
+        \acro{API}{Application Programming Interface}
+        \acro{GPU}{Graphics Processing Unit}
     \end{acronym}
 }
 
@@ -99,6 +101,14 @@ TODO: introduction to this chapter
 \label{sec:Deep learning}
 
 TODO: write details
+
+% TODO: stuff to mention
+% * Backpropogation, weights
+% * meaning of "forward" pass
+% * "backwards" pass
+% * What a GPU is, and how used to train models efficiently (nice to get this
+%   mentioned, as PREPMIX optimisation part mentions distributing computation to
+%   different GPUs)
 
 \subsection{Sequence models}%
 \label{sub:Sequence models}
@@ -225,7 +235,7 @@ and scale operation, and then finally passed through an adaptive power transform
 The architecture also has two modes, \textit{local-aware} and \textit{global-aware}. In
 global-aware mode, the \ac{EDAIN} layer aims to normalize each input such that the resulting
 distribution of all the samples in the dataset resemble a unimodal normal distribution, that is
-a ``global normalization''. In local-aware mode, 
+a ``global normalization''. In local-aware mode,
 the \ac{EDAIN} layer's normalization operations
 also depend on summary statistics of each input sample $\bfX^{(i)}$, and the goal is to transform
 all the data into a common normalized representation space, independent of where in the
@@ -237,7 +247,7 @@ and works best if the input data has few modes.
 
 In local-aware mode, the \ac{EDAIN} architecture is similar to the
 \ac{DAIN} architecture proposed by \citeauthor{dain}, but it
-extends it with both a global-aware mode as well as an adaptive outlier removal sublayer and 
+extends it with both a global-aware mode as well as an adaptive outlier removal sublayer and
 an adaptive power transform sublayer.
 
 % Outlier removal
@@ -264,7 +274,7 @@ which to apply winsorization.
 
 For input vector $\bfx_t^{(i)} \in \R^d$, the adaptive outlier removal operation is defined as:
 \begin{equation}\label{eq:adaptive-outlier-removal}
-    \mathbf{h}_1(\bfx_t^{(i)})=\bm\alpha' \odot \underbrace{\left(\bm\beta' \odot 
+    \mathbf{h}_1(\bfx_t^{(i)})=\bm\alpha' \odot \underbrace{\left(\bm\beta' \odot
         \tanh\left\{(\bfx_t^{(i)}-\hat{\bm\mu}) \oslash \bm\beta'  \right\}+\hat{\bm\mu}
 \right)}_{\text{smooth adaptive centred winsorization}}
     +\underbrace{\left(1-\bm\alpha' \right) \odot \bfx}_{\text{residual connection}},
@@ -300,7 +310,7 @@ global mean of the data.
 \begin{center}
     \includegraphics[scale=1.0]{figures/adaptive_outlier_removal.pdf}
 \end{center}
-\caption{Plot of the adaptive outlier removal operation for different combinations of parameter 
+\caption{Plot of the adaptive outlier removal operation for different combinations of parameter
 values for $\alpha'$ and $\beta'$.}
 \label{fig:adaptive_outlier}
 \end{figure}
@@ -412,7 +422,7 @@ introduced as additional hyperparameters and the weight updates happen according
 \begin{equation}
     \Delta \left( \bm{\alpha}, \bm{\beta}, \bm{\gamma}, \bm{\lambda}, \bm{\lambda}^{(\textrm{YJ})}\right)
     =
-    -\eta\left( 
+    -\eta\left(
         \eta_{\textrm{out}} \frac{\partial \mathcal{L}}{\partial \bm\alpha},
         \eta_{\textrm{out}} \frac{\partial \mathcal{L}}{\partial \bm\beta},
         \eta_{\textrm{shift}} \frac{\partial \mathcal{L}}{\partial \bm\gamma},
@@ -461,7 +471,7 @@ where $f^{\lambda_i}_{\textrm{YJ}}(\cdot)$ is defined in \cref{eq:yeo-johnson}.
 \label{sub:Optimisation through Kullback-Leibler divergence}
 
 This optimisation method is inspired by normalizing flow, of which \citeauthor{normalizing_flows}
-provide a great overview of. 
+provide a great overview of.
 
 \subsubsection{Brief background on normalizing flow}%
 \label{ssub:Brief background on normalizing flow}
@@ -472,7 +482,7 @@ call the \textit{base distribution}. The idea behind normalizing flows is
 defining a arbitrarily complicated parametrised bijector
 $\mathbf{g}_{\bm \theta}:\R^d \rightarrow {\R^d}$---an
 invertible function---and transforming the simple base distribution into a new
-arbitrarily complicated probability distribution: $\bfY=\mathbf{g}_{\bm\theta}(\bfZ)$. 
+arbitrarily complicated probability distribution: $\bfY=\mathbf{g}_{\bm\theta}(\bfZ)$.
 The \ac{pdf} of the transformed distribution can then be computed using the change of variable
 formula \citep{normalizing_flows}:
 \begin{align}
@@ -554,7 +564,7 @@ is because we will use $\mathbf{g}_{\bm\theta}$ to transform our base distributi
 a distribution that is as close to our dataset $\mathcal{D}$ as possible. Then, when we want to
 normalize the dataset, we apply
 \begin{equation}\label{eq:gthetainv}
-    \mathbf{g}_{\bm\theta}^{-1}=h_4 \circ h_3 \circ h_2 \circ h_1  
+    \mathbf{g}_{\bm\theta}^{-1}=h_4 \circ h_3 \circ h_2 \circ h_1
 \end{equation}
 to each sample.  It can be shown that all the transformations defined in
 \cref{eq:kl1,eq:kl2,eq:kl3,eq:kl4} are invertible. Using \cref{thrm:normFlow}, it follows that
@@ -643,7 +653,7 @@ It follows that
 By considering the expression in \cref{eq:kl4}, it can be shown that for fixed $\lambda$, negative inputs are always
 mapped to negative values and vice versa, making the Yeo-Johnson transformation invertible.
 Additionally, in $\mathbf{h}_4(\cdot)$ the Yeo-Johnson transformation is applied element-wise, so
-we get 
+we get
 \begin{equation}
     \mathbf{h}_4^{-1}(\mathbf{z})=\left[\left[f_{\textrm{YJ}}^{\lambda_1}\right]^{-1}(z_1) \quad \left[f_{\textrm{YJ}}^{\lambda_2}\right]^{-1}(z_2) \quad \cdots \quad \left[f_{\textrm{YJ}}^{\lambda_d}\right]^{-1}(z_d) \right],
 \end{equation}
@@ -712,7 +722,7 @@ theoretic approach.
 % TODO: clean up writing, as this is not very nice to read...
 The first clustering approach is based on statistics. With this approach, we first compute
 $d_{\textrm{stats}}$ different statistics for each of the $d$ predictor variables in the tensor
-$\bfX$. This then gives a $\bfX' \in \R^{d \times d_{\textrm{stats}}}$ matrix that can be used
+$\bfX$. This then gives a $\bfX' \in \R^{d \times d_{\textrm{stats} }}$ matrix that can be used
 to cluster the predictor variables later. The first statistic used is the Fisher's moment
 coefficient of skewness \citep{shape}, which for $k=1,2,\dots,d$ is computed as
 \begin{equation}\label{eq:fglkhy809s}
@@ -736,12 +746,12 @@ $k$th predictor, $\left\{x_{t,k}^{(i)} \right\}_{i=1,\dots,N,\;t=1,\dots,T}$
 that fall into the $i$th bin, all after applying min-max scaling of $[0,1]$ on the feature
 space. The fourth statistic is computed as
 \begin{equation}
-    \frac{1}{n_{\textrm{num. bins}}}  \argmax_{i} B_{k,i},
+    \frac{1}{n_{\textrm{num. bins} }}  \argmax_{i} B_{k,i},
 \end{equation}
 which models the location of the highest mode.
 The fifth static is computed as
 \begin{equation}
-    \frac{1}{n_{\textrm{num. bins}}}  \sum^{n_{\textrm{num. bins}}}_{i=1} \mathbb{I}\left\{ 
+    \frac{1}{n_{\textrm{num. bins} }}  \sum^{n_{\textrm{num. bins} }}_{i=1} \mathbb{I}\left\{
         B_{k,i} > 0
     \right\},
 \end{equation}
@@ -750,7 +760,7 @@ approximating how many unique values the distribution has. The sixth statistic i
      \max_{i} B_{k,i},
 \end{equation}
 denoting the density in the highest mode.
-After computing all the statistics and compiling the $\bfX' \in \R^{d \times d_{\textrm{stats}}}$,
+After computing all the statistics and compiling the $\bfX' \in \R^{d \times d_{\textrm{stats} }}$,
 here with $d_{\textrm{stats}}=6$, we apply $K$-means clustering on the matrix to get $k$ clusters
 of the $d$ predictor \citep{kmeans}.
 
@@ -763,10 +773,10 @@ distance matrix $\mathbf{W} \in \R^{d \times d}$ where $W_{i,j}$ denotes the
 \ac{KL-divergence} between variable $j$ and $i$ for $j > i$, that is
 from \citep{mackay} we set
 \begin{equation}
-    W_{i,j}= \sum^{n_{\textrm{num. bins}}}_{k=1} \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins}}}  \right)
-    \log\left\{ 
-    \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins}}}  \right) \bigg/
-    \mathbb{P}_{X_j}\left( \frac{k}{n_{\textrm{num. bins}}}  \right)
+    W_{i,j}= \sum^{n_{\textrm{num. bins} }}_{k=1} \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins} }}  \right)
+    \log\left\{
+    \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins} }}  \right) \bigg/
+    \mathbb{P}_{X_j}\left( \frac{k}{n_{\textrm{num. bins} }}  \right)
 \right\},
 \end{equation}
 where $\mathbb{P}_{X_i}(\cdot)$ is an approximation of the \ac{pdf} of the $i$th predictor variable,
@@ -789,9 +799,6 @@ non-Euclidean, the linkage criteria used was selected to be ``average''.
     for each cluster, as part of the \ac{PREPMIX-CAPS} routine.}
     \label{fig:prepmix}
 \end{figure}
-
-% TODO: reference the figure, and explain the "ablation study" done, and how results combined
-% TODO: also describe the set of preprocessing methods considered, with reference to background???
 
 The goal of the \ac{PREPMIX-CAPS} preprocessing approach is preprocessing the
 data using the mixture of preprocessing technique that gives the best
@@ -833,19 +840,41 @@ different way.
 \subsubsection{Optimisations}%
 \label{ssub:Optimisations}
 
-% TODO:Write about parallel search here, and how distribute jobs in round-robin fashion
-
+The different experiments, as shown in \cref{fig:prepmix}, have no dependencies
+between them and can thus be executed in parallel. This allows optimising the
+experiment running phase through parallel computation, as the computer the experiments were to
+be run on had several cores as well as multiple \acp{GPU}. Before starting, the set of \acp{GPU}
+to use has to be configured, denoted $\mathcal{I}_{\textrm{device IDs}}$ and the number of jobs
+to run concurrently on each \ac{GPU} at any point in time, denotes $n_{\textrm{num. jobs}}$.
+Then, all the experiments, or jobs, were abstracted away in a Python
+\texttt{threading.Thread} object. The jobs were then allocated to the \acp{GPU} in
+$\mathcal{I}_{\textrm{device IDs}}$ in a \textit{round-robin} fashion, that is, allocate the first
+job to the first \ac{GPU}, the second job to the second \ac{GPU}, etc., going back to the first
+\ac{GPU} once we reach the last \ac{GPU}. This is done until up to
+$\# \mathcal{I}_{\textrm{device IDs}} \cdot n_{\textrm{num. jobs}}$ have been allocated and
+set to execute. When these jobs finish, the subsequent experiments to run are scheduled in a similar
+fashion. Unlike standard \textit{round-robin} scheduling, each job is run until completion instead
+of switching while they execute.
 
 \subsection{Hyperparameters}%
 \label{sub:Hyperparameters}
 
-For my experiments, I used the following selection of preprocessing techniques.
-
-% TODO: list these
-
-Additionally,
-
-% TODO: list other hyperparaemters, such as the number of bins, number of cluster $k$ etc. with some justification?
+For my experiments, I used the following selection of preprocessing techniques:
+\begin{itemize}
+    \item Standard scaling across both temporal axis and sample axis
+    \item Standard scaling just across sample axis
+    \item Standard scaling followed by $\tanh(\cdot)$ across both temporal axis and sample axis
+    \item Standard scaling followed by $\tanh(\cdot)$ across sample axis
+    \item Min-Max scaling to $[0,1]$ across both temporal axis and sample axis
+    \item Min-Max scaling to $[0,1]$ across sample axis
+\end{itemize}
+This gives $m=5$. From hyperparameter tuning on $k$, also found $k=20$ for amex dataset
+(TODO: don't go into datasets yet...).
+For both clustering methods, the number of bins parameter, required for computing some of the
+statistics, as well as estimating the \ac{pdf} values required for estimating the
+\ac{KL-divergence} between the random variables, was set to be
+$n_{\textrm{num. bins}}=5000$. The number of clusters $k$ to use, was tuned using the specific
+dataset the \ac{PREPMIX-CAPS} method was applied to, which is described in section TODO.
 
 % }}}
 
@@ -854,6 +883,68 @@ Additionally,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 TODO: introduction to this chapter
+
+
+Dump of results...
+
+\begin{figure}
+\centering
+\begin{subfigure}[b]{0.99\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/amex_performance_convergence.pdf}
+    \caption{loss}
+    \label{fig:amex_performance_loss}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.99\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/amex_performance_convergence_metric.pdf}
+    \caption{AMEX metric}
+    \label{fig:amex_performance_metric}
+\end{subfigure}
+\caption{Performance and convergence speed. TODO: description, 5 cross-validations, average
+value taken. For validations where converged faster, last value used in averaging}
+\label{fig:}
+\end{figure}
+
+\begin{table}
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        Method & Validation loss & AMEX metric \\
+        \midrule
+        Standard scaling & $0.2213 \pm 0.0039$ & $0.7872 \pm 0.0068$ \\
+        PREPMIX-CAPS (k=20) & $0.2208 \pm 0.0033$ & $0.7875 \pm 0.0053$ \\
+        EDAIN (global-aware) & $\mathbf{0.2199} \bm\pm \mathbf{0.0034}$ & $\mathbf{0.7890} \bm\pm \mathbf{0.0078}$ \\
+        EDAIN-KL & $0.2218 \pm 0.0040$ & $0.7858 \pm 0.0060$ \\
+        DAIN & $0.2224 \pm 0.0035$ & $0.7847 \pm 0.0054$ \\
+        BIN & $0.2237 \pm 0.0038$ & $0.7829 \pm 0.0064$ \\
+        \bottomrule
+    \end{tabular}%
+    \label{tab:amex}%
+    \caption{Table of asymptotic normal 95\% confidence interval of validation loss and
+    AMEX competition metric for the methods considered, confidence interval based on 5 cross-validation folds.}
+\end{table}
+
+\begin{table}
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        Method & Cohen's Kappa, $\kappa$ & Average $F_1$-score \\
+        \midrule
+        Standard scaling & $0.2772 \pm 0.0550$ & $0.5047 \pm 0.0403$ \\
+        Min-max scaling & $0.2618 \pm 0.0783$ & $0.4914 \pm 0.0603$ \\
+        BIN & $0.3670 \pm 0.0640$ & $0.5889 \pm 0.0479$ \\
+        DAIN & $0.3588 \pm 0.0506$ & $0.5776 \pm 0.0341$ \\
+        EDAIN (local-aware) & $\bm{0.3836 \pm 0.0554}$ & $\bm{0.5946 \pm 0.0431}$ \\
+        EDAIN (global-aware) & $0.2820 \pm 0.0706$ & $0.5111 \pm 0.0648$ \\
+        EDAIN-KL & $0.2870 \pm 0.0642$ & $0.5104 \pm 0.0519$ \\
+        \bottomrule
+    \end{tabular}%
+    \label{tab:lob}%
+    \caption{Table of asymptotic normal 95\% confidence interval for LOB FI-2010 dataset.}
+\end{table}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Evaluation methodology}%%%  Evaluation methodology %%
@@ -977,7 +1068,7 @@ TODO: introduction to this chapter
 
 
 
-Conclusion goes here. 
+Conclusion goes here.
 
 
 
