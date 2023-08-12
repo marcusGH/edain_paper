@@ -4,11 +4,11 @@
 
 % Commands {{{
 
-\title{Title of the Thesis}
-\author{FIRSTNAME LASTNAME}
-\CID{01234567}
-\supervisor{SUPERVISORNAME and COSUPERVISORNAME}
-\date{1 May 2022}
+\title{Automating the selection of preprocessing techniques for deep neural networks}
+\author{Marcus Alexander Karmi September}
+\CID{01725740}
+\supervisor{Francesco Sanna Passino, Leonie Tabea Goldmann, and Anton Hinel}
+\date{\today}
 %For today's date, use:
 %\date{\today}
 \logoimg{}
@@ -33,8 +33,8 @@
 
 
 % Generates plagiarism declaration
-\declarationname{STUDENT'S NAME}
-\declarationdate{DATE}
+\declarationname{Marcus Alexander Karmi September}
+\declarationdate{\today}
 \declaration
 
 
@@ -54,10 +54,13 @@
 {\chapter*{Notation}\thispagestyle{plain}
     $\boldsymbol{X}$ is a matrix
 
-    $y$ is a vector
+    $\bfy$ is a vector
 }
 
-% Abbreviations
+% }}}
+
+%%%% Abbreviations and acronyms %%%%
+% Abbreviations {{{
 {\chapter*{Abbreviations}\thispagestyle{plain}
     \begin{acronym}[TDMA]
         \acro{DAIN}{Deep Adaptive Input Normalization}
@@ -70,10 +73,11 @@
         \acro{PREPMIX-CAPS}{Preprocessing Mixture, optimised with Clustering and Parallel Seearch}
         \acro{API}{Application Programming Interface}
         \acro{GPU}{Graphics Processing Unit}
+        \acro{RNN}{Recurrent Neural Network}
+        \acro{GRU}{Gated recurrent unit}
+        \acro{LSTM}{Long short-term memory}
     \end{acronym}
 }
-
-
 
 % VERY IMPORTANT
 % This command switches from Roman to Arabic numbering for main part of thesis
@@ -156,43 +160,96 @@ If let $J(\bm\theta)$ denote the \textit{objective} to minimize in \cref{eq:nn_l
 then we estimate its gradient with
 \begin{equation}
     \widehat{\nabla_{\bm\theta} J(\bm\theta)} = \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} 
-    \nabla_{\bftheta} \mathcal{L}(\hat{\bfy}^{(i)}, {\bfy}^{(i)}).
+    \nabla_{\bm\theta} \mathcal{L}(\hat{\bfy}^{(i)}, {\bfy}^{(i)}).
 \end{equation}
 After computing this estimate, we update the unknown parameters by setting a \textit{stepsize}
-$\eta \in \R$ and setting
-\begin{equation}
+$\eta \in \R$ and performing the parameter update:
+\begin{equation}\label{eq:sadaosidhaoisdh89}
     \bm\theta \leftarrow \bm\theta - \eta \widehat{\nabla_{\bm\theta} J(\bm\theta)}.
 \end{equation}
-
-% TODO: mention "epochs", going through all "batches" in training data, "initialisation" of neural network, and "validation"
-% TODO: also mention "learning rate scheduling" and "early stopping", as all of that is used in later seciton when training Amex dataset...
-
-
-During both the forward- and backwards-pass, a lot of matrix multiplications are performed.
-This can efficiently be parallelised on \acp{GPU}, so deep learning is typically done using
-libraries built to execute on the computer's \ac{GPU}, as this reduces computation time during both
-training and inference.
+This is usually done once for each of the batches
+$\mathcal{B}_1,\mathcal{B}_2,\dots, \mathcal{B}_{\lceil N / B \rceil}$, where
+the batches are a partition of the indices of the training dataset
+$\mathcal{D}$. This sequence of $\lceil N / B \rceil$ parameter updates, once for each batch, is
+referred to as one \textit{training epoch}.
+When training a neural network, one usually optimise the parameters by repeating this process
+for several epochs, for example 20 epochs.
 
 
-% TODO: stuff to mention
-% * Backpropogation, weights
-% * meaning of "forward" pass
-% * "backwards" pass
-% * What a GPU is, and how used to train models efficiently (nice to get this
-%   mentioned, as PREPMIX optimisation part mentions distributing computation to
-%   different GPUs)
+% Early stopping paragraph
+One way of improving generalization performance, that is, how well the model performs on data
+not present in the training data, is to use \textit{early stopping} when training the neural
+network. To do this, the training data $\mathcal{D}$ is split into a \textit{training set}
+$\mathcal{D}_{\textrm{train}}$ and validation set $\mathcal{D}_{\textrm{val}}$, where only
+$\mathcal{D}_{\textrm{train}}$ is used for the parameter updates.
+Then, after each epoch, the average value of the criterion $\mathcal{L}(\cdot,\cdot)$ is computed on
+the validation set, giving the \textit{validation loss}. If we start seeing the validation loss
+increasing at some point, training is terminated. During neural network training, the loss
+might jump around a lot during convergence, so one typically specifies the
+\textit{patience} $\in\mathbb{N}$
+for the early stopper. After each epoch, one also keeps track of the lowest validation loss achieved
+so far, and if the model trains for a patience number of epochs, without achieving a validation
+loss lower than the lowest recorded validation loss so far, the training is terminated.
+
+% Learning rate scheduling paragraph
+Certain neural network architectures might also not efficiently convergence if the learning
+rate $\eta \in \R$ is held fixed, which can be solved by using a \textit{learning rate scheduler}.
+A learning rate scheduler, $\eta: \mathbb{N} \rightarrow {\R}$ is usually a
+monotonically non-increasing function that maps the current epoch number $t \in \mathbb{N}$
+to the learning rate $\eta \in \R$ to use when updating the parameters at epoch $t$. With
+a learning rate scheduler, the parameter update in \cref{eq:sadaosidhaoisdh89} can be reformulated
+as
+\begin{equation}
+    \bm\theta^{(t+1)} \leftarrow \bm\theta^{(t)} - \eta(t) \widehat{\nabla_{\bm\theta} J\left(\bm\theta^{(t)}\right)},
+\end{equation}
+where $\bm\theta^{(t)}$ denotes the parameter values at epoch $t \in \mathbb{N}$.
+
+% Brief background on GPUs
+During both the \textit{forward passes}, as described by \cref{eq:nn_update}, and the 
+\textit{backwards passes}, where the gradients are computed, a lot of operations that can be
+formulated through matrix multiplications are performed \citep{backprop}.
+This can efficiently be parallelised on a \acp{GPU}, so deep learning is typically done using
+libraries built to execute code on the computer's \ac{GPU}, as this reduces computation time
+during both training and inference. Popular Python libraries for deep learning leveraging
+\acp{GPU} to efficiently speed up computation include PyTorch \citep{pytorch} and TensorFlow \citep{tensorflow}.
 
 \subsection{Sequence models}%
 \label{sub:Sequence models}
 
-We have as input some rank-3 tensor $\bfX \in \R^{N \times T \times d}$. Each sample, can be
-represented as a $T \times d$ matrix, $\bfX^{(i)} \in \R^{T \times d}$, or more conviently
-as a sequence of $d$-dimensional vectors,
-$\bfx^{(i)}=\left(\bfx^{(i)}_1,\bfx^{(i)}_2,\cdots, \bfx^{(i)}_T\right)$, where
-for $t=1,2,\dots,T$, we have $\bfx^{(i)}_t \in \R^d$.
+In the previous section, we talked about conventional feedforward--or linear--neural networks,
+and how these take input samples on the form $\bfx \in \R^d$. Sequence models such as
+\acp{RNN} extend the linear neural networks and can handle variable-length sequences
+$\bfX \in \R^{d \times T}$, where $T \in \mathbb{N}$ is the sequence length. We might alternatively
+denote these sequences with $\bfxvec=(\bfx_1,\bfx_2,\dots,\bfx_T)$, where $\bfx_i\in\R^d$.
+Traditional \acp{RNN} do this by iteratively updating its \textit{recurrent hidden state} $\mathbf{h}_t \in
+\R^{n_{\textrm{hidden dim} }}$
+\begin{equation}\label{eq:rnn_trad}
+    \mathbf{h}_t=
+    \left\{ 
+        \begin{array}{ll}
+            0, & t=0 \\
+            \sigma\left(\mathbf{W}\bfx_t + \mathbf{U}\mathbf{h}_{t-1} \right), & \textrm{otherwise}
+        \end{array}
+    \right.,
+\end{equation}
+where $\sigma(\cdot): \R \rightarrow {\R}$ is a smooth non-linear activation function,
+and $\mathbf{W}$ and $\mathbf{U}$ are the unknown weights \citep{gru}.
+The output of the \ac{RNN} is then the sequence
+$\vec{\bfh}=\left(\bfh_1,\bfh_2,\dots,\bfh_T \right)$, which can subsequently be fed into other
+neural network components depending on the task to be solved. For example, if
+classifying sequences, the last element of $\vec{\bfh}$ can be fed into a conventional
+linear neural network that outputs a vector of unnormalized log-probabilities for each of
+the classes. On the other hand, if the task is to predict the next \textit{token} in the
+sequence, the vectors $\bfh_1,\bfh_2,\dots,\bfh_T$ can separately be fed into a feedforward
+neural network that produces a probability distribution over the set of all possible next tokens.
 
-Good background in \citep{gru}.
-
+Unfortunately, the traditional \acp{RNN} presented in \cref{eq:rnn_trad} cannot
+capture long-term dependencies in the input sequences very well
+\citep{long_term_dep}. Therefore, more sophisticated recurrent update equations
+than the one in \cref{eq:rnn_trad} have been proposed, such as the \ac{LSTM}
+cell \citep{lstm} and the \ac{GRU} \citep{gru_cho}.
+In later years, even more sophisticated model architectures for handling sequence data with
+long-term dependencies, such as the transformer \citep{attention}, have been proposed.
 
 % }}}
 
@@ -204,12 +261,95 @@ Good background in \citep{gru}.
 \cite{nawi} also investigate the effect of data preprocessing on neural network.
 Also looked at effect on classification performance by \cite{singh}.
 Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
-% TODO: write more overview above...
+% TODO: Write some introduction here, and cite all the papers, including DAIN, BIN and RDAIN
 
 % Static distribution transformations
 \subsection{Static distribution transformations}% {{{
 \label{sub:Static distribution transformations}
 
+In this subsection, we are working with $N$ samples, each of $d$ dimensions, which we
+denote as $\mathcal{D}=\{\bfx^{(i)} \}_{i=1,2,\dots,N}$. When talking about a general operation
+on a sample $\bfx^{(i)}\in\R^d$, as in \cref{eq:pp1,eq:pp2,eq:pp3,eq:pp4,eq:pp5,eq:pp6,eq:pp7},
+we will drop the sample index and just use the notation
+$\tilde{\bfx}=\left(\tilde{x}_1,\tilde{x}_2,\dots,\tilde{x}_d \right)
+=(f_1(x_1), f_2(x_2),\dots,f_d(x_d))$ to denote applying some transformation $\mathbf{f}(\cdot)$ to
+$\bfx$, element-wise, but with different parameters for each element.
+Moreover, for $j=1,2,\dots,d$, we let
+\begin{align}
+    x_j^{(min)}=\min_i x^{(i)}_j,  \qquad\qquad&\quad
+    x_j^{(max)}=\max x^{(i)}_j, \nonumber\\
+    \mu_j = \frac{1}{N} \sum^{N}_{i=1} x^{(i)}_j, \quad
+    \textrm{ and }&\quad
+    \sigma_j = \sqrt{\frac{1}{N} \sum^{N}_{i=1} \left( x^{(i)}_j - \mu_j\right)^2}.
+\end{align}
+
+With notation out of the way, we now proceed with describing some of the most common
+static preprocessing techniques.  The Min-Max transformation can be
+used to transform the data to the range $[0, 1]$ by performing the following operation:
+\begin{equation}\label{eq:pp1}
+    \tilde{x}_j = \frac{x_j-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}} .
+\end{equation}
+It can also be modified to transform the data to the range $[-1,+1]$ with
+\begin{equation}\label{eq:pp2}
+    \tilde{x}_j = 2\cdot\frac{x_j-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}}-1.
+\end{equation}
+Standard scaling, also known as Z-score scaling, is also a common preprocessing technique and
+is done with
+\begin{equation}\label{eq:pp3}
+    \tilde{x}_j=\frac{x_j-\mu_j}{\sigma_j}.
+\end{equation}
+One can also apply an activation function after performing Z-score scaling \citep{nawi},
+giving
+\begin{equation}\label{eq:pp4}
+    \tilde{x}_j=f\left(\frac{x_j-\mu_j}{\sigma_j}\right).
+\end{equation}
+For example, \citeauthor{mixture_ct} use $f=\tanh$ to constrain the data into domain $[-1,+1]$.
+Another option is decimal scaling, which is the operation
+\begin{equation}\label{eq:pp5}
+    \tilde{x}_j=\frac{x_j}{10^{a_j}}, \quad \textrm{ where } a_j
+    \textrm{ is the smallest integer that satisfies }
+        \left|\frac{x_j^{(max)}}{10^{a_j}}  \right|<1.
+\end{equation}
+We also have the Box-Cox transformation, proposed by \citeauthor{boxcox}:
+\begin{equation}\label{eq:pp6}
+    \tilde{x}_j=\left\{ 
+        \begin{array}{ll}
+            \frac{x_j^\lambda-1}{\lambda}, & \textrm{ if } \lambda \neq 0 \\
+            \log(x_j), & \textrm{ if } \lambda=0
+        \end{array}
+    \right.,
+\end{equation}
+which works for positive $x_j$ and is a power-transformation that can reduce the skewness of
+a distribution.  If the data has outliers, a transformation for reducing the effects of these
+is what is called \textit{winsorization}, or clipping,
+where the transformation is
+\begin{equation}\label{eq:pp7}
+    \tilde{x}_j=\max\left\{q_j^{(\alpha/2)},\;\min\left(q_j^{(1-\alpha/2)},\; x_j\right)\right\},
+\end{equation}
+where $q_j^{(\beta)}$ denotes the $\beta$th quantile along the $j$th dimension of the dataset
+$\mathcal{D}$.
+
+So far, we have only considered $d$-dimensional datasets, but when working with multivariate
+time-series, there is also a temporal dimension $T$, giving samples on the form
+$\bfX \in \R^{d\times T}$. There are two approaches to applying the
+transformations in \cref{eq:pp1,eq:pp2,eq:pp3,eq:pp4,eq:pp5,eq:pp6,eq:pp7}
+to such datasets. Say we are working with a transformation $\mathbf{f}: \R^d \rightarrow {\R^d}$, where the
+parameters such as $\bm\mu$, $\bm\sigma$, $\bfx^{(min)}$, and $\bfx^{(max)}$ have been learned
+from a set of samples $\mathcal{D}$. The first approach, which I will refer to as
+\textit{preprocessing across time}, involves merging the time-axis with the sample-axis, giving
+an augmented dataset $\mathcal{D}'=\{\bfx^{(i\cdot T +t)}\}_{i=1,2,\dots,N,t=1,2,\dots,T}$
+containing $N \cdot T$ samples, each of dimensionality $d$. This dataset $\mathcal{D}'$ is then
+used to estimate the transformation parameters, and to transform each sample, we do
+$\tilde{x}_{j,t}=f_j(x_{j,t})$ regardless of what the value of $t$ is.
+
+% TODO: this might not make much sense when read...
+In the second approach, which will be referred to as
+\textit{preprocessing with time- and dimension-axis}, we do not augment the dataset. Instead,
+we merge the time-axis and dimension-axis, and learn the transformation parameters for
+each of the $d \cdot T$ ``new features''. That is, we let
+$\mathcal{D}''=\left\{\left[\bfx^{(i)}_{*,1} \; \bfx^{(i)}_{*,2} \; \cdots \; \bfx^{(i)}_{*,T} \right]^\top \right\}_{i=1,2,\dots,N}$ be our new dataset of $N$ samples of $d\cdot T$-dimensional samples, and
+use this to find the transformation parameters. The transformation applied to the value
+$\bfx^{(i)}_{j,t}$ then depends on both $j$ and $t$.
 
 % }}}
 
@@ -217,14 +357,19 @@ Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
 \subsection{Adaptive distribution transformations}% {{{
 \label{sub:Adaptive distribution transformations}
 
+% TODO: write adaptive part next now...
+
 \subsubsection{DAIN}%
 \label{ssub:DAIN}
 
 The \ac{DAIN} method, proposed by \cite{dain}.
 
+% To produce the diagram, run
+%     pdfcrop --margins '-15 -30 0 -560' dain_paper_page2.pdf dain_diagram.pdf
+% on the second page of a PDF copy of the DAIN paper by Passalis et al.
 \begin{figure}
 \begin{center}
-    \includegraphics[width=\textwidth]{diagrams/dain-diagram.pdf}
+    \includegraphics[width=\textwidth]{diagrams/dain_diagram.pdf}
 \end{center}
 \caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
 is taken from page 2 of \citep{dain}.}
@@ -1061,6 +1206,8 @@ Details on the tuning for all the methods presented
 \subsection{Cross-validation}% {{{
 \label{sub:Cross-validation}
 
+Mention both how cross-validation is done on American Express dataset, and how done differently
+on Limit Order Book dataset.
 
 % }}}
 
@@ -1111,6 +1258,24 @@ Small introduction, including motivation
 
 % }}}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{FI-2010 Limit order book dataset}%%%  LOB dataset %%%
+\label{sec:American Express default prediction dataset}%%%%%%%%
+
+% Description
+\subsection{Description}% {{{
+\label{sub:Description}
+
+% }}}
+
+% Preprocessing method experiments
+\subsection{Preprocessing method experiments}% {{{
+\label{sub:Preprocessing method experiments}
+
+
+
+% }}}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Discussion} %%%%    Discussion        %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1127,6 +1292,8 @@ TODO: introduction to this chapter
 \section{EDAIN-KL}% {{{
 \label{sec:EDAIN-KL-discuss}
 
+One advantage is that if DNN model changes, can still keep the bijector and just retransform
+the data later. Do not have to add overhead of adaptive layer like with EDAIN
 
 % }}}
 

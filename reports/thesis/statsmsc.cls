@@ -243,9 +243,11 @@ otherwise stated.
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\bfX}{\mathbf{X}}
 \newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bfxvec}{\vec{\mathbf{x}}}
 \newcommand{\bfY}{\mathbf{Y}}
 \newcommand{\bfy}{\mathbf{y}}
 \newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfh}{\mathbf{h}}
 \newcommand{\bfZ}{\mathbf{Z}}
 \newcommand{\bftheta}{\mathbf{\theta}}
 
