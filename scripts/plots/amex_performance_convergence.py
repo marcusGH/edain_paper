@@ -57,7 +57,7 @@ for i, (hist, lab) in enumerate(zip(histories, names)):
     df.loc[i] = [lab, f"${m:.4f} \pm {s:.4f}$", f"${m2:.4f} \pm {s2:.4f}$"]
 print(df.to_latex(index=False))
 
-# table of results per fold (put this in thesis???)
+# table of results per fold
 fig, ax = plt.subplots(figsize=get_figsize(fraction=1.0, height_width_ratio=0.8))
 for hist, c, ls, lab in zip(histories, cols, linestyles, names):
     vals = get_confidence_interval(hist, key='val_loss', get_vals=True)
@@ -67,4 +67,4 @@ ax.set_xlabel("Fold")
 ax.set_xticks(range(5))
 ax.set_ylabel("Cross-validation loss")
 fig.suptitle("Validation loss per fold on AMEX dataset")
-plt.show()
+save_plot(fig, "amex_performance_convergence_per_fold")

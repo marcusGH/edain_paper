@@ -26,6 +26,8 @@
 
 % for bold symbols, e.g. bold Greek symbols, use the bm package
 \usepackage{bm} 
+% For enumerations
+\RequirePackage{enumerate}
 
 % Graphics, importing figures
 \RequirePackage{graphicx}
