@@ -28,6 +28,8 @@
 \usepackage{bm} 
 % For enumerations
 \RequirePackage{enumerate}
+% For margin notes
+\RequirePackage{marginnote}
 
 % Graphics, importing figures
 \RequirePackage{graphicx}
@@ -47,11 +49,14 @@
 
 % for clickable table of content entries
 \usepackage{color}
+\usepackage{xcolor}
 \usepackage{hyperref}
+\definecolor{linkcolor}{rgb}{0.0,0.0,0.3}
 \hypersetup{
     colorlinks=true, %set true if you want colored links
     linktoc=all,     %set to all if you want both sections and subsections linked
     linkcolor=black,  %choose some color if you want links to stand out
+    citecolor=linkcolor,
 }
 \usepackage{cleveref} 
 % For handling acronyms

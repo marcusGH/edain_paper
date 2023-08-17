@@ -2,4 +2,5 @@ build/*
 !build/main.pdf
 past-theses/*
 past-theses/
-
+marking-criteria.pdf
+criteria-for-marking.pdf

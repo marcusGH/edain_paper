@@ -7,7 +7,7 @@
 \title{Automating the selection of preprocessing techniques for deep neural networks}
 \author{Marcus Alexander Karmi September}
 \CID{01725740}
-\supervisor{Francesco Sanna Passino, Leonie Tabea Goldmann, and Anton Hinel}
+\supervisor{Francesco Sanna Passino (Imperial College London), \newline Leonie Tabea Goldmann, and Anton Hinel (American Express)}
 \date{\today}
 %For today's date, use:
 %\date{\today}
@@ -49,14 +49,16 @@
 {\thispagestyle{plain}
     \tableofcontents
 }
+% }}}
 
-% Glossary ?
+%%%% Notation %%%%
+% Notation {{{
 {\chapter*{Notation}\thispagestyle{plain}
     $\bfx, \bfy, \bfz\in\R^d$ are $d$-dimensional vectors
 
     $\bfX \in \R^{p \times q}$ is a matrix
 
-    $\bfX^{(i)} \in \R^{d \times T}$ denotes the $i$th sample in a dataset. This sample is multivariate time-series of length $T$ and dimensionality $d$
+    $\bfX^{(i)} \in \R^{d \times T}$ denotes the $i$th sample in a dataset, corresponding to a multivariate time-series of length $T$ and dimensionality $d$
 
     $\bfx^{(i)}_t \in \R^d$ denotes the $d$-dimensional feature vector at timestep $t$ in the $i$th sample in the dataset
 
@@ -281,6 +283,11 @@ Also looked at effect on classification performance by \cite{singh}.
 Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
 % TODO: Write some introduction here, and cite all the papers, including DAIN, BIN and RDAIN
 
+% TODO: notation not consistent when indexing dimension and time
+\marginpar{FIXME:
+    \scriptsize Inconsistent notation when indexing into $\bfX^{(i)} \in \R^{d\times T}$.
+    Should you do $x_{j,t}$ or $x_{t,j}$, and then what about $x_{*,t}$?}
+
 % Static distribution transformations
 \subsection{Static distribution transformations}% {{{
 \label{sub:Static distribution transformations}
@@ -376,40 +383,222 @@ $\bfx^{(i)}_{j,t}$ then depends on both $j$ and $t$.
 \label{sub:Adaptive distribution transformations}
 
 % TODO: write adaptive part next now...
+% Points to get across:
+% * In adaptive preprocessing methods, have unknown parameters that can't be directly inferred from 
+%   simple statistics computed on the training dataset
+% TODO: introduction here that mentions what I mean by "adaptive" and how
+%       different from the "static" preprocessing techniques
 
-\subsubsection{DAIN}%
+% TODO: this does not read very well! FIX THIS!
+We now move onto the adaptive preprocessing techniques. The static preprocessing techniques have unknown parameters that can be
+fully represented by summary statistics, for instance the mean and standard deviation of the training dataset. The adaptive
+preprocessing technique, however, have unknown parameters that need to be trained for a specific problem and neural network in mind.
+That is, they are inferred in an end-to-end fashion. That way, the preprocessing layers can \textit{adapt} to normalize the data
+in whatever fashion is most suitable for the particular task and model being used.
+
+% DAIN layer subsection
+\subsubsection{DAIN}% {{{
 \label{ssub:DAIN}
 
-The \ac{DAIN} method is presented in \cite{dain}, and its architecture is shown
-in \cref{fig:dain-arch}.
+
+% Talking about DAIN:
+% * Main motivation is being able to handle nonstationarity of time-series,
+%   that is mean and or variance might be a function of time
+% * More on this..
+% * Three sublayers:
+%   * shift the data, which centres the the data in the feature space
+%   * scaling, increase or reduce variances of samples, depending on what's most appopriate
+%   * third layer performs gating, which is a non-linear operation that is able
+%     to supress irrelvant features, that is, perform some notion of feature
+%     selection
+% * adaptive in the sense that the parameters can be trained on input data
+% * local-aware in the sense that each normalization operation depends on the
+%   current sample through summary aggregators. The normalization "adapts" to the
+%   local distribution
+% * Designed around application to financial forecasting problems, where dataset highly multimodal
+% * local-aware normalization, which transforms all time-series into common representation space
 
 % To produce the diagram, run
 %     pdfcrop --margins '-15 -30 0 -560' dain_paper_page2.pdf dain_diagram.pdf
 % on the second page of a PDF copy of the DAIN paper by Passalis et al.
 \begin{figure}
-\begin{center}
-    \includegraphics[width=\textwidth]{diagrams/dain_diagram.pdf}
-\end{center}
-\caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
-is taken from page 2 of \citep{dain}.}
-\label{fig:dain-arch}
+    \begin{center}
+        \includegraphics[width=\textwidth]{diagrams/dain_diagram.pdf}
+    \end{center}
+    \caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
+    is taken from page 2 of \citep{dain}.}
+    \label{fig:dain-arch}
 \end{figure}
 
+The \ac{DAIN} layer is one of the earliest preprocessing methods that can 
+handle highly multimodal and non-stationary multivariate time-series in an adaptive,
+end-to-end fashion \cite{dain}.
+This layer was designed for application on financial forecasting tasks, where highly multi-modal
+time-series are common. Additionally, these time-series are often non-stationary, that is, the
+mean and variance of the data no not remain constant across time.
+Both of these aspects makes Z-score normalization unsuitable as the statistics can differ
+from one timestep to another, and Z-score scaling is not suitable on multimodal distributions.
+The \ac{DAIN} layer handles these issues through three adaptive sublayers that all depend
+on both summary statistics of the current sample being normalized, as well unknown transformation
+parameters that can be trained for the specific dataset being used.
+As we see in \cref{fig:dain-arch}, the first sublayer is an adaptive shift layer
+that centres the data. The second sublayer is an adaptive scaling layer that can increase or
+reduce the variance of each sample. The third sublayer is a non-linear gating operation
+that can suppress irrelevant features, that is, perform feature selection.
 
-\subsubsection{RDAIN}%
+Before delving deeper into how exactly the sublayers operate, we consider an illustrative
+example of what might cause a high number of modes in financial data and why this might
+be problematic for deep sequence models. In
+\cite{dain}, the authors provide an illustrative example of this:
+\begin{quote}
+    ``\textit{assume two tightly
+    connected companies with very different stock prices, e.g., 1\$
+    and 100\$ respectively. Even though the price movements can
+    be very similar for these two stocks, the trained forecasting
+    models will only observe very small variations around two
+    very distant modes (if the raw time series are fed to the model).}''
+\end{quote}
+By normalizing each time-series in what I will refer to as a
+\textit{local-aware} fashion, that is, make the normalization also depend on summary statistics
+based on the particular sample being normalized,
+the amount of shifting and scaling can depend on what particular mode in the dataset the sample
+came from, and this information can be discarded. This allows transforming all the samples into
+a common more unimodal representation space, despite the input data being highly multimodal.
+
+We look at an overview of the \ac{DAIN} architecture, of which an overview is shown
+in \cref{fig:dain-arch}. The unknown parameters are the weight matrices
+$\mathbf{W}_a$, $\mathbf{W}_b$, $\mathbf{W}_c \in \R^{d \times d}$, and the bias
+term $\mathbf{d} \in \R^d$, and are used
+for shift, scale, and gating layer, respectively. The adaptive shift layer and
+adaptive scale layer, together, perform the operation
+\begin{equation}\label{eq:dain_tild}
+    \tilde{\bfx}_t^{(i)}=\left(
+        \bfx_t^{(i)}-\mathbf{W}_a \mathbf{a}^{(i)}
+    \right) \oslash \mathbf{W}_b \mathbf{b}^{(i)},
+\end{equation}
+where $\mathbf{a}^{(i)}$ and $\mathbf{b}^{(i)}$ are summary statistics that are computed for
+the $i$th sample as follows:
+\begin{align}
+    \mathbf{a}^{(i)}& =\frac{1}{T} \sum^{T}_{t=1} \bfx_t^{(i)}, \label{eq:dain_a}\\
+    b_k^{(i)}&=\sqrt{
+    \frac{1}{T} \sum^{T}_{t=1} \left(x^{(i)}_{t,k} - \left[\mathbf{W}_a  \mathbf{a}^{(i)}\right]_k \right)^2},
+    \qquad k=1,2,\dots,d. \label{eq:dain_b}
+\end{align}
+The third sublayer, the gating layer, performs the operation
+\begin{equation}
+    \tilde{\tilde{\bfx}}_t^{(i)}=\tilde{\bfx}^{(i)} \odot \textrm{sigm}\left( \mathbf{W}_c \mathbf{c}^{(i)} + \mathbf{d}\right),
+\end{equation}
+where $\textrm{sigm}(\cdot)$ denotes the sigmoid function, defined as
+$\textrm{sigm}(x)=1/(1+e^{-x})$, and $\mathbf{c}^{(i)}$ is the third summary statistic, computed
+with
+\begin{equation}
+    \mathbf{c}^{(i)}=\frac{1}{T} \sum^{T}_{t=1} \tilde{\bfx}_t^{(i)}.
+\end{equation}
+
+% }}}
+
+% RDAIN layer subsection
+\subsubsection{RDAIN}% {{{
 \label{ssub:RDAIN}
 
-The \ac{RDAIN} method is presented in \cite{rdain}.
+% RDAIN:
+% * By same author as DAIN paper, extends it with a residual connection
+% * Additionally, introduce bias terms
+% * Show diagram
+A few years after \citeauthor{dain} proposed the \ac{DAIN} layer in \citeyear{dain}, they
+improved on
+this layer with the \ac{RDAIN} architecture \citep{rdain}. This adaptive preprocessing layer
+extends \ac{DAIN} with a local-aware residual connection that skips the adaptive shift and
+scale sublayers. Additionally, the adaptive shift and scale sublayers in \ac{RDAIN} also
+include a trainable bias term, not just a weight matrix.
 
-\subsubsection{BiN}%
+% \begin{equation}
+%     \bm\alpha(\bfx)=\mathbf{W}_\alpha \mathbf{s}_\alpha(\bfx) + \mathbf{b}_\alpha \in \R^d
+% \end{equation}
+% \begin{equation}
+%     \bm\beta(\bfx)=\left(\mathbf{W}_{\beta} \mathbf{s}(\bfx)+\mathbf{b}_\beta \right)^{-1}
+% \end{equation}
+% \begin{equation}
+%     \gamma(\bfx)=\textrm{sigm}\left(\mathbf{W}_\gamma \mathbf{s}_\gamma(\bfx)+\mathbf{b}_\gamma \right)
+% \end{equation}
+
+
+% }}}
+
+% BIN layer
+\subsubsection{BiN}% {{{
 \label{ssub:BiN}
 
-The \ac{BIN} layer is presented in \cite{bin}.
+
+% BIN:
+% * Also uses "sample-level statistics" to adapt to the local distribution
+% * Performs similar operation as DAIN layer, but does it across both time and dimension axis,
+%   then it combines the two results with a linear combination
+% * Using the same notation is with DAIN, the operation is
+% * TODO: equations for the operations, such that easy to understand ....
+%   * Do this while reading the BIN paper
+
+The third adaptive preprocessing method is the \ac{BIN} layer, initially
+presented by \cite{bin}. It has a similar architecture to \ac{DAIN}, but drops the
+third gating layer. Additionally, while the \ac{DAIN} only does an adaptive shift and scale layer
+based on a summary representation found from reducing along the time-axis, the \ac{BIN} layer
+does a similar operation twice, once across time, and once across dimension axis, then returns
+a linear combination of these two normalized time-series as the final output.
+
+We now look at the adaptive scale- and shift sublayers of the \ac{BIN} architecture.
+Recall that one sample is a multivariate time-series on the form $\bfX^{(i)} \in \R^{d \times T}$.
+Like the \ac{DAIN} layer in \cref{eq:dain_a,eq:dain_b}, the \ac{BIN} layer also
+compute two summary representations of each sample along the time-\textit{column}:
+\begin{align}
+    \overline{\mathbf{c}}^{(i)}& =\frac{1}{T} \sum^{T}_{t=1} \bfx_t^{(i)} \in \R^d, \\
+    \bm\sigma_c^{(i)}&=\sqrt{
+    \frac{1}{T} \sum^{T}_{t=1} \left(\bfx^{(i)}_{t} - \overline{\mathbf{c}}^{(i)} \right)
+    \odot \left(\bfx^{(i)}_{t} - \overline{\mathbf{c}}^{(i)} \right)
+} \in \R^d.
+\end{align}
+These summary representation are then used together with unknown parameters
+$\bm\gamma_c \in \R^d$ and $\bm\beta_c \in \R^d$ to produce a sample that is normalized across
+the time \textit{column}:
+\begin{equation}
+    \tilde{\bfx}^{(i)}_t= \bm\gamma_c \odot \left\{
+        \left(\mathbf{x}^{(i)}_t - \overline{\mathbf{c}}^{(i)}\right)\oslash \bm\sigma_c^{(i)}
+    \right\}+\bm\beta_c, \qquad \forall t=1,2,\dots,T.
+\end{equation}
+Notice how the order of operation multiplication of the unknown parameters differ from what
+\ac{DAIN} does in \cref{eq:dain_tild}. Similarly, along the dimension \textit{row}, we compute
+the summary representations:
+\begin{align}
+    \overline{\mathbf{r}}^{(i)}& =\frac{1}{d} \sum^{d}_{k=1} \bfx_{*,k}^{(i)} \in \R^T, \\
+    \bm\sigma_r^{(i)}&=\sqrt{
+        \frac{1}{d} \sum^{d}_{k=1} \left(\bfx^{(i)}_{*,k} - \overline{\mathbf{r}}^{(i)} \right)
+        \odot \left(\bfx^{(i)}_{*,k} - \overline{\mathbf{r}}^{(i)} \right)
+    } \in \R^T.
+\end{align}
+The row-summaries are then used together with new unknown parameters
+$\bm\gamma_r \in \R^T$ and $\bm\beta_r \in \R^T$ to produce
+a sample that is normalized across the dimension \textit{row}:
+\begin{equation}
+    \tilde{\tilde{\bfx}}^{(i)}_{*,k}= \bm\gamma_r \odot \left\{
+        \left(\mathbf{x}^{(i)}_{*,k} - \overline{\mathbf{r}}^{(i)}\right)\oslash \bm\sigma_r^{(i)}
+    \right\}+\bm\beta_r, \qquad \forall k=1,2,\dots,d.
+\end{equation}
+The output of the \ac{BIN} layers is then a linear combination of these two normalized samples:
+\begin{equation}
+    % TODO: add some other symbol above the first x
+    \tilde{\tilde{\tilde{x} }}^{(i)}_{t,k} = \lambda_c \tilde{x}^{(i)}_{t,k}
+    + \lambda_r \tilde{\tilde{x}}^{(i)}_{t,k},
+\end{equation}
+where $\lambda_c \in \R$ and $\lambda_r$ are two learnable scalars that allows the \ac{BIN} layer
+to learn how much to weight each of the normalization methods.
+
 
 % }}}
 
 
-% }}}
+% END adaptive layer }}}
+
+
+% END data preprocessing }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Methods} %%%%       METHODS         %%%%
