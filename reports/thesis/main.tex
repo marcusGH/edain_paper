@@ -77,6 +77,11 @@
     $\mathbf{J}_{\bfZ \rightarrow {\bfY}}$ denotes the Jacobian matrix of a function $\mathbf{f} : \R^d \rightarrow {\R^d}$ that maps samples $\bfz \sim \bfZ$ to samples $\bfy \sim \bfY$, that is,
     $\bfy=\mathbf{f}(\bfz)$.
 
+    $\mathbb{I}(p)$ denotes the indicator function and takes value 1 when condition $p$ is true,
+    0 otherwise.
+
+    $\#A$ and $|A|$ both refer to the cardinality of a set $A$, that is, the number of elements contained in $A$.
+
 % }}}
 
 %%%% Abbreviations and acronyms %%%%
@@ -97,6 +102,7 @@
         \acro{GRU}{Gated recurrent unit}
         \acro{LSTM}{Long short-term memory}
         \acro{ReLU}{Rectified Linear Unit}
+        \acro{LOB}{limit order book}
     \end{acronym}
 }
 
@@ -112,6 +118,9 @@
 % Introduction {{{
 
 The introduction section goes here\footnote{Tip: write this section last.}.
+
+% TODO: in addition to methods as part of **MAIN CONTRIBUTIONS**, also present that additional
+%       contribution is some novel insight on local- vs. global-ware normalization.
 
 % }}}
 
@@ -1458,42 +1467,6 @@ cluster.
 % TODO: introduction to this chapter
 
 
-% LOB performance table
-\begin{table}[htp]
-    \centering
-    \begin{tabular}{lll}
-        \toprule
-        Method & Cohen's Kappa, $\kappa$ & Average $F_1$-score \\
-        \midrule
-        Standard scaling & $0.2772 \pm 0.0550$ & $0.5047 \pm 0.0403$ \\
-        Min-max scaling & $0.2618 \pm 0.0783$ & $0.4914 \pm 0.0603$ \\
-        BIN & $0.3670 \pm 0.0640$ & $0.5889 \pm 0.0479$ \\
-        DAIN & $0.3588 \pm 0.0506$ & $0.5776 \pm 0.0341$ \\
-        EDAIN (local-aware) & $\bm{0.3836 \pm 0.0554}$ & $\bm{0.5946 \pm 0.0431}$ \\
-        EDAIN (global-aware) & $0.2820 \pm 0.0706$ & $0.5111 \pm 0.0648$ \\
-        EDAIN-KL & $0.2870 \pm 0.0642$ & $0.5104 \pm 0.0519$ \\
-        \bottomrule
-    \end{tabular}%
-    \label{tab:lob_performance}%
-    \caption{
-        Evaluation results using the FI-2010 limit order book dataset..
-        Higher $\kappa$ and higher $F_1$-score is better.
-        All confidence intervals are based on evaluation metrics from 9 cross-validation folds,
-        and are asymptotic normal 95\% confidence intervals.
-        The experiment methodology, including a description of the metrics,
-        is described in  \cref{sec:lob_meth}.
-    }
-\end{table}
-
-% LOB cross-validation breakdown
-\begin{figure}[htp]
-\begin{center}
-    \includegraphics[width=\textwidth]{figures/lob_performance_per_fold.pdf}
-\end{center}
-\caption{Validation $\kappa$ and average $F_1$-value at convergence for each of the
-    nine folds in the FI-2010 limit order book dataset.}
-\label{fig:lob_folds}
-\end{figure}
 
 
 \clearpage
@@ -1852,7 +1825,6 @@ and $\eta_{\textrm{power}}=10^{-7}$.
         BIN & $0.2237 \pm 0.0038$ & $0.7829 \pm 0.0064$ \\
         \bottomrule
     \end{tabular}%
-    \label{tab:amex_performance}%
     \caption{
         Evaluation results using the American Express default prediction dataset. Lower validation
         loss and higher AMEX metric is better.
@@ -1860,7 +1832,8 @@ and $\eta_{\textrm{power}}=10^{-7}$.
         and are asymptotic normal 95\% confidence intervals.
         The experiment methodology, including a description of the metrics,
         is described in  \cref{sec:amex_meth}.
-    }
+    }%
+    \label{tab:amex_performance}%
 \end{table}
 % }}}
 
@@ -1908,11 +1881,139 @@ but \ac{BIN} performs the worst out of the methods attempt on this particular da
 \subsection{Description}% {{{
 \label{sub:Description}
 
+% TODO: clean this up!
+The second real-world dataset considered in our experimental evaluation is a publicly available,
+large-scale dataset called FI-2010, which contains several \ac{LOB} records
+\citep{lob-data}.
+There are two types of limit orders: A bid order indicates the highest price at
+which someone is willing to buy an asset, while an ask order is the lowest
+price at which someone is willing to sell their asset \citep{gould2013limit}.
+The FI-2010 dataset contains high-frequency \acp{LOB}, that is,
+records of limit orders, from 10 business days in June 2010 \citep{lob-data}.
+The data collected from five Finnish companies. Also
+note that only the ten lowest and highest ask and bid order prices were recorded.
+The data from \cite{lob-data} was cleaned and features were extracted based on the pipeline
+proposed by \cite{lob_preprocess}, of which \cite{dain} has made publicly available
+\footnote{The preprocessed FI-2010 dataset can be found here: \url{https://github.com/passalis/dain}}.
+This resulted in $N=453\,975$ vectors of dimensionality $d=144$. To
+use window $T=15$.
+The task is then to predict whether the \textit{mid price} will increase, decrease or remain
+stationary in in $H$ timesteps after the window. The integer $H$ is called the
+horizon, and to follow suite with the experiments of \cite{dain}, we use the horizon $H=10$.
+The mid price is the average of  the highest bid price and the lowest ask price. We label a stock
+as stationary if the mid price changes by less than 0.01\% in the horizon of $H=10$ timesteps.
+
+
 % }}}
 
 % Evaluation methodology
 \subsection{Evaluation methodology}% {{{
 \label{sec:lob_meth}
+
+\subsubsection{Cross-validation}%
+\label{ssub:Cross-validation}
+
+We use the \textit{anchored cross-validation scheme}  proposed by \cite{lob-data}.
+This consists of using the first day of data to train the model, then evaluate it on the second
+day of data. Afterwards, the first two days of data is used for training, and the third day
+for evaluation. This is repeated until we use the first 9 days of data and the 10th day for evaluation. This scheme is illustrated in \cref{fig:lob_anchor}.
+In total, this means we evaluate the models and preprocessing methods in 9 different folds.
+
+% This figure was produced by running
+%     pdfcrop --margins '0 0 0 -377' lob_paper_p12.pdf lob_cross_val_diagram.pdf
+% on a PDF copy of the 12th page of the LOB FI-2010 paper
+\begin{figure}
+\begin{center}
+    \includegraphics[width=\textwidth]{diagrams/lob_cross_val_diagram.pdf}
+\end{center}
+\caption{Anchored cross-validation experimental setup framework}
+\label{fig:lob_anchor}
+\end{figure}
+
+\subsubsection{Sequence model}%
+\label{ssub:Sequencemodel2}
+
+Used a similar \ac{GRU} model as with Amex dataset, but changed parameters to match \ac{RNN}
+model used by \cite{dain} in order to get a fair comparison to their \ac{DAIN} methods, evaluated
+on the same dataset. The architecture is  similar to the \ac{RNN} model used for the Amex dataset
+and described in \cref{ssub:Sequence model}. However, instead of using two stacked \ac{GRU} cells,
+we just have one with 256 units. The classifier head that follows then consists of one linear
+layer with 512 units, followed by a \ac{ReLU} layer and a dropout layer with probability $p=0.5$.
+The output layer is
+a linear layer with 3 units, as we are classifying the multivariate time-series into one of
+three classes, $\mathcal{C}=\{\textrm{decrease}, \textrm{stationary}, \textrm{increase}\}$.
+These outputs are then passed to a softmax activation function such that the
+output is a probability distribution over the three classes and sums to 1.
+The softmax activation function is defined as
+\begin{equation}
+    \left[\textrm{softmax}(\bfy)\right]_j=\frac{e^{y_j}}{\sum^{k}_{i=1} e^{y_i}} ,\qquad j=1,2,\dots,k.
+\end{equation}
+In our case, we have $k=3$.
+
+\subsubsection{Optimising the model}%
+\label{ssub:as8dhasdh}
+
+The targets are ternary labels $y_1,y_2,\dots,y_N \in \{0,1,2\}$, denoting whether the mid-price
+decreased, remain stationary, or increased. The output of the model is, as discussed above,
+probability vectors $\mathbf{p}_1, \mathbf{p}_2,\dots, \mathbf{p}_N \in
+(0,1)^3$. Therefore, a suitable loss function is the cross-entropy loss
+function, defined as
+\begin{equation}
+    \mathcal{L}(\mathbf{p}_i, y_i)=-\sum^{2}_{c=0} \mathbb{I}\{y_i=c\} \log \left( p_{i,c} \right),
+\end{equation}
+where $p_{i,c}$ denotes the predicted probability of class $c$ for the $i$th input sample.
+The \ac{GRU} \ac{RNN} model was then trained according to the description in
+\cref{sec:Deep learning}. This was done using a batch size of 128. The optimizer used
+was the RMSProp optimizer proposed by \cite{rmsprop}. The base learning rate was set to
+$\eta=10^{-4}$. No learning rate scheduler nor early stoppers%
+\footnote{%
+    Despite not using any early stoppers,
+    all the metrics were computed based on the model state at the epoch where the validation loss
+    was lowest. This was due to
+    the generalization performance starting to decline in the middle of training in most cases.
+}
+were used in order to best reproduce
+the methodology used by \cite{dain}. At each validation folds, the model was trained for 20
+epochs. The details on how all these hyperparameters were tuned can be found in
+\cref{ch:hyp_lob}.
+
+\subsubsection{Evaluation metrics}%
+\label{ssub:Evaluation metrics}
+
+For evaluating the model performance on the FI-2010 \ac{LOB} dataset, we consider look at the
+macro-$F_1$ score and Cohen's $\kappa$ metric.
+Recall that we have three classes for our true labels,
+$\mathcal{C}=\{\textrm{decrease}, \textrm{stationary}, \textrm{increase}\}$.
+We consider the predicted label to be the entry with the highest probability in the predicted
+probability vector $\mathbf{p} \in (0,1)^3$
+Then, let $\textrm{TP}_c$, $\textrm{FP}_c$, $\textrm{TN}_c$
+and $\textrm{FN}_c$ denote the true-positive, false-positive, true-negative and
+false-negative rates for each class $c \in \mathcal{C}$. We then have that the precision and
+recall for a class $c \in \mathcal{C}$ is defined as
+\begin{equation}
+    \textrm{precision}_c= \frac{\textrm{TP}_c}{\textrm{TP}_c+\textrm{FP}_c}
+    \qquad \textrm{recall}_c=\frac{\textrm{TP}_c}{\textrm{TP}_c+\textrm{FN}_c}.
+\end{equation}
+The $F_1$ score for a single class $c \in \mathcal{C}$ is then
+\begin{equation}
+    F_1^{(c)}=2\frac{\textrm{precision}_c  \cdot \textrm{recall}_c}{\textrm{precision}_c+\textrm{recall}_c} .
+\end{equation}
+The \textit{macro-}$F_1$ score metric is then simply the arithmetic mean of the $F_1$ score for
+the different classes, that is
+\begin{equation}
+    \textrm{macro-}F_1=\frac{1}{|\mathcal{C}|}  \sum^{}_{c \in \mathcal{C}}  F_1^{(c)}.
+\end{equation}
+
+Cohen's $\kappa$ metric is computed as
+\begin{equation}
+    \kappa=\frac{p_o-p_e}{1-p_e} \in [-1,+1],
+\end{equation}
+where $p_o$ is the \textit{observed} probability of agreement between the true label and the
+predicted label, and $p_e$ denotes the \textit{expected} agreement between the true and predicted
+labels, assuming they are independently resampled from a distribution matching the empirical
+distribution of the true labels and predicted labels, respectively \citep{kappa}.
+Thus, this metric measures the level of agreement between the predicted and true labels,
+accounting for agreement by chance.
 
 % }}}
 
@@ -1920,6 +2021,85 @@ but \ac{BIN} performs the worst out of the methods attempt on this particular da
 \subsection{Preprocessing method experiments}% {{{
 \label{sub:Preprocessing method experiments}
 
+TODO: make this similar to Amex discussion part
+
+\subsubsection{Learning rate tuning}%
+\label{ssub:Learning rate tuning}
+
+Mention that use learning rate tunes from papers, but did it mnaually for BIN because not
+present in their paper.
+
+\subsubsection{Overview of results}%
+\label{ssub:Overview of results}
+
+% LOB performance table
+% table {{{
+\begin{table}[htp]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        Method & Cohen's Kappa, $\kappa$ & Average $F_1$-score \\
+        \midrule
+        Standard scaling & $0.2772 \pm 0.0550$ & $0.5047 \pm 0.0403$ \\
+        Min-max scaling & $0.2618 \pm 0.0783$ & $0.4914 \pm 0.0603$ \\
+        BIN & $0.3670 \pm 0.0640$ & $0.5889 \pm 0.0479$ \\
+        DAIN & $0.3588 \pm 0.0506$ & $0.5776 \pm 0.0341$ \\
+        EDAIN (local-aware) & $\bm{0.3836 \pm 0.0554}$ & $\bm{0.5946 \pm 0.0431}$ \\
+        EDAIN (global-aware) & $0.2820 \pm 0.0706$ & $0.5111 \pm 0.0648$ \\
+        EDAIN-KL & $0.2870 \pm 0.0642$ & $0.5104 \pm 0.0519$ \\
+        \bottomrule
+    \end{tabular}%
+    \caption{
+        Evaluation results using the FI-2010 limit order book dataset..
+        Higher $\kappa$ and higher $F_1$-score is better.
+        All confidence intervals are based on evaluation metrics from 9 cross-validation folds,
+        and are asymptotic normal 95\% confidence intervals.
+        The experiment methodology, including a description of the metrics,
+        is described in  \cref{sec:lob_meth}.
+    }%
+    \label{tab:lob_performance}%
+\end{table}
+% }}}
+
+% LOB cross-validation breakdown
+% figure {{{
+\begin{figure}[htp]
+\begin{center}
+    \includegraphics[width=\textwidth]{figures/lob_performance_per_fold.pdf}
+\end{center}
+\caption{Validation $\kappa$ and average $F_1$-value at convergence for each of the
+    nine folds in the FI-2010 limit order book dataset.}
+\label{fig:lob_folds}
+\end{figure}
+% }}}
+
+In \cref{tab:lob_performance}, we see the average macro-$F_1$ score and Cohen's $\kappa$ metric
+for the nine different validation folds, along with a 95\% confidence interval for each metric.
+For both metrics, the different preprocessing methods' performance fall into two groups.
+The first group consists of standard scaling, min-max scaling, global-aware \ac{EDAIN} and
+\ac{EDAIN-KL}, all of which achieve similar performance with average $\kappa$ metric values
+in the range 0.26-0.29 and macro-$F_1$ values around 0.49-0.51. The second group of methods,
+involving \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN}, all perform noticeably better than the
+first group, with average $\kappa$ values in the range 0.36-0.38 and mean macro-$F_1$ scores around
+0.58-0.59. This is likely because all the methods in the second group do
+\textit{local-aware normalization} where the shift and scale depends on summary statistics computed
+for each sample. None of the methods in the first group does this. This phenomenon will be
+discussed in greater detail in \cref{sub:local_vs_global}.
+% Mention how EDAIN ga and EDAIN-KL still better than ss
+Within the first group, we notice that global-aware \ac{EDAIN} and \ac{EDAIN-KL} both slightly
+outperform standard scaling. This is also somewhat evident in \cref{fig:lob_folds}, where
+especially \ac{EDAIN-KL} beats standard scaling on most of the folds.
+% Mention that EDAIN la still slightly better than BIN and DAIN
+TODO TODO TODO TODO THIS NEXT JKJKJKJKJ
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% THIS ONE NEXT %%%%%%%%%%%%%%%%%%%
+% TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+. Validation split shown in \cref{fig:lob_folds}.
 
 
 % }}}
@@ -1934,6 +2114,27 @@ but \ac{BIN} performs the worst out of the methods attempt on this particular da
 \section{EDAIN}% {{{
 \label{sec:EDAIN-discuss}
 
+\subsection{Local vs.\ global normalization}%
+\label{sub:local_vs_global}
+
+Local good on LOB, global good on Amex.
+% It’s to do with “local” vs “global” normalization. In amex data, batches aren’t
+% really that different. They’re just “random samples” from a global
+% distribution. Therefore, it makes more sense to aim for a global batch-agnostic
+% normalization procedure, such as the EDAIN method I’ve implemented, and this is
+% why DAIN and BIN does not work that well. On the other hand, for LOB dataset,
+% have stocks from different companies and distributions are very multimodal,
+% illustrating the difference in statistics between e.g. companies. On such
+% problems, makes more sense to aim more more “local” mode-aware optimization,
+% and reason why DAIN and BIN performs better
+
+\subsection{Adaptive outlier removal}%
+\label{sub:Adaptive outlier removal}
+
+% Learns whether to apply a tanh activation or not, and as saw in \ac{PREPMIX-CAPS}, often mixture
+% of tanh and standard scaler, so adaptive version???
+
+
 % }}}
 
 % EDAIN-KL
@@ -1943,14 +2144,27 @@ but \ac{BIN} performs the worst out of the methods attempt on this particular da
 % One advantage is that if DNN model changes, can still keep the bijector and just retransform
 % the data later. Do not have to add overhead of adaptive layer like with EDAIN
 
+% TODO: comment on why not performing very well:
+% * Even worse than standard scaling.
+% * TODO: come up with some hypothesis on why this does not work that well? Maybe work well on synthetic data???
+
 % }}}
 
 % PREPMIX-CAPS
 \section{PREPMIX-CAPS}% {{{
 \label{sec:PREPMIX-CAPS}
 
+% TODO: comment on why might not be that much better than just standard scaling:
+% * E.g. potential that all the important features are in one clustering, and other features
+%   not that important, so does not matter what preprocessing method apply to them
+% * But in the validation split method, see that outperforms standard scaling across time
+%   on some of the splits, so somewhat good
+% * Additionally, interesting to see the mixture of the preprocessing methods selected for
+%   the method. See appendix ....
+
 
 % }}}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion} %%%%     Conclusion      %%%%
@@ -1973,7 +2187,6 @@ Conclusion goes here.
 \label{sec:Main contributions}
 
 % }}}
-
 
 % Future work
 \section{Future work}% {{{
@@ -2002,6 +2215,11 @@ originate from \cite{amex-data}. The ``starter model'' was developed by \cite{am
 \label{ch:lr_tuning}
 
 TODO: add plot of learning rate tuning for \ac{PREPMIX-CAPS}, showing how $k=20$ is best.
+
+\chapter{Learning rate tuning for LOB}
+\label{ch:hyp_lob}
+
+TODO
 
 % }}}
 
