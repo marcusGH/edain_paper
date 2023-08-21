@@ -19,10 +19,10 @@
 \KOMAoptions{twoside=false}
 
 % AMS packages
-\RequirePackage{amsmath}
-\RequirePackage{amssymb}
-\RequirePackage{amsfonts}
-\RequirePackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
 
 % for bold symbols, e.g. bold Greek symbols, use the bm package
 \usepackage{bm} 
@@ -30,6 +30,8 @@
 \RequirePackage{enumerate}
 % For margin notes
 \RequirePackage{marginnote}
+% For \mathghost
+\RequirePackage{halloweenmath}
 
 % Graphics, importing figures
 \RequirePackage{graphicx}

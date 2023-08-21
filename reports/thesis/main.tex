@@ -4,7 +4,7 @@
 
 % Commands {{{
 
-\title{Automating the selection of preprocessing techniques for deep neural networks}
+\title{Automated selection of preprocessing techniques for deep neural networks}
 \author{Marcus Alexander Karmi September}
 \CID{01725740}
 \supervisor{Francesco Sanna Passino (Imperial College London), \newline Leonie Tabea Goldmann, and Anton Hinel (American Express)}
@@ -62,7 +62,9 @@
 
     $\bfx^{(i)}_t \in \R^d$ denotes the $d$-dimensional feature vector at timestep $t$ in the $i$th sample in the dataset
 
-    $x^{(i)}_{j,t}\in\R$ is the $j$th feature at timestep $t$ in the $i$th sample in the dataset
+    $\bfx^{(i)}_{*,k} \in \R^T$ denotes the $T$-dimensional slice of the $i$th time-series sample, only including the $k$th feature at each timestep.
+
+    $x^{(i)}_{t,j}\in\R$ is the $j$th feature at timestep $t$ in the $i$th sample in the dataset
 
     $f(x)$ denotes a scalar function $f: \R \rightarrow {\R}$ that maps a single element to a single element
 
@@ -128,11 +130,39 @@ The introduction section goes here\footnote{Tip: write this section last.}.
 \chapter{Background} %%%%        Background       %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TODO: introduction to this chapter
+% Introduction
+% Introduction {{{
+
+In this project, we make extensive use of deep learning method, especially sequence models as
+both of the real-world datasets and synthetic dataset we will be working with all contain
+multivariate time-series.  Therefore, we start this chapter off with a background on deep
+learning, building up to sequence models.
+Another big part of the project is investigating the effect of different
+preprocessing techniques applied to the data before it is passed onto the deep neural network.
+As such, this chapter also covers the most commonly used \textit{static preprocessing methods} used
+in the literature. Additionally, we will look at the current state of the art when it comes
+to preprocessing multivariate time-series data, which includes three
+\textit{adaptive preprocessing methods} whose unknown parameters are trained in the same
+fashion as neural networks.
+
+% }}}
 
 \section{Deep learning}% Deep learning
 % Methods: Deep learning {{{
 \label{sec:Deep learning}
+
+Deep learning has played a significant role in improving predictive performance in many fields,
+ranging from financial forecasting \citep{dain,rdain,bin} to machine
+translation \citep{gru_cho,attention} to computed tomography analysis
+\citep{mixture_ct}. In this section, we provide a brief overview of how neural networks work and
+how they are trained using a dataset. We do this by first describing the standard \textit{linear},
+or feedforward-type, neural network. Then we move onto describing how neural networks are trained,
+including descriptions of loss functions, stochastic gradient descent, and backpropagation. We will
+also cover extensions to the standard training framework, including early stoppers, learning
+rate schedulers and optimizers with adaptive learning rates.
+
+\subsection{The standard linear neural network}%
+\label{sub:The standard linear neural network}
 
 The standard neural network consists of $L$ \textit{linear} layers, each containing
 $n_1,n_2,\dots,n_L$ perceptrons \citep{dnn}. An input sample $\bfx \in \R^d$ can be fed
@@ -154,6 +184,9 @@ to apply the neural network to. For example, if doing regression, one typically 
 $n_L=1$, giving $\hat{\bfy} \in \R$. If one wants to classify some inputs in one of three classes,
 one could set $n_L=3$ and interpret $\hat{\bfy} \in \R^3$ as unnormalized log-probabilities of
 the sample $\bfx \in \R^d$ belonging to each of the 3 classes.
+
+\subsection{Training a neural network}%
+\label{sub:Training a neural network}
 
 During training of the neural network, we want to optimise the \textit{unknown
 parameters} $\bm{\theta}=(\mathbf{W}, \mathbf{b})$, where
@@ -287,11 +320,29 @@ long-term dependencies, such as the transformer \citep{attention}, have been pro
 % Methods: Data preprocessing {{{
 \label{sec:Data preprocessing}
 
-\cite{stanislav} does some data preprocessing for neural networks, and
-\cite{nawi} also investigate the effect of data preprocessing on neural network.
-Also looked at effect on classification performance by \cite{singh}.
-Moreover, been studied as early as 1997 by \citep{preprocess_origin}.
-% TODO: Write some introduction here, and cite all the papers, including DAIN, BIN and RDAIN
+Data preprocessing in machine learning has been studied as early
+as \citeyear{preprocess_origin} by for instance \citeauthor{preprocess_origin}.
+Moreover, several works study its effects on neural networks \citep{stanislav, nawi, singh, hassan}.
+In this section, we first cover \textit{static preprocessing methods}, which
+are transformations where the parameters are simple statistics that can be
+computed directly
+\marginpar{\scriptsize ``Simple statistics?'' correct term?}
+from the dataset, such as the mean, minimum, standard deviation etc.
+We cover the methods most commonly such in the literature, such as min-max
+normalization, Z-score scaling, decimal scaling, Box-Cox transformation,
+and winsorization \citep{stanislav, nawi, singh, hassan, winsorization}.
+We will also look at two different ways all these methods can be applied to multivariate
+time-series data.
+%
+After this, we move onto describing three state of the art adaptive
+preprocessing methods from work by \cite{dain,rdain,bin}.
+In the adaptive preprocessing techniques, the preprocessing layers also have
+unknown parameters, but instead of setting them equal to simple statistics of
+the dataset, we iteratively tune them through gradient descent while training the
+neural network. Additionally, these three layers all
+perform a \textit{local-aware} normalization, meaning they also consider
+summary statistics computed for each individual time-series sample when
+deciding how to normalize it.
 
 % TODO: notation not consistent when indexing dimension and time
 \marginpar{FIXME:
@@ -362,7 +413,8 @@ where the transformation is
     \tilde{x}_j=\max\left\{q_j^{(\alpha/2)},\;\min\left(q_j^{(1-\alpha/2)},\; x_j\right)\right\},
 \end{equation}
 where $q_j^{(\beta)}$ denotes the $\beta$th quantile along the $j$th dimension of the dataset
-$\mathcal{D}$.
+$\mathcal{D}$. The effect of this preprocessing method for handling outliers has been
+studied by \cite{winsorization}.
 
 So far, we have only considered $d$-dimensional datasets, but when working with multivariate
 time-series, there is also a temporal dimension $T$, giving samples on the form
@@ -461,7 +513,7 @@ example of what might cause a high number of modes in financial data and why thi
 be problematic for deep sequence models. In
 \cite{dain}, the authors provide an illustrative example of this:
 \begin{quote}
-    ``\textit{assume two tightly
+    ``\textit{[A]ssume two tightly
     connected companies with very different stock prices, e.g., 1\$
     and 100\$ respectively. Even though the price movements can
     be very similar for these two stocks, the trained forecasting
@@ -595,7 +647,7 @@ a sample that is normalized across the dimension \textit{row}:
 The output of the \ac{BIN} layers is then a linear combination of these two normalized samples:
 \begin{equation}
     % TODO: add some other symbol above the first x
-    \tilde{\tilde{\tilde{x} }}^{(i)}_{t,k} = \lambda_c \tilde{x}^{(i)}_{t,k}
+    \stackrel{\mathbat}{x}^{(i)}_{t,k} = \lambda_c \tilde{x}^{(i)}_{t,k}
     + \lambda_r \tilde{\tilde{x}}^{(i)}_{t,k},
 \end{equation}
 where $\lambda_c \in \R$ and $\lambda_r$ are two learnable scalars that allows the \ac{BIN} layer
@@ -609,6 +661,57 @@ to learn how much to weight each of the normalization methods.
 
 
 % END data preprocessing }}}
+
+\section{Conclusion}% Conclusion
+\label{sec:Conclusion}% {{{
+
+% Deep learning:
+% * Linear layer, works by multiplying post-activations from previous layer with
+%   weight matrix and bias term, then passed through activation function,
+% * training NN using stochastic gradient descent, where pass one batch of
+%   samples at the time and look at the average gradient of the loss with respect
+%   to unknown parameters, 
+% * iteratively update the parameter values based on this gradient with a learning rate
+% * also covered early stoppers for imrpvoing generalization performance, and
+%   lr scheduler for more stable convergence
+% * Then moved onto sequence model and described the basic RNN cell as well as the GRU cell
+In this chapter, we provided an overview of deep learning and various data preprocessing techniques
+suitable for multivariate time-series. We looked at the linear neural network layer, which
+produces pre-activations that are weighted sums of the previous post-activations and bias terms.
+These are then passed through a non-linear activation function to produce the next vector of
+post-activations. We also looked at training the neural network with stochastic gradient descent,
+where the gradients of the loss with respect to the unknown parameters are estimated on a batch of
+data using backpropagation. The gradient estimates are then used to iteratively update the model
+parameters until a certain number of epochs have elapsed. We also looked at using early stopping,
+learning rate scheduling and adaptive optimizer to make the training process more efficient and
+stable, as well as improving generalization performance. Finally, we covered some common building
+blocks used in creating deep sequence models.
+
+% * data preprocessing.Covered static distribution transformations such as min-max, Z-score
+%   scaling, Z-score scaling with tanh activation function, decimal scaling,
+%   the Box-Cox transformation for handling skewed data, and winsorization for
+%   handling outliers
+% * computed using statistics to estimate the mean, standard deviation, minimum, maximum, etc.
+% * then moved onto adaptive preprocessing techniques, such as the DAIN, RDAIN, BIN
+% * DAIN consists of an adaptive scale and shift layer, followed by an adaptive
+%   gating layer used for feature selection. The BIN layer similarly contains an adaptive scale
+%   and shift layer, and applies this along both the time-axis and dimension-axis and returns
+%   a learned linear combination of these, while the DAIN layer only summary representation along
+%   time-axis
+We then looked at the most commonly used data preprocessing techniques, which are mostly static
+distribution transformation such as min-max scaling, Z-score scaling, Z-score scaling with a
+$\tanh$ activation function, decimal scaling, the Box-Cox transformation for handling skewed data,
+and winsorization for handling outliers. All of these techniques use simple statistics such as the
+mean, the standard deviation etc.\ to compute the transformation parameters. We then looked at
+another more recent class of preprocessing techniques, adaptive methods, of which we considered the
+\ac{DAIN}, \ac{RDAIN} and \ac{BIN} methods. These three adaptive preprocessing
+methods have learnable parameters that are optimised together with the neural
+network instead of using simple statistics. They are also all local-aware, meaning that they use
+a summary representation of each sample to adjust the extent at which the normalization is applied
+to each sample. The \ac{BIN} method does this over both the time- and dimension-axis while the
+\ac{DAIN} method only uses a summary representation computed with a reduction over the time-axis.
+
+% }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Methods} %%%%       METHODS         %%%%
@@ -1893,7 +1996,7 @@ records of limit orders, from 10 business days in June 2010 \citep{lob-data}.
 The data collected from five Finnish companies. Also
 note that only the ten lowest and highest ask and bid order prices were recorded.
 The data from \cite{lob-data} was cleaned and features were extracted based on the pipeline
-proposed by \cite{lob_preprocess}, of which \cite{dain} has made publicly available
+proposed by \cite{lob_preprocess}, of which \cite{dain} has made publicly available%
 \footnote{The preprocessed FI-2010 dataset can be found here: \url{https://github.com/passalis/dain}}.
 This resulted in $N=453\,975$ vectors of dimensionality $d=144$. To
 use window $T=15$.
@@ -2097,8 +2200,6 @@ TODO TODO TODO TODO THIS NEXT JKJKJKJKJ
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-
 . Validation split shown in \cref{fig:lob_folds}.
 
 
@@ -2164,6 +2265,15 @@ Local good on LOB, global good on Amex.
 
 
 % }}}
+
+% TODO:
+% * Nice discussion point is how standard scaling across time outperforms the other standard scaling
+%   method, and how this can be because the change in distribution from one
+%   timestep to next conveys important information for each customer, so if
+%   standard scaling across both time and dimension, then discard this
+%   information
+% * If I want to add this discussion point, I should also include the other
+%   standard scaling method in my benchmarking experiments in the results chapter
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
