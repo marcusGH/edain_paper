@@ -54,7 +54,8 @@
 %%%% Notation %%%%
 % Notation {{{
 {\chapter*{Notation}\thispagestyle{plain}
-    $\bfx, \bfy, \bfz\in\R^d$ are $d$-dimensional vectors
+    $\bfx, \bfy, \bfz\in\R^d$ are $d$-dimensional vectors, and unless otherwise specified, they are
+    treated as column vectors
 
     $\bfX \in \R^{p \times q}$ is a matrix
 
@@ -248,10 +249,10 @@ $\mathcal{D}_{\textrm{train}}$ is used for the parameter updates.
 Then, after each epoch, the average value of the criterion $\mathcal{L}(\cdot,\cdot)$ is computed on
 the validation set, giving the \textit{validation loss}. If we start seeing the validation loss
 increasing at some point, training is terminated. During neural network training, the loss
-might jump around a lot during convergence, so one typically specifies the
-\textit{patience} $\in\mathbb{N}$
+might jump around a lot during convergence, so one typically specifies a
+\textit{patience} parameter $p\in\mathbb{N}$
 for the early stopper. After each epoch, one also keeps track of the lowest validation loss achieved
-so far, and if the model trains for a patience number of epochs, without achieving a validation
+so far, and if the model trains for $p$ epochs, without achieving a validation
 loss lower than the lowest recorded validation loss so far, the training is terminated.
 
 % Learning rate scheduling paragraph
@@ -266,6 +267,26 @@ as
     \bm\theta^{(t+1)} \leftarrow \bm\theta^{(t)} - \eta(t) \widehat{\nabla_{\bm\theta} J\left(\bm\theta^{(t)}\right)},
 \end{equation}
 where $\bm\theta^{(t)}$ denotes the parameter values at epoch $t \in \mathbb{N}$.
+
+% TODO: adaptive learning rate optimizers
+Another common way of increasing model convergence efficiency is using an optimizer with adaptive
+learning rates, such as the Adam optimizer proposed by \cite{adam}.
+At each parameter update step $t=1,2,3,\dots$, the optimizer maintains exponential moving average
+estimates,
+$\widehat{\mathbf{m}_t}$ and $\widehat{\mathbf{v}_t}$, of 
+the first and second moment of the gradient $\widehat{\nabla_{\bm\theta}
+J\left(\bm\theta^{(t)}\right)}$, respectively. These estimates are also corrected for bias, with
+more details on how presented by \cite{adam}.
+The stepsize used for the parameter update in \cref{eq:sadaosidhaoisdh89} is then given by
+\begin{equation}
+    \bm\eta(t)=\gamma \frac{\widehat{\mathbf{m}_t}}{\sqrt{\widehat{\mathbf{v}_t}}+\epsilon}.
+\end{equation}
+This gives the parameter updates a sense of \textit{momentum}, meaning that if one parameter has
+repeatedly been updated in one direction, it is likely to continue contributing to lower loss if
+it keeps moving in that direction,
+so the stepsizes for that parameter will keep increasing  as momentum builds up.
+Another commonly used adaptive optimization algorithm is the RMSprop algorithm,
+proposed by \cite{rmsprop}. 
 
 % Brief background on GPUs
 During both the \textit{forward passes}, as described by \cref{eq:nn_update}, and the
@@ -283,20 +304,23 @@ In the previous section, we talked about conventional feedforward--or linear--ne
 and how these take input samples on the form $\bfx \in \R^d$. Sequence models such as
 \acp{RNN} extend the linear neural networks and can handle variable-length sequences
 $\bfX \in \R^{d \times T}$, where $T \in \mathbb{N}$ is the sequence length. We might alternatively
-denote these sequences with $\bfxvec=(\bfx_1,\bfx_2,\dots,\bfx_T)$, where $\bfx_i\in\R^d$.
-Traditional \acp{RNN} do this by iteratively updating its \textit{recurrent hidden state} $\mathbf{h}_t \in
-\R^{n_{\textrm{hidden dim} }}$
+denote these sequences with $\bfxvec=(\bfx_1,\bfx_2,\dots,\bfx_T)$, where $\bfx_t\in\R^d$ is the
+value of the sequence at timestep $t$.
+A traditional \acp{RNN} of dimenstionality $p$ can then process the sequence $\bfxvec$ by
+iteratively updating its \textit{recurrent hidden state} $\mathbf{h}_t \in
+\R^{p}$ with
 \begin{equation}\label{eq:rnn_trad}
     \mathbf{h}_t=
     \left\{
         \begin{array}{ll}
-            0, & t=0 \\
-            \sigma\left(\mathbf{W}\bfx_t + \mathbf{U}\mathbf{h}_{t-1} \right), & \textrm{otherwise}
+            0, & t=0; \\
+            \sigma\left(\mathbf{W}\bfx_t + \mathbf{U}\mathbf{h}_{t-1} \right), & \textrm{otherwise,}
         \end{array}
-    \right.,
+    \right.
 \end{equation}
 where $\sigma(\cdot): \R \rightarrow {\R}$ is a smooth non-linear activation function,
-and $\mathbf{W}$ and $\mathbf{U}$ are the unknown weights \citep{gru}.
+and $\mathbf{W} \in \R^{p \times d}$ and $\mathbf{U} \in \R^{p \times p}$ are the unknown
+weights \citep{gru}.
 The output of the \ac{RNN} is then the sequence
 $\vec{\bfh}=\left(\bfh_1,\bfh_2,\dots,\bfh_T \right)$, which can subsequently be fed into other
 neural network components depending on the task to be solved. For example, if
@@ -389,7 +413,7 @@ giving
 \begin{equation}\label{eq:pp4}
     \tilde{x}_j=f\left(\frac{x_j-\mu_j}{\sigma_j}\right).
 \end{equation}
-For example, \citeauthor{mixture_ct} use $f=\tanh$ to constrain the data into domain $[-1,+1]$.
+For example, \citeauthor{mixture_ct} use $f(\cdot)=\tanh(\cdot)$ to constrain the data into domain $[-1,+1]$.
 Another option is decimal scaling, which is the operation
 \begin{equation}\label{eq:pp5}
     \tilde{x}_j=\frac{x_j}{10^{a_j}}, \quad \textrm{ where } a_j
@@ -719,20 +743,23 @@ to each sample. The \ac{BIN} method does this over both the time- and dimension-
 
 % Introduction
 % Introduction {{{
-In this chapter, I present three novel preprocessing methods. The first method, abbreviated
-\acs{EDAIN}, is based on existing work by \citeauthor{dain} and \citeauthor{bin}. It
-is an adaptive preprocessing method, so it performs a sequence of parametrised transformations
-on the input data before passing it to a deep neural network. To optimize the adaptive layer,
-the deep
-neural network is augmented with the \acs{EDAIN} layer and both the neural network parameters
-and the \acs{EDAIN} parameters are trained with stochastic gradient descent.
-In \cref{sec:EDAIN-KL-method}, I present the second method, abbreviated \acs{EDAIN-KL}.
-This method uses a very similar architecture to the \acs{EDAIN} layer, but instead of fitting the
-parameters using stochastic gradient descent, it is optimised with a technique inspired by
-\textit{normalizing flow} networks. In \cref{sec:PREPMIX-CAPS-method}, my third
-contribution, the \acs{PREPMIX-CAPS} procedure, is presented. This procedure is significantly
-different from the first two methods, as it automatically selects a mixture of static preprocessing
-techniques to apply to the data instead of using adaptive transformations.
+In this chapter, I present the main contribution of this thesis: three novel
+preprocessing methods. The first method, abbreviated \acs{EDAIN}, is based on
+existing work by \citeauthor{dain} and \citeauthor{bin}. It is an adaptive
+preprocessing method, so it performs a sequence of parametrised transformations
+on the input data before passing it to a deep neural network. To optimize the
+adaptive layer, the deep neural network is augmented with the \acs{EDAIN} layer
+and both the neural network parameters and the \acs{EDAIN} parameters are
+trained with stochastic gradient descent.  In \cref{sec:EDAIN-KL-method}, I
+present the second method, abbreviated \acs{EDAIN-KL}.  This method uses a very
+similar architecture to the \acs{EDAIN} layer, but instead of fitting the
+parameters using stochastic gradient descent, it is optimised with a technique
+inspired by \textit{normalizing flow} networks. In
+\cref{sec:PREPMIX-CAPS-method}, my third contribution, the \acs{PREPMIX-CAPS}
+procedure, is presented. This procedure is significantly different from the
+first two methods, as it automatically selects a mixture of static
+preprocessing techniques to apply to the data instead of using adaptive
+transformations.
 
 % }}}
 
@@ -750,7 +777,7 @@ techniques to apply to the data instead of using adaptive transformations.
 
 
 My first contribution is the \ac{EDAIN} layer. This adaptive preprocessing layer is inspired
-by the likes of \citep{dain}  and \citep{bin}, but unlike the aforementioned methods, the
+by the likes of \cite{dain}  and \cite{bin}, but unlike the aforementioned methods, the
 \ac{EDAIN} layer also supports normalizing the data in a \textit{global-aware} fashion, whereas
 the \ac{DAIN}, \ac{RDAIN} and \ac{BIN} layers are all \textit{local-aware}.
 The \ac{EDAIN} layer has four different sublayers. The first sublayer reduces the effect of
@@ -799,8 +826,9 @@ an adaptive power transform sublayer.
 \subsubsection{Outlier removal}% {{{
 \label{ssub:Outlier removal}
 
-Handling outliers and extreme values in the dataset can increase predictive performance if done
-correctly (citation needed). Two common ways of doing this are omission and winsorization
+Handling outliers and extreme values in our dataset can increase predictive performance if done
+correctly, as evident in work by \cite{outlier_wind}. 
+Two common ways of doing this are omission and winsorization
 \citep{winsorization}. With the former, observations that are deemed to be extreme are simply
 removed during training. With the latter, all the data is still used, but observations lying
 outside a certain number of standard deviation from the mean, or below or above certain
@@ -846,17 +874,18 @@ The $\hat{\bm\mu}\in \R^d$ parameter in \cref{eq:adaptive-outlier-removal} is an
 to ensure the winsorization is centred. When setting the \ac{EDAIN} layer in \textit{local-aware}
 mode, it is simply the mean of the current batch of data points, $\mathcal{B}$:
 \begin{equation}
-    \hat{\mu}_k=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T x_{t,k}^{(i)}, \qquad k=1,\dots,d.
+    \hat{\bm\mu}=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T \bfx_{t}^{(i)}. %, \qquad k=1,\dots,d.
 \end{equation}
 In \textit{global-aware} mode, it is iteratively updated using a \textit{cumulative
 moving average estimate} at each forward pass of the sublayer.
 This is to better approximate the global mean of the data.
+\marginpar{\scriptsize TODO? Describes how this ``cumulative moving average estimate'' is computed?}
 % For ease of notation, we let $\mathbf{W}_1=(\bm\alpha, \bm\beta)$ denote the $2d$ unknown
 % parameters that are optimised for the adaptive outlier removal layer.
 
 \begin{figure}
 \begin{center}
-    \includegraphics[scale=1.0]{figures/adaptive_outlier_removal.pdf}
+    \includegraphics[width=\textwidth]{figures/adaptive_outlier_removal.pdf}
 \end{center}
 \caption{Plot of the adaptive outlier removal operation for different combinations of parameter
 values for $\alpha'$ and $\beta'$.}
@@ -880,17 +909,17 @@ operation works best. This gives two different approaches and scaling and shifti
 
 In global-aware mode, the adaptive shift and scale layer, combined, simply performs the operation
 \begin{equation}\label{eq:adaptive-scale-shift}
-    \mathbf{h}_3(\mathbf{h}_2(\bfx_t^{(i)})):=(\bfx_t^{(i)} - \bm\gamma) \oslash \bm\lambda,
+    \mathbf{h}_3(\mathbf{h}_2(\bfx_t^{(i)}))=(\bfx_t^{(i)} - \bm\gamma) \oslash \bm\lambda,
 \end{equation}
 where the unknown parameters are $\bm\gamma \in \R^d$ and $\bm\lambda \in (0,\infty)^d$.
 This makes the scale-and-shift layer a generalised version of
 Z-score scaling, or standard scaling, as setting
 \begin{equation}
-    \bm\gamma:=\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
+    \bm\gamma=\frac{1}{N T}  \sum^{N}_{i=1} \sum^{T}_{t=1} \bfx_{t}^{(i)}
 \end{equation}
 and
 \begin{equation}
-    \bm\lambda:=\frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}- \bm\gamma\right)^2
+    \bm\lambda=\frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}- \bm\gamma\right)^2
 \end{equation}
 makes the operation in \cref{eq:adaptive-scale-shift} equivalent to Z-score scaling.
 This \textit{global-aware} mode is useful if the distribution is similar across batches
@@ -906,7 +935,7 @@ basing the scale and shift on a \textit{summary representation} of each data poi
 each sample to be normalized according the specific mode  of the data it originated from.
 This gives
 \begin{equation}
-    \mathbf{h}_3\left(\mathbf{h}_2\left(\bfx_t^{(i)}\right)\right):=
+    \mathbf{h}_3\left(\mathbf{h}_2\left(\bfx_t^{(i)}\right)\right)=
     \left(\bfx_t^{(i)} - \left[\bm\gamma \odot \mu_{\bfx}^{(i)}\right]\right) \oslash \left[\bm\lambda \odot \sigma_{\bfx}^{(i)}\right],
 \end{equation}
 where the summary representations $\sigma_{\bfx}^{(i)} \in \R^d$ and $\mu_{\bfx}^{(i)} \in \R^d$ are computed through a reduction
@@ -928,7 +957,7 @@ through the layer.
 Many real-world datasets exhibit significant skewness, which is often treated using power
 transformations (citation needed). The most common transformation is the Box-Cox transformation,
 but this is only valid for positive values, so it is not applicable to most real-world datasets
-\citep{boxcox}. An alternative is a transformation proposed by \citeauthor{yeoJohnson},
+\citep{boxcox}. An alternative is a transformation proposed by \cite{yeoJohnson},
 known as the Yeo-Johnson transform:
 \begin{equation}\label{eq:yeo-johnson}
     f_{\textrm{YJ}}^\lambda(x)= \left\{
@@ -944,7 +973,7 @@ Like the Box-Cox transformation, the transformation $f_{\textrm{YJ}}$ only has o
 it works for any $x \in \R$, not just positive values \citep{yeoJohnson}.
 The power transform layer simply applies the transformation in \cref{eq:yeo-johnson} along each dimension of the input, that is for each $i=1,\dots,N$ and $t=1,\dots,T$,
 \begin{equation}
-    \left[\mathbf{h}_4\left(\bfx_t^{(i)}\right)\right]_j:=f^{\lambda_j^{(\textrm{YJ})}}_{\textrm{YJ}}\left(x_{t,j}^{(i)}\right), \;\;\; j=1,\dots,d.
+    \left[\mathbf{h}_4\left(\bfx_t^{(i)}\right)\right]_j=f^{\lambda_j^{(\textrm{YJ})}}_{\textrm{YJ}}\left(x_{t,j}^{(i)}\right), \;\;\; j=1,\dots,d.
 \end{equation}
 The vector of the $d$ unknown parameter for the Yeo-Johnson transformation will be
 denoted $\bm\lambda^{(\textrm{YJ})} \in \R^d$, as to not be confused with the scale parameter
@@ -1027,7 +1056,7 @@ where $f^{\lambda_i^ {(\textrm{YJ})}}_{\textrm{YJ}}(\cdot)$ is defined in \cref{
 \label{sub:Optimisation through Kullback-Leibler divergence}
 
 The  optimisation approach used to train the \ac{EDAIN-KL} method is inspired by normalizing flow,
-of which \citeauthor{normalizing_flows} provide a great overview of \cite{normalizing_flows}.
+of which \cite{normalizing_flows} provide a great overview of.
 Before describing the approach, we provide a brief overview of related notation and some
 background on the concept behind normalizing flows. After this, we go through how the
 \ac{EDAIN-KL} layer itself can be treated as an invertible bijector to fit into the
@@ -1065,7 +1094,7 @@ Taking logs on both sides of \cref{eq:sj98days9dohao}, it follows that
     \log p_\bfY(\bfy)= \log p_\bfZ(\mathbf{g}_{\bm\theta}^{-1}\left(\bfy\right)) - \log \left|\det \mathbf{J}_{\bfZ \rightarrow {\bfY}}\left(\mathbf{g}_{\bm\theta}^{-1}\left(\bfy\right) \right) \right|.
 \end{equation}
 
-One common application of normalizing flows is density estimation \citep{normalizing_flows};
+One common application of normalizing flows is density estimation \citep{normalizing_flows}:
 Given a dataset $\mathcal{D}=\{\bfy^{(i)}\}_{i=1}^N$ with samples from some
 unknown, complicated distribution, we want to estimate its \ac{pdf}.
 This can be done with likelihood-based estimation, where we assume the data points
@@ -1261,8 +1290,8 @@ Additionally, in $\mathbf{h}_4(\cdot)$ the Yeo-Johnson transformation is applied
 we get
 \begin{equation}
     \mathbf{h}_4^{-1}(\mathbf{z})=\left[
-        \left[f_{\textrm{YJ}}^{\lambda_1^{(\textrm{YJ})}}\right]^{-1}\bigg(z_1\bigg) \quad
-        \left[f_{\textrm{YJ}}^{\lambda_2^{(\textrm{YJ})}}\right]^{-1}\bigg(z_2\bigg) \quad \cdots \quad
+        \left[f_{\textrm{YJ}}^{\lambda_1^{(\textrm{YJ})}}\right]^{-1}\bigg(z_1\bigg), \quad
+        \left[f_{\textrm{YJ}}^{\lambda_2^{(\textrm{YJ})}}\right]^{-1}\bigg(z_2\bigg), \quad \cdots \quad
     \left[f_{\textrm{YJ}}^{\lambda_d^{(\textrm{YJ})}}\right]^{-1}\bigg(z_d\bigg) \right],
 \end{equation}
 where it can be shown that the inverse Yeo-Johnson transformation for a single element is given by
@@ -1357,18 +1386,21 @@ that can later be used as features in a clustering routine such as $K$-means. In
 method, we have $d_{stats}=6$, and these statistics have been designed to quantitatively
 capture a wide set of characteristics a distribution might have.
 
+% For the skewness and kurtosis, a nice reference is this article:
+%    http://brownmath.com/stat/shape.htm
 I will now present the six statistics that are computed
 for each of the $d$ predictor variables.
 The first statistic used is the Fisher's moment
+\marginpar{\scriptsize Mention somewhere that is biased estimate of kurotisis and skewness being used here.}
 coefficient of skewness \citep{shape}, which for $k=1,2,\dots,d$ is computed as
 \begin{equation}\label{eq:fglkhy809s}
     \gamma_k=\frac{m_3}{m_2^{3/2}}, \quad \textrm{where }
     m_i=  \frac{1}{NT} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(x^{(i)}_{t,k}-\mu_k \right)^i,
 \end{equation}
 where $\bm{\mu}=\frac{1}{NT}\sum^{N}_{i=1} \sum^{T}_{t=1} \bfx^{(i)}_t \in \R^d$ is the mean along the dimension-axis.
-The second statistic used is the kurtosis \citep{shape}, which for $k=1,2,\dots,d$ is computed as
+The second statistic used is the excess kurtosis \citep{shape}, which for $k=1,2,\dots,d$ is computed as
 \begin{equation}
-    \alpha_k=\frac{m_4}{m_2^2},
+    \alpha_k=\frac{m_4}{m_2^2}-3,
 \end{equation}
 where $m_i$ for $i\in \{2,4\}$ is defined in  \cref{eq:fglkhy809s}.
 The third statistic used is the standard deviation, computed as
@@ -1380,21 +1412,21 @@ where $m_2$ is defined in \cref{eq:fglkhy809s}.
 % Binning statistics
 The next three statistics are designed to capture characteristic of the variables' \ac{pdf}, but
 since this is unknown, we approximate it by \textit{binning} the samples in the dataset
-$\mathcal{D}$ in $n_{\textrm{num. bins}}$ distinct bins for each variable $k=1,2,\dots,d$.
+$\mathcal{D}$ in $n_{{b}}$ distinct bins for each variable $k=1,2,\dots,d$.
 We note that is done after applying Min-Max scaling on the dataset so that all the samples take
 values in the range $[0,1]$.
-Then consider $\mathbf{B} \in \R^{d \times \textrm{num. bins}}$,
+Then consider $\mathbf{B} \in \R^{d \times n_b}$,
 where $B_{k,m}$ denotes the number of samples from the set of values corresponding to the
 $k$th predictor, that is $\left\{x_{t,k}^{(i)} \right\}_{i=1,\dots,N,\;t=1,\dots,T}$,
 that fall into the $m$th bin.
 After performing this binning operation to get $\mathbf{B}$, the fourth statistic is computed as
 \begin{equation}
-    \frac{1}{n_{\textrm{num. bins} }}  \argmax_{i} B_{k,i},
+    \frac{1}{n_{b}}  \argmax_{i} B_{k,i},
 \end{equation}
 which approximates the normalized location of the highest mode in the variable's \ac{pdf}.
 The fifth static is computed as
 \begin{equation}
-    \frac{1}{n_{\textrm{num. bins} }}  \sum^{n_{\textrm{num. bins} }}_{i=1} \mathbb{I}\left\{
+    \frac{1}{n_{b }}  \sum^{n_{b }}_{i=1} \mathbb{I}\left\{
         B_{k,i} > 0
     \right\},
 \end{equation}
@@ -1422,16 +1454,16 @@ distance matrix $\mathbf{W} \in \R^{d \times d}$ where $W_{i,j}$ denotes the
 \citep{mackay} we can compute the \ac{KL-divergence} between predictor variable $X_j$ and $X_i$
 with
 \begin{equation}
-    W_{i,j}= \sum^{n_{\textrm{num. bins} }}_{k=1} \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins} }}  \right)
+    W_{i,j}= \sum^{n_{b }}_{k=1} \mathbb{P}_{X_i}\left( \frac{k}{n_{b }}  \right)
     \log\left\{
-    \mathbb{P}_{X_i}\left( \frac{k}{n_{\textrm{num. bins} }}  \right) \bigg/
-    \mathbb{P}_{X_j}\left( \frac{k}{n_{\textrm{num. bins} }}  \right)
+    \mathbb{P}_{X_i}\left( \frac{k}{n_{b }}  \right) \bigg/
+    \mathbb{P}_{X_j}\left( \frac{k}{n_{b }}  \right)
 \right\},
 \end{equation}
 where $\mathbb{P}_{X_i}(\cdot)$ is an approximation of the \ac{pdf} of the $i$th predictor variable.
 We get this approximation by binning the samples after performing Min-Max normalization to ensure
 the samples all fall in the range $[0,1]$, as was done when clustering based on statistics.
-The integer $n_{\textrm{num. bins}}$ denote the number of bins used when doing this.
+The integer $n_{b}$ denote the number of bins used when doing this.
 This distance matrix $\mathbf{W}$ is then used together with an \textit{agglomerative clustering}
 approach to cluster the $d$ variables into $k$ clusters
 \citep{hierarchical_clustering}. Since the distance matrix $\mathbf{W}$ is
@@ -1569,52 +1601,6 @@ cluster.
 
 % TODO: introduction to this chapter
 
-
-
-
-\clearpage
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Evaluation methodology}%%%  Evaluation methodology %%
-\label{sec:Evaluation methodology}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Small introduction
-
-% Sequence model architecture
-\subsection{Sequence model architecture}% {{{
-\label{sub:Sequence model architecture}
-
-% }}}
-
-% Fitting the models
-\subsection{Fitting the models}% {{{
-\label{sub:Fitting the models}
-
-Mention scheduling, early stopping, optimizer used, learning rate etc.
-% }}}
-
-% Tuning adaptive preprocessing model hyperparameters
-\subsection{Tuning adaptive preprocessing model hyperparameters}% {{{
-\label{sub:Tuning adaptive preprocessing model hyperparameters}
-
-Details on the tuning for all the methods presented
-% }}}
-
-% Evaluation metric
-\subsection{Evaluation metrics}% {{{
-\label{sub:Evaluation metrics}
-
-% }}}
-
-% Cross-validaiton
-\subsection{Cross-validation}% {{{
-\label{sub:Cross-validation}
-
-Mention both how cross-validation is done on American Express dataset, and how done differently
-on Limit Order Book dataset.
-
-% }}}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Simulation study}%%%  Simulation study   %%
 \label{sec:Simulation study}%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1694,6 +1680,8 @@ normalized to $[0, 1]$ and then an additive noise $\bm\epsilon \sim
 experimentation, I tried to undo this process: First, cite Raddar, denoise
 numerical and categorical features, then randomly generate scale and shift of
 data to undo Min-Max normalization, done using parameters TODO TODO
+% TODO: can do brief summary here, then move detailed explanation to the appendix, such
+%       as what parameters used to sample the scale and shift ....
 
 Raw dataset has a lot of missing values, some variables up to 90\% missing
 values.  Across the whole dataset, 8.50\% of the numeric data points are
@@ -1916,7 +1904,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
 % table {{{
 \begin{table}[htp]
     \centering
-    \begin{tabular}{lll}
+    \begin{tabular}{lcc}
         \toprule
         Method & Validation loss & AMEX metric \\
         \midrule
@@ -1971,6 +1959,10 @@ competition on all folds. From this plot, we can also rank the methods with \ac{
 best performing, \ac{PREPMIX-CAPS} in second place, and standard scaling in third place.
 The performance difference between \ac{EDAIN-KL} and \ac{DAIN} is then somewhat overlapping,
 but \ac{BIN} performs the worst out of the methods attempt on this particular dataset.
+Looking at the average validation loss and Amex metric in \cref{tab:amex_performance}, we notice
+that all the methods, even standard scaling, improves upon \ac{DAIN} and \ac{BIN}, even though
+the latter methods are recent, novel preprocessing methods. A possible explanation for this
+observation is presented in later in \cref{sub:local_vs_global}.
 
 % TODO: also integrate comments from Francesco on the results plot in this section!
 
@@ -2139,7 +2131,7 @@ present in their paper.
 % table {{{
 \begin{table}[htp]
     \centering
-    \begin{tabular}{lll}
+    \begin{tabular}{lcc}
         \toprule
         Method & Cohen's Kappa, $\kappa$ & Average $F_1$-score \\
         \midrule
@@ -2229,11 +2221,22 @@ Local good on LOB, global good on Amex.
 % problems, makes more sense to aim more more “local” mode-aware optimization,
 % and reason why DAIN and BIN performs better
 
+% TODO: Re-point-out that all the methods in Amex table improves upon DAIN and BIN
+%       Do some discussion in this, with silver lining that it's because latter are local-aware
+%       wheras Amex data follows global distribution, and very little multimodal nature, so from
+%       similar data generation mechanisms
+
+% TODO: in this section, need to motivate why EDAIN global is not doing well on the LOB dataset
+
 \subsection{Adaptive outlier removal}%
 \label{sub:Adaptive outlier removal}
 
 % Learns whether to apply a tanh activation or not, and as saw in \ac{PREPMIX-CAPS}, often mixture
 % of tanh and standard scaler, so adaptive version???
+
+\subsection{Limitations}%
+\label{sub:Limitations}
+
 
 
 % }}}
@@ -2249,6 +2252,12 @@ Local good on LOB, global good on Amex.
 % * Even worse than standard scaling.
 % * TODO: come up with some hypothesis on why this does not work that well? Maybe work well on synthetic data???
 
+% TODO: in this section, need to motivate why EDAIN-KL is not doing well on the LOB dataset
+
+\subsection{Limitations}%
+\label{sub:Limitations}
+
+
 % }}}
 
 % PREPMIX-CAPS
@@ -2262,6 +2271,9 @@ Local good on LOB, global good on Amex.
 %   on some of the splits, so somewhat good
 % * Additionally, interesting to see the mixture of the preprocessing methods selected for
 %   the method. See appendix ....
+
+\subsection{Limitations}%
+\label{sub:Limitations}
 
 
 % }}}
@@ -2295,6 +2307,8 @@ Conclusion goes here.
 % Main contributions
 \section{Main contributions}% {{{
 \label{sec:Main contributions}
+
+This section is very important!
 
 % }}}
 

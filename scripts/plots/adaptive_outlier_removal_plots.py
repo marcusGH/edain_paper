@@ -25,8 +25,8 @@ for i, beta in enumerate([1.0, 5.0]):
         ax[i].plot(xs, f(xs, alpha, beta), label=f"$\\alpha'={alpha}$", linestyle=ls)
     ax[i].legend(title="Winsorization ratio")
     ax[i].set_xlabel("$x$")
-    ax[i].set_ylabel("$h_1(x)$")
+    ax[i].set_ylabel("$h_1(x)$", labelpad=-10)
     ax[i].set_title(f"Threshold $\\beta'={beta}$")
-plt.tight_layout(pad=0.0)
+plt.tight_layout(w_pad=0.8, h_pad=0.0)
 save_plot(fig, "adaptive_outlier_removal")
 
