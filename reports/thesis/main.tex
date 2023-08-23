@@ -106,6 +106,8 @@
         \acro{LSTM}{Long short-term memory}
         \acro{ReLU}{Rectified Linear Unit}
         \acro{LOB}{limit order book}
+        \acro{OLS}{ordinary least squares}
+        \acro{PCA}{principal component analysis}
     \end{acronym}
 }
 
@@ -273,7 +275,7 @@ Another common way of increasing model convergence efficiency is using an optimi
 learning rates, such as the Adam optimizer proposed by \cite{adam}.
 At each parameter update step $t=1,2,3,\dots$, the optimizer maintains exponential moving average
 estimates,
-$\widehat{\mathbf{m}_t}$ and $\widehat{\mathbf{v}_t}$, of 
+$\widehat{\mathbf{m}_t}$ and $\widehat{\mathbf{v}_t}$, of
 the first and second moment of the gradient $\widehat{\nabla_{\bm\theta}
 J\left(\bm\theta^{(t)}\right)}$, respectively. These estimates are also corrected for bias, with
 more details on how presented by \cite{adam}.
@@ -286,7 +288,7 @@ repeatedly been updated in one direction, it is likely to continue contributing 
 it keeps moving in that direction,
 so the stepsizes for that parameter will keep increasing  as momentum builds up.
 Another commonly used adaptive optimization algorithm is the RMSprop algorithm,
-proposed by \cite{rmsprop}. 
+proposed by \cite{rmsprop}.
 
 % Brief background on GPUs
 During both the \textit{forward passes}, as described by \cref{eq:nn_update}, and the
@@ -694,7 +696,7 @@ to learn how much to weight each of the normalization methods.
 %   weight matrix and bias term, then passed through activation function,
 % * training NN using stochastic gradient descent, where pass one batch of
 %   samples at the time and look at the average gradient of the loss with respect
-%   to unknown parameters, 
+%   to unknown parameters,
 % * iteratively update the parameter values based on this gradient with a learning rate
 % * also covered early stoppers for imrpvoing generalization performance, and
 %   lr scheduler for more stable convergence
@@ -786,7 +788,7 @@ scale operation. Finally, an adaptive power transform operation is applied to re
 skewness of the input data.
 
 \subsection{Architecture}%
-\label{sub:Architecture}
+\label{sub:edain_arch}
 
 % Latex equations used:
 % \(\mathbf{\alpha}' \odot \left(\mathbf{\beta}' \odot \tanh\left\{(\mathbf{x}_t^{(i)}-\hat{\mathbf\mu}) \oslash \mathbf{\beta}'  \right\}+\hat{\mathbf\mu} \right)+\left(1-\mathbf{\alpha}' \right) \odot \mathbf{x}_t^{(i)}\)
@@ -827,7 +829,7 @@ an adaptive power transform sublayer.
 \label{ssub:Outlier removal}
 
 Handling outliers and extreme values in our dataset can increase predictive performance if done
-correctly, as evident in work by \cite{outlier_wind}. 
+correctly, as evident in work by \cite{outlier_wind}.
 Two common ways of doing this are omission and winsorization
 \citep{winsorization}. With the former, observations that are deemed to be extreme are simply
 removed during training. With the latter, all the data is still used, but observations lying
@@ -1053,7 +1055,7 @@ would make the inverse intractable. The \ac{EDAIN-KL} transformations are:
 where $f^{\lambda_i^ {(\textrm{YJ})}}_{\textrm{YJ}}(\cdot)$ is defined in \cref{eq:yeo-johnson}.
 
 \subsection{Optimisation through Kullback-Leibler divergence}%
-\label{sub:Optimisation through Kullback-Leibler divergence}
+\label{sub:opt_with_kl}
 
 The  optimisation approach used to train the \ac{EDAIN-KL} method is inspired by normalizing flow,
 of which \cite{normalizing_flows} provide a great overview of.
@@ -1598,6 +1600,7 @@ cluster.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Results} %%%%         Results        %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ch:Results}
 
 % TODO: introduction to this chapter
 
@@ -1641,7 +1644,8 @@ TODO
 \label{sub:Description}
 
 The dataset from \cite{amex-data}, which we will abbreviate as the Amex
-dataset, contains $N=458913$ customers (TODO: check?), entries of length $T=13$
+\marginpar{\scriptsize Double check $N$?}
+dataset, contains $N=458\,913$ customers, entries of length $T=13$
 $d=188$ features.  For each customer, there is a binary label $y \in \{0,1\}$
 indicating whether the customer defaulted or not, that is, whether they were
 able to pay back their credit card balance amount within 120 days after their
@@ -2133,7 +2137,7 @@ present in their paper.
     \centering
     \begin{tabular}{lcc}
         \toprule
-        Method & Cohen's Kappa, $\kappa$ & Average $F_1$-score \\
+        Method & Cohen's Kappa, $\kappa$ & Macro $F_1$-score \\
         \midrule
         Standard scaling & $0.2772 \pm 0.0550$ & $0.5047 \pm 0.0403$ \\
         Min-max scaling & $0.2618 \pm 0.0783$ & $0.4914 \pm 0.0603$ \\
@@ -2185,15 +2189,10 @@ Within the first group, we notice that global-aware \ac{EDAIN} and \ac{EDAIN-KL}
 outperform standard scaling. This is also somewhat evident in \cref{fig:lob_folds}, where
 especially \ac{EDAIN-KL} beats standard scaling on most of the folds.
 % Mention that EDAIN la still slightly better than BIN and DAIN
-TODO TODO TODO TODO THIS NEXT JKJKJKJKJ
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% THIS ONE NEXT %%%%%%%%%%%%%%%%%%%
-% TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-. Validation split shown in \cref{fig:lob_folds}.
-
+In the second group, the mean $\kappa$ metric and mean macro-$F_1$ score is higher for the
+proposed local-aware \ac{EDAIN} method when compared to the existing \ac{BIN} and \ac{DAIN}
+methods. However, when considering the per-fold performance in \cref{fig:lob_folds}, there are some
+folds where either \ac{BIN} or \ac{DAIN} outperform the proposed \ac{EDAIN} method.
 
 % }}}
 
@@ -2207,10 +2206,59 @@ TODO TODO TODO TODO THIS NEXT JKJKJKJKJ
 \section{EDAIN}% {{{
 \label{sec:EDAIN-discuss}
 
+We now present some insights related to the performance of the proposed \ac{EDAIN} method,
+based on the results observed in \cref{ch:Results}.
+
 \subsection{Local vs.\ global normalization}%
 \label{sub:local_vs_global}
 
-Local good on LOB, global good on Amex.
+In \cref{sub:amex_res}, we made four observations about the performance of the adaptive
+preprocessing methods on the two datasets:
+\begin{enumerate}[(i)]
+    \item The \ac{BIN}, \ac{DAIN}, and local-aware \ac{EDAIN} methods
+        all performed relatively well on \ac{LOB} dataset.
+    \item The EDAIN-KL method, standard scaling, and global-aware EDAIN method performed
+        relatively poorly on the \ac{LOB} dataset.
+    \item The global-aware \ac{EDAIN} method performs well on the Amex dataset,
+        outperforming all the other methods.
+    \item The \ac{DAIN} and \ac{BIN} methods perform poorly on the Amex dataset,
+        even being outperformed by standard scaling.
+\end{enumerate}
+We now present some insight on the difference between local-aware and global-aware
+normalization, which can explain why these phenomena occur.
+
+First of all, the we note that the \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN} methods are
+all local-aware as the normalization applied also depends on instance-specific summary statistics.
+On the other hand, standard scaling, \ac{EDAIN-KL}, and the global-aware \ac{EDAIN} methods are
+all global-aware as they all apply the same transformation to each sample. This categorisation
+correlates with observations (i) and (ii): All the local-aware methods perform well on the
+\ac{LOB} dataset, while the global-aware methods perform poorly.
+This can be explained by the nature of the \ac{LOB} datasets: It contains limit orders from several
+different company stocks, which gives rise to a mixture of data generation mechanisms within the
+data. Aiming for a global normalization where all the samples are normalized equally does not bode
+well for performance in such a case, hence observation (ii). Instead, it would make more sense to
+condition the normalization on what data generation mechanism the sample
+originated from, which is what the local-aware adaptive preprocessing methods
+all learn to do during training. As such, it is expected that they perform better on this dataset
+than the preprocessing methods they treat all the samples the same, hence observation (i).
+
+We now turn our attention to the Amex dataset, of which all the local-aware methods performed very
+poorly on based on observation (iv), but the global-aware \ac{EDAIN} method performed very well on
+according to observation (iii).
+In the Amex datasets, the samples are not that different. They all come from a
+similar data generation mechanism, so can be thought of as just random samples
+from some global unimodal distribution.
+Therefore, it makes more sense to aim for a global instance-agnostic
+normalization procedure, where all the samples are transformed by the same transformation.
+This might explain observation (iv) as the \ac{DAIN} and \ac{BIN} methods do the opposite of this.
+Therefore, even standard scaling outperform these methods as standard scaling tries to shift and
+scale the data to make it into a more standardized global distribution.
+It also explains observation (iii) as the global-aware \ac{EDAIN} method aims to do a global
+normalization where all the samples are transformed with the same function, but this function is
+very flexible and can handle both the outliers and skewness present in the global distribution
+of the Amex dataset.
+
+% Some notes:
 % It’s to do with “local” vs “global” normalization. In amex data, batches aren’t
 % really that different. They’re just “random samples” from a global
 % distribution. Therefore, it makes more sense to aim for a global batch-agnostic
@@ -2221,15 +2269,15 @@ Local good on LOB, global good on Amex.
 % problems, makes more sense to aim more more “local” mode-aware optimization,
 % and reason why DAIN and BIN performs better
 
-% TODO: Re-point-out that all the methods in Amex table improves upon DAIN and BIN
-%       Do some discussion in this, with silver lining that it's because latter are local-aware
-%       wheras Amex data follows global distribution, and very little multimodal nature, so from
-%       similar data generation mechanisms
+% Re-point-out that all the methods in Amex table improves upon DAIN and BIN
+% Do some discussion in this, with silver lining that it's because latter are local-aware
+% wheras Amex data follows global distribution, and very little multimodal nature, so from
+% similar data generation mechanisms
 
-% TODO: in this section, need to motivate why EDAIN global is not doing well on the LOB dataset
+\subsection{Examples}%
+\label{sub:Examples}
 
-\subsection{Adaptive outlier removal}%
-\label{sub:Adaptive outlier removal}
+TODO
 
 % Learns whether to apply a tanh activation or not, and as saw in \ac{PREPMIX-CAPS}, often mixture
 % of tanh and standard scaler, so adaptive version???
@@ -2237,7 +2285,17 @@ Local good on LOB, global good on Amex.
 \subsection{Limitations}%
 \label{sub:Limitations}
 
-
+One limitation of the \ac{EDAIN} layer appears during training, where we need to set the
+learning rate modifiers for the outlier removal, shift, scale and power transform sublayers,
+respectively. This is required to ensure training is stable, but it introduces more hyperparameters
+that need to be tuned when training the model.
+Additionally, if an untrained \ac{EDAIN} layer is passed extreme values, the gradients computed
+for the power transform sublayer might produce \texttt{NaN}s due to numerical errors. To suppress
+this issue, one often needs to apply regular standard scaling to the data before passing it to
+the \ac{EDAIN} layer. One last limitation has do with coupling the training of the \ac{EDAIN}
+layer together with the training of the neural network model: If one wants to use a different
+neural network architecture for the task, the \ac{EDAIN} will also need to be retrained as the
+learned transformations might be dependent on the specific neural network architecture used.
 
 % }}}
 
@@ -2245,18 +2303,126 @@ Local good on LOB, global good on Amex.
 \section{EDAIN-KL}% {{{
 \label{sec:EDAIN-KL-discuss}
 
-% One advantage is that if DNN model changes, can still keep the bijector and just retransform
-% the data later. Do not have to add overhead of adaptive layer like with EDAIN
+% Note: Don't need subsection on performance; Can instead briefly mention that this method
+%       performs poorly in the introduction with 2-3 sentences, then move onto discussing
+%       the other aspects of this method
 
-% TODO: comment on why not performing very well:
-% * Even worse than standard scaling.
-% * TODO: come up with some hypothesis on why this does not work that well? Maybe work well on synthetic data???
+Observations when it comes to performance:
+* It outperforms standard scaling and min-max scaling on the \ac{LOB} dataset
+* It is beaten by standard scaling on Amex dataset, even though it should theoretically be able
+  to generalise standard scaling with its shift and scale layers
 
-% TODO: in this section, need to motivate why EDAIN-KL is not doing well on the LOB dataset
+\subsection{Examples}%
+\label{sub:Examples}
+
+\subsection{Advantages}%
+\label{sub:Advantages}
+
+% Unsupervised learning, no need to have responses
+The first advantage comes from \ac{EDAIN-KL} being fully unsupervised, that is,
+the target labels are not needed during the fitting of the bijector.  This
+allows the method to preprocess data for unsupervised machine learning tasks
+such as dimensionality reduction, clustering, or anomaly detection.
+Additionally, these task are not required to fit into the deep learning
+framework because the \ac{EDAIN-KL} bijector is trained completely separate of
+the model the preprocessed data is fed to afterwards. This allows the \ac{EDAIN-KL} method to
+be used for a wider range of problems compared to \ac{EDAIN}, which also includes supervised
+machine learning models not based on neural network.
+However, as the scope of this thesis did not cover non-neural network models
+nor unsupervised learning problems, the effectiveness of the \ac{EDAIN-KL}
+preprocessing method has not been evaluated on such tasks. Despite this, we will still discuss some
+potential scenarios in which this method is advantageous and provides further benefits beyond
+common alternatives like standard scaling.
+
+% Linear regression OLS example
+One especially relevant application of \ac{EDAIN-KL} is performing linear regression with
+\ac{OLS}. In linear regression, we typically assume the error terms
+$\epsilon_1,\dots,\epsilon_N$ follow a normal distribution \citep{wasserman}. Thus, if we want
+to apply \ac{OLS} to a dataset where the covariates follow a very skewed distribution or one with
+a lot of outliers, we can reduce the effect of incorrectly assuming Gaussian errors by first
+preprocessing our data with the \ac{EDAIN-KL} method to reduce the effect of outliers and reduce
+the skewness with the power transform sublayer. Another relevant example is
+performing dimensionality reduction with \ac{PCA}. This method is usually sensitive to the
+\marginpar{\scriptsize Does this PCA example make sense?}
+scale of the different variables, so one typically applies standard scaling to ensure all the
+variables are treated fairly in the \ac{PCA} routine. However, this does remove potential skewness
+and outliers that may be present in the dataset. For this, one could normalize the data with
+\ac{EDAIN-KL} first as this layer can both standardize the data like standard scaling, but
+also remove skewness and reduce the effects of outliers.
+
+% TODO: squeeze in the second avantage: Can swap out the neural network or try
+% different architectures, without needing to retrain the \ac{EDAIN-KL} layer
+% as seperate... Can't do this with the EDAIN layer
+% Don't add the adaptive layer overhead during training of the final neural network with this...
 
 \subsection{Limitations}%
 \label{sub:Limitations}
 
+% Architecture-based limitations
+% * Cannot do local-aware mode
+% * Outlier removal transformation simplified from \ac{EDAIN} method to make the
+%   inverse transformation into an analytic expression
+The \ac{EDAIN-KL} layer cannot run in local-aware mode like the \ac{EDAIN} layer.
+As we saw in \cref{sub:opt_with_kl}, to train the \ac{EDAIN-KL} layer, we need analytic and
+differentiable expressions for the inverse of each of the sublayers: outlier removal, shift,
+scale, and power transform. Recalling how the local-aware \ac{EDAIN} architecture presented
+in \cref{sub:edain_arch} used summary representations
+\begin{equation}
+    \mu_\bfx^{(i)}=\frac{1}{T} \sum^{T}_{t=1} \bfx^{(i)}_t  \quad\textrm{ and }\quad
+    \sigma_\bfx^{(i)}=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2}
+\end{equation}
+in the expressions for the shift and scale operations, respectively, we would need to be able to
+invert these summaries to get an expression for the inverse shift and scale operation. However,
+that is not possible as taking the sum of the data along the time-axis discards information.
+Therefore, with a local-aware shift and scale operation, we cannot fulfil the requirements
+we set out in \cref{sub:opt_with_kl} for optimising the layer with \ac{KL-divergence}.
+This constrains the \ac{EDAIN-KL} layer to only being able to perform global-aware normalization,
+so it cannot be used for highly multimodal datasets such as the \ac{LOB} dataset.
+
+\marginpar{\scriptsize Should the paragraph on ``why this method perform poorly
+  on datasets'' be in the ``Limitations'' subsection? Or make separate subsection
+  for that point?
+}
+% Performance, need to motivate why EDAIN-KL is not doing well on the LOB dataset
+% Discuss why perform poorly here: Can theoretically generalise standard scaling,
+% but requires learning the shift and scale parameters for all the variables, and
+% it is not guided by the loss gradients like EDAIN method, so might waste time
+% trying to standardize variables that are not even important to predicting the
+% response, while leaving the important variables untouched, as optimised with
+% how close dataset is to standardized normal, where all variables weighted
+% equally, but clear variable importance difference when it's actually time to
+% train the neural network. This disparity ...
+%
+% Point out that even worse than standard scaling even though it should be able to generalize
+% standard scaling in theory, so even more flexible. Why worse?
+
+Another limitation of the \ac{EDAIN-KL} method is its relatively poor performance on the two
+datasets that the methods have been evaluated on in this thesis. Although the
+\ac{EDAIN-KL} methods outperforms min-max scaling and standard scaling on the
+\ac{LOB} dataset, its performance is nowhere near that of the local-aware preprocessing
+methods. Additionally, it underperforms standard scaling on the Amex dataset despite
+the \ac{EDAIN-KL} layer being designed to be a generalisation of standard scaling through
+its flexible shift and scale sublayers. One possible reason for this might be the high
+dimensionality of the dataset, with $d=188$ predictors. As the \ac{EDAIN-KL} bijector is trained
+based on the \ac{KL-divergence} between the dataset and a transformed normal distribution, instead
+of using the loss function related to the prediction task, the variable prioritisation will be
+completely different when compared to that when training the \ac{EDAIN} layer. This may cause
+the \ac{EDAIN-KL} layer to waste time determining how to transform variables that are not
+important for the prediction task, while possibly neglecting the most important variables,
+as it has no information about the variable importance when the training process is separate
+from the neural network training.
+
+% Others
+% * Many hyperparameters to tune,
+% * Power transform numerical errors while computing gradients, sometimes need
+%   to be combined with Z-Score scaling to avoid this
+% * separate training procedure, adds overhead to training, but also several
+%   advantages as discussed above
+% TODO: include this???
+% Some other limitations are the many hyperparameters required to tune, as the learning rates for
+% all four sublayers need to be fine-tuned. Additionally, the power-transform layer usually
+% encounters numerical errors when its gradients are computed, causing training to need to be
+% restarted or the power transform layer turned of or configured with a very low learning rate.
 
 % }}}
 
@@ -2272,9 +2438,17 @@ Local good on LOB, global good on Amex.
 % * Additionally, interesting to see the mixture of the preprocessing methods selected for
 %   the method. See appendix ....
 
+No advantages, just limitations :(
+
 \subsection{Limitations}%
 \label{sub:Limitations}
 
+% TODO TODO TODO: Write the limitations of the PREPMIX-CAPS next...
+
+Very computationally inefficient
+
+Not adaptive, so cannot learn a local-aware transformation like \ac{EDAIN},
+\ac{BIN} and \ac{DAIN}, so not suitable for highly multimodal datasets
 
 % }}}
 

@@ -10,6 +10,29 @@
 
 \LoadClass[11pt,headings=optiontohead,twoside=false]{scrbook}
 
+%%% For formatting text and spacing nicely %%%
+
+% Use the setspace package instead because it only affects text
+% \usepackage{setspace} 
+% \onehalfspacing % Remove this if report becomes longer than 70 pages
+
+% For not doing indent on new paragraphs
+\usepackage{parskip} 
+
+% % Makes text nicer to read
+\usepackage[activate={true,nocompatibility}, % > activate protrusion and expansion
+final,          % > enable microtype; use "draft" to disable
+tracking=true,  % v
+kerning=true,   % v
+spacing=true,   % > activate these techniques
+factor=1100,    % > add 10% to the protrusion amount (default is 1000)
+stretch=10,     % v
+shrink=10,      % > reduce stretchability/shrinkability (default is 20/20) 
+]{microtype}
+\microtypecontext{spacing=nonfrench}
+
+%%% End text formatting packages %%%
+
 \RequirePackage{scrtime}
 \RequirePackage{setspace}
 % From icmathsthesis.cls
@@ -63,8 +86,6 @@
 \usepackage{cleveref} 
 % For handling acronyms
 \usepackage{acronym} 
-% For not doing indent on new paragraphs
-\usepackage{parskip} 
 
 %% Theorem environment and numbering
 \theoremstyle{definition}
