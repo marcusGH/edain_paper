@@ -4,6 +4,8 @@
 
 % Commands {{{
 
+% TODO: alternative title "Automated (data) preprocessing for deep sequence models"
+%                  or     "Automated (data) preprocessing for deep neural networks"
 \title{Automated selection of preprocessing techniques for deep neural networks}
 \author{Marcus Alexander Karmi September}
 \CID{01725740}
@@ -136,7 +138,9 @@ The introduction section goes here\footnote{Tip: write this section last.}.
 % Introduction
 % Introduction {{{
 
-In this project, we make extensive use of deep learning method, especially sequence models as
+\marginpar{\scriptsize Comment: In this copy, I have set the line-spacing to \texttt{$\backslash$onehalfspacing} (1.5 times the regular line-spacing) as I believe it makes the paragraphs nicer to read. Let me know if I should revert this change.}
+
+In this project, we make extensive use of deep learning methods, especially sequence models, as
 both of the real-world datasets and synthetic dataset we will be working with all contain
 multivariate time-series.  Therefore, we start this chapter off with a background on deep
 learning, building up to sequence models.
@@ -168,8 +172,8 @@ rate schedulers and optimizers with adaptive learning rates.
 \label{sub:The standard linear neural network}
 
 The standard neural network consists of $L$ \textit{linear} layers, each containing
-$n_1,n_2,\dots,n_L$ perceptrons \citep{dnn}. An input sample $\bfx \in \R^d$ can be fed
-through the neural network, producing \textit{post-activations} at each layer, denotes
+$n_1,n_2,\dots,n_L$ perceptrons, or \textit{units} \citep{dnn}. An input sample $\bfx \in \R^d$ can be fed
+through the neural network, producing \textit{post-activations} at each layer, denoted
 $\bfz^{(1)}, \dots, \bfz^{(L)}$. The post-activations are produced through weighted
 connections between each neuron and all the neurons in the previous layer. If we let
 $\bfz^{(0)}=\bfx \in \R^d$ denote the input and let $n_0=d$, we have for $\ell=1,\dots,L$
@@ -203,9 +207,9 @@ $\mathcal{D}=\{(\bfx^{(i)}, \bfy^{(i)})\}_{i=1,2,\dots,N}$ of inputs
 $\bfx^{(i)} \in \R^d$ and \textit{targets} $\bfy \in \R^{n_L}$, we want to find
 \begin{equation}\label{eq:nn_loss}
     \widehat{\bm\theta}= \argmin_{\bm\theta}
-    \frac{1}{N}  \sum^{N}_{i=1} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}),
+    \frac{1}{N}  \sum^{N}_{i=1} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}).
 \end{equation}
-where as evident from \cref{eq:nn_update}, $\hat{\bfy}^{(i)}$ is a function of
+As evident from \cref{eq:nn_update}, $\hat{\bfy}^{(i)}$ is a function of
 $\bfx^{(i)}$ and the unknown parameters $\bm\theta$.
 In most situations, there is no analytic solution to \cref{eq:nn_loss}, so
 the parameters $\bm\theta$ are optimised through \textit{stochastic gradient descent},
@@ -213,9 +217,9 @@ where the gradients are computed with \textit{backpropagation}.
 The backpropagation algorithm is an efficient method of computing the gradients
 $\frac{\partial }{\partial \bm\theta} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}) $
 using the chain-rule. A more comprehensive description of the algorithm can be
-found in \citep{backprop}.
-After computing the gradients, the weights and biases $\bm\theta$ are updated through
-stochastic gradient descent, which involves estimating
+found in \cite{backprop}.
+After computing the gradients, the weights and biases, $\bm\theta=(\mathbf{W},\mathbf{b})$, are updated through
+stochastic gradient descent. This requires estimating
 the full gradient using only a \textit{sample batch} of the training data,
 $\mathcal{B}=\{i_1,i_2,\dots,i_B\}$, where $B$ is the \textit{batch-size} and
 $1\leq i_1,i_2,\dots,i_B \leq N$ are indices into the training dataset $\mathcal{D}$.
@@ -250,19 +254,19 @@ $\mathcal{D}_{\textrm{train}}$ and validation set $\mathcal{D}_{\textrm{val}}$, 
 $\mathcal{D}_{\textrm{train}}$ is used for the parameter updates.
 Then, after each epoch, the average value of the criterion $\mathcal{L}(\cdot,\cdot)$ is computed on
 the validation set, giving the \textit{validation loss}. If we start seeing the validation loss
-increasing at some point, training is terminated. During neural network training, the loss
-might jump around a lot during convergence, so one typically specifies a
+increasing at some point, training is terminated. However, during neural network training, the loss
+might jump around a lot, so one typically specifies a
 \textit{patience} parameter $p\in\mathbb{N}$
 for the early stopper. After each epoch, one also keeps track of the lowest validation loss achieved
 so far, and if the model trains for $p$ epochs, without achieving a validation
-loss lower than the lowest recorded validation loss so far, the training is terminated.
+loss lower than the lowest recorded validation loss found so far, training is terminated.
 
 % Learning rate scheduling paragraph
 Certain neural network architectures might also not efficiently convergence if the learning
 rate $\eta \in \R$ is held fixed, which can be solved by using a \textit{learning rate scheduler}.
 A learning rate scheduler, $\eta: \mathbb{N} \rightarrow {\R}$ is usually a
 monotonically non-increasing function that maps the current epoch number $t \in \mathbb{N}$
-to the learning rate $\eta \in \R$ to use when updating the parameters at epoch $t$. With
+to the learning rate $\eta \in \R$ that is used when updating the parameters at epoch $t$. With
 a learning rate scheduler, the parameter update in \cref{eq:sadaosidhaoisdh89} can be reformulated
 as
 \begin{equation}
@@ -277,12 +281,14 @@ At each parameter update step $t=1,2,3,\dots$, the optimizer maintains exponenti
 estimates,
 $\widehat{\mathbf{m}_t}$ and $\widehat{\mathbf{v}_t}$, of
 the first and second moment of the gradient $\widehat{\nabla_{\bm\theta}
-J\left(\bm\theta^{(t)}\right)}$, respectively. These estimates are also corrected for bias, with
-more details on how presented by \cite{adam}.
+J\left(\bm\theta^{(t)}\right)}$, respectively. These estimates are also corrected for bias,
+of which \cite{adam} provide more details.
 The stepsize used for the parameter update in \cref{eq:sadaosidhaoisdh89} is then given by
 \begin{equation}
-    \bm\eta(t)=\gamma \frac{\widehat{\mathbf{m}_t}}{\sqrt{\widehat{\mathbf{v}_t}}+\epsilon}.
+    \bm\eta(t)=\gamma \frac{\widehat{\mathbf{m}_t}}{\sqrt{\widehat{\mathbf{v}_t}}+\epsilon},
 \end{equation}
+where $\gamma \in \R$ is the base learning rate and $\epsilon>0$ is a small constant to avoid
+numerical errors.
 This gives the parameter updates a sense of \textit{momentum}, meaning that if one parameter has
 repeatedly been updated in one direction, it is likely to continue contributing to lower loss if
 it keeps moving in that direction,
@@ -292,12 +298,12 @@ proposed by \cite{rmsprop}.
 
 % Brief background on GPUs
 During both the \textit{forward passes}, as described by \cref{eq:nn_update}, and the
-\textit{backwards passes}, where the gradients are computed, a lot of operations that can be
-formulated through matrix multiplications are performed \citep{backprop}.
-This can efficiently be parallelised on a \acp{GPU}, so deep learning is typically done using
+\textit{backwards passes}, where the gradients are computed, we perform
+several matrix multiplications operations \citep{backprop}.
+This can efficiently be parallelised on a \ac{GPU}, so deep learning is typically done using
 libraries built to execute code on the computer's \ac{GPU}, as this reduces computation time
-during both training and inference. Popular Python libraries for deep learning leveraging
-\acp{GPU} to efficiently speed up computation include PyTorch \citep{pytorch} and TensorFlow \citep{tensorflow}.
+during both training and inference. Popular Python libraries for deep learning that leverage
+\acp{GPU} to efficiently speed up computation include PyTorch \citep{pytorch} and TensorFlow \citep{tensorflow}. For all the code in this thesis, I have used PyTorch.
 
 \subsection{Sequence models}%
 \label{sub:Sequence models}
@@ -353,8 +359,8 @@ In this section, we first cover \textit{static preprocessing methods}, which
 are transformations where the parameters are simple statistics that can be
 computed directly
 \marginpar{\scriptsize ``Simple statistics?'' correct term?}
-from the dataset, such as the mean, minimum, standard deviation etc.
-We cover the methods most commonly such in the literature, such as min-max
+from the dataset, such as the mean, minimum, standard deviation, etc.
+We cover the methods most commonly used in the literature, such as min-max
 normalization, Z-score scaling, decimal scaling, Box-Cox transformation,
 and winsorization \citep{stanislav, nawi, singh, hassan, winsorization}.
 We will also look at two different ways all these methods can be applied to multivariate
@@ -370,11 +376,6 @@ perform a \textit{local-aware} normalization, meaning they also consider
 summary statistics computed for each individual time-series sample when
 deciding how to normalize it.
 
-% TODO: notation not consistent when indexing dimension and time
-\marginpar{FIXME:
-    \scriptsize Inconsistent notation when indexing into $\bfX^{(i)} \in \R^{d\times T}$.
-    Should you do $x_{j,t}$ or $x_{t,j}$, and then what about $x_{*,t}$?}
-
 % Static distribution transformations
 \subsection{Static distribution transformations}% {{{
 \label{sub:Static distribution transformations}
@@ -389,7 +390,7 @@ $\bfx$, element-wise, but with different parameters for each element.
 Moreover, for $j=1,2,\dots,d$, we let
 \begin{align}
     x_j^{(min)}=\min_i x^{(i)}_j,  \qquad\qquad&\quad
-    x_j^{(max)}=\max x^{(i)}_j, \nonumber\\
+    x_j^{(max)}=\max_i x^{(i)}_j, \nonumber\\
     \mu_j = \frac{1}{N} \sum^{N}_{i=1} x^{(i)}_j, \quad
     \textrm{ and }&\quad
     \sigma_j = \sqrt{\frac{1}{N} \sum^{N}_{i=1} \left( x^{(i)}_j - \mu_j\right)^2}.
@@ -405,8 +406,8 @@ It can also be modified to transform the data to the range $[-1,+1]$ with
 \begin{equation}\label{eq:pp2}
     \tilde{x}_j = 2\cdot\frac{x_j-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}}-1.
 \end{equation}
-Standard scaling, also known as Z-score scaling, is also a common preprocessing technique and
-is done with
+Standard scaling, also known as Z-score scaling, is a common preprocessing technique and
+uses the operation
 \begin{equation}\label{eq:pp3}
     \tilde{x}_j=\frac{x_j-\mu_j}{\sigma_j}.
 \end{equation}
@@ -453,16 +454,17 @@ from a set of samples $\mathcal{D}$. The first approach, which I will refer to a
 an augmented dataset $\mathcal{D}'=\{\bfx^{(i\cdot T +t)}\}_{i=1,2,\dots,N,t=1,2,\dots,T}$
 containing $N \cdot T$ samples, each of dimensionality $d$. This dataset $\mathcal{D}'$ is then
 used to estimate the transformation parameters, and to transform each sample, we do
-$\tilde{x}_{j,t}=f_j(x_{j,t})$ regardless of what the value of $t$ is.
+$\tilde{x}_{t,j}=f_j(x_{t,j})$ for all $t=1,2,\dots,T$ is. In other words, we apply the same
+transformation \textit{across time}.
 
-% TODO: this might not make much sense when read...
 In the second approach, which will be referred to as
 \textit{preprocessing with time- and dimension-axis}, we do not augment the dataset. Instead,
 we merge the time-axis and dimension-axis, and learn the transformation parameters for
 each of the $d \cdot T$ ``new features''. That is, we let
-$\mathcal{D}''=\left\{\left[\bfx^{(i)}_{*,1} \; \bfx^{(i)}_{*,2} \; \cdots \; \bfx^{(i)}_{*,T} \right]^\top \right\}_{i=1,2,\dots,N}$ be our new dataset of $N$ samples of $d\cdot T$-dimensional samples, and
-use this to find the transformation parameters. The transformation applied to the value
-$\bfx^{(i)}_{j,t}$ then depends on both $j$ and $t$.
+$\mathcal{D}''=\left\{\left[\bfx^{(i)}_{1} \; \bfx^{(i)}_{2} \; \cdots \; \bfx^{(i)}_{T} \right]^\top \right\}_{i=1,2,\dots,N}$ be our new dataset of $N$ samples, each $d\cdot T$-dimensional.
+This dataset is then used to find the transformation parameters.
+When transforming a data-point $x^{(i)}_{t,j}\in\R$, the transformation depends on both $j$ and $t$,
+unlike the first method which only depended on $j$.
 
 % }}}
 
@@ -470,19 +472,14 @@ $\bfx^{(i)}_{j,t}$ then depends on both $j$ and $t$.
 \subsection{Adaptive distribution transformations}% {{{
 \label{sub:Adaptive distribution transformations}
 
-% TODO: write adaptive part next now...
-% Points to get across:
-% * In adaptive preprocessing methods, have unknown parameters that can't be directly inferred from
-%   simple statistics computed on the training dataset
-% TODO: introduction here that mentions what I mean by "adaptive" and how
-%       different from the "static" preprocessing techniques
-
-% TODO: this does not read very well! FIX THIS!
-We now move onto the adaptive preprocessing techniques. The static preprocessing techniques have unknown parameters that can be
-fully represented by summary statistics, for instance the mean and standard deviation of the training dataset. The adaptive
-preprocessing technique, however, have unknown parameters that need to be trained for a specific problem and neural network in mind.
-That is, they are inferred in an end-to-end fashion. That way, the preprocessing layers can \textit{adapt} to normalize the data
-in whatever fashion is most suitable for the particular task and model being used.
+We now move onto the adaptive preprocessing techniques. The static
+preprocessing techniques have unknown parameters that can be fully represented
+by summary statistics, for instance the mean and standard deviation of the
+training dataset. The adaptive preprocessing technique, however, have unknown
+parameters that need to be trained with the problem setting and neural network in
+mind.  That is, they are inferred in an end-to-end fashion. That way, the
+preprocessing layers can \textit{adapt} to normalize the data in whatever
+fashion is most suitable for the particular task and model architecture being used.
 
 % DAIN layer subsection
 \subsubsection{DAIN}% {{{
@@ -514,21 +511,21 @@ in whatever fashion is most suitable for the particular task and model being use
         \includegraphics[width=\textwidth]{diagrams/dain_diagram.pdf}
     \end{center}
     \caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
-    is taken from page 2 of \citep{dain}.}
+    is taken from page 2 of \cite{dain}.}
     \label{fig:dain-arch}
 \end{figure}
 
-The \ac{DAIN} layer is one of the earliest preprocessing methods that can
+The \ac{DAIN} layer, proposed by \cite{dain}, is one of the earliest preprocessing methods that can
 handle highly multimodal and non-stationary multivariate time-series in an adaptive,
-end-to-end fashion \cite{dain}.
-This layer was designed for application on financial forecasting tasks, where highly multi-modal
+end-to-end fashion.
+This layer was designed for financial forecasting tasks, where highly multi-modal
 time-series are common. Additionally, these time-series are often non-stationary, that is, the
 mean and variance of the data no not remain constant across time.
 Both of these aspects makes Z-score normalization unsuitable as the statistics can differ
 from one timestep to another, and Z-score scaling is not suitable on multimodal distributions.
 The \ac{DAIN} layer handles these issues through three adaptive sublayers that all depend
-on both summary statistics of the current sample being normalized, as well unknown transformation
-parameters that can be trained for the specific dataset being used.
+on both summary statistics of the current sample being normalized, as well as unknown transformation
+parameters that can be tuned for the specific dataset being used.
 As we see in \cref{fig:dain-arch}, the first sublayer is an adaptive shift layer
 that centres the data. The second sublayer is an adaptive scaling layer that can increase or
 reduce the variance of each sample. The third sublayer is a non-linear gating operation
@@ -553,11 +550,11 @@ the amount of shifting and scaling can depend on what particular mode in the dat
 came from, and this information can be discarded. This allows transforming all the samples into
 a common more unimodal representation space, despite the input data being highly multimodal.
 
-We look at an overview of the \ac{DAIN} architecture, of which an overview is shown
+We now look more closely at  the \ac{DAIN} architecture, of which an overview is shown
 in \cref{fig:dain-arch}. The unknown parameters are the weight matrices
 $\mathbf{W}_a$, $\mathbf{W}_b$, $\mathbf{W}_c \in \R^{d \times d}$, and the bias
 term $\mathbf{d} \in \R^d$, and are used
-for shift, scale, and gating layer, respectively. The adaptive shift layer and
+for the shift, scale, and gating sublayer, respectively. The adaptive shift layer and
 adaptive scale layer, together, perform the operation
 \begin{equation}\label{eq:dain_tild}
     \tilde{\bfx}_t^{(i)}=\left(
@@ -629,9 +626,10 @@ include a trainable bias term, not just a weight matrix.
 The third adaptive preprocessing method is the \ac{BIN} layer, initially
 presented by \cite{bin}. It has a similar architecture to \ac{DAIN}, but drops the
 third gating layer. Additionally, while the \ac{DAIN} only does an adaptive shift and scale layer
-based on a summary representation found from reducing along the time-axis, the \ac{BIN} layer
-does a similar operation twice, once across time, and once across dimension axis, then returns
-a linear combination of these two normalized time-series as the final output.
+based on a summary representation computed from a sum along the time-axis, the \ac{BIN} layer
+does a similar operation twice, once across the time-axis, and once across the dimension-axis.
+It then returns a linear combination of these two normalized time-series as the
+final output.
 
 We now look at the adaptive scale- and shift sublayers of the \ac{BIN} architecture.
 Recall that one sample is a multivariate time-series on the form $\bfX^{(i)} \in \R^{d \times T}$.
@@ -646,14 +644,14 @@ compute two summary representations of each sample along the time-\textit{column
 \end{align}
 These summary representation are then used together with unknown parameters
 $\bm\gamma_c \in \R^d$ and $\bm\beta_c \in \R^d$ to produce a sample that is normalized across
-the time \textit{column}:
+the time-\textit{column}:
 \begin{equation}
     \tilde{\bfx}^{(i)}_t= \bm\gamma_c \odot \left\{
         \left(\mathbf{x}^{(i)}_t - \overline{\mathbf{c}}^{(i)}\right)\oslash \bm\sigma_c^{(i)}
     \right\}+\bm\beta_c, \qquad \forall t=1,2,\dots,T.
 \end{equation}
-Notice how the order of operation multiplication of the unknown parameters differ from what
-\ac{DAIN} does in \cref{eq:dain_tild}. Similarly, along the dimension \textit{row}, we compute
+Note that the order of the multiplication order of the unknown parameters differ from what
+\ac{DAIN} does in \cref{eq:dain_tild}. Similarly, along the dimension-\textit{row}, we compute
 the summary representations:
 \begin{align}
     \overline{\mathbf{r}}^{(i)}& =\frac{1}{d} \sum^{d}_{k=1} \bfx_{*,k}^{(i)} \in \R^T, \\
@@ -664,7 +662,7 @@ the summary representations:
 \end{align}
 The row-summaries are then used together with new unknown parameters
 $\bm\gamma_r \in \R^T$ and $\bm\beta_r \in \R^T$ to produce
-a sample that is normalized across the dimension \textit{row}:
+a sample that is normalized across the dimension-\textit{row}:
 \begin{equation}
     \tilde{\tilde{\bfx}}^{(i)}_{*,k}= \bm\gamma_r \odot \left\{
         \left(\mathbf{x}^{(i)}_{*,k} - \overline{\mathbf{r}}^{(i)}\right)\oslash \bm\sigma_r^{(i)}
@@ -672,11 +670,10 @@ a sample that is normalized across the dimension \textit{row}:
 \end{equation}
 The output of the \ac{BIN} layers is then a linear combination of these two normalized samples:
 \begin{equation}
-    % TODO: add some other symbol above the first x
     \stackrel{\mathbat}{x}^{(i)}_{t,k} = \lambda_c \tilde{x}^{(i)}_{t,k}
     + \lambda_r \tilde{\tilde{x}}^{(i)}_{t,k},
 \end{equation}
-where $\lambda_c \in \R$ and $\lambda_r$ are two learnable scalars that allows the \ac{BIN} layer
+where $\lambda_c \in \R$ and $\lambda_r\in\R$ are two learnable scalars that allows the \ac{BIN} layer
 to learn how much to weight each of the normalization methods.
 
 
@@ -709,7 +706,7 @@ post-activations. We also looked at training the neural network with stochastic 
 where the gradients of the loss with respect to the unknown parameters are estimated on a batch of
 data using backpropagation. The gradient estimates are then used to iteratively update the model
 parameters until a certain number of epochs have elapsed. We also looked at using early stopping,
-learning rate scheduling and adaptive optimizer to make the training process more efficient and
+learning rate scheduling and adaptive optimizers to make the training process more efficient and
 stable, as well as improving generalization performance. Finally, we covered some common building
 blocks used in creating deep sequence models.
 
@@ -728,20 +725,21 @@ We then looked at the most commonly used data preprocessing techniques, which ar
 distribution transformation such as min-max scaling, Z-score scaling, Z-score scaling with a
 $\tanh$ activation function, decimal scaling, the Box-Cox transformation for handling skewed data,
 and winsorization for handling outliers. All of these techniques use simple statistics such as the
-mean, the standard deviation etc.\ to compute the transformation parameters. We then looked at
+mean, the standard deviation, etc.\ to compute the transformation parameters. We then looked at
 another more recent class of preprocessing techniques, adaptive methods, of which we considered the
 \ac{DAIN}, \ac{RDAIN} and \ac{BIN} methods. These three adaptive preprocessing
-methods have learnable parameters that are optimised together with the neural
+methods have trainable parameters that are optimised together with the neural
 network instead of using simple statistics. They are also all local-aware, meaning that they use
 a summary representation of each sample to adjust the extent at which the normalization is applied
 to each sample. The \ac{BIN} method does this over both the time- and dimension-axis while the
-\ac{DAIN} method only uses a summary representation computed with a reduction over the time-axis.
+\ac{DAIN} method only uses summary representations computed by summing over the time-axis.
 
 % }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Methods} %%%%       METHODS         %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ch:Methods}
 
 % Introduction
 % Introduction {{{
@@ -1474,7 +1472,7 @@ non-Euclidean, the linkage criteria used was selected to be ``average''.
 % TODO: does the reader really know what linkage criteria and anglomerative clustering is????
 
 \subsection{Determining the optimal preprocessing method for each cluster}%
-\label{sub:Determining the optimal preprocessing method for each clusterch cluster}
+\label{sub:prep_determine}
 
 \begin{figure}[htp]
     \vspace*{-15pt}
@@ -1602,7 +1600,23 @@ cluster.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{ch:Results}
 
-% TODO: introduction to this chapter
+% Introduction {{{
+
+In this chapter, we apply the methods proposed in \cref{ch:Methods} on both
+synthetic data and two real-world datasets with very different characteristics.
+The first real-world dataset is based on a high-frequency stock market and thus
+exhibits highly multi-modal distributions.  The second dataset contains
+aggregated profile features of credit card customers at different statement
+dates and is more unimodal, but still exhibits many traits commonly observed in
+real-world datasets such as missing values, skewed distributions and outliers
+\citep{nawi,brits}.  In our experiments, we give detailed descriptions of the
+datasets used, describe the evaluation methodology, and specify the neural
+networks used as well as describe how they are optimised and evaluated. In our
+experiments, we also compare the performance of the proposed methods to
+baseline static preprocessing methods, as well as other adaptive preprocessing
+methods from the literature \citep{dain,bin}.
+
+% }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Simulation study}%%%  Simulation study   %%
@@ -1637,27 +1651,48 @@ Small introduction, including motivation
 \section{American Express default prediction dataset}%%%  Amex dataset %%%
 \label{sec:American Express default prediction dataset}%%%%%%%%%%%%%%%%%%%%
 
-TODO
+% Introduction
+% {{{
+The first real-world dataset we will test our proposed processing methods on is
+the default prediction dataset published by \cite{amex-data} on behalf of
+American Express.  This dataset was first used in a Kaggle%
+\footnote{\url{https://www.kaggle.com/}} competition, where data scientists
+competed online for three months to produce the best model for the dataset
+\citep{amex-data}.  For the rest of the thesis, I will refer to the dataset as
+the \textit{Amex dataset}.
+
+This section is structured as follows. We first describe the
+dataset in more detail and give the motivation for why it was selected for the study of
+preprocessing methods. Then, we present the initial data preprocessing performed to allow it to
+be used for our experiments. After this, we
+cover the  methodology used when evaluating the different preprocessing methods on
+the dataset, including details of the deep sequence model used, how it was optimised, and
+the metrics used for evaluating the its performance.
+We also list the hyperparameters selected for the different preprocessing methods.
+Finally, we present the experimentation results and look at how well each of the proposed methods
+perform on the Amex dataset. While doing this, we also compare their performance to state of
+the art methods and a baseline preprocessing technique.
+% }}}
 
 % Description
 \subsection{Description}% {{{
 \label{sub:Description}
 
-The dataset from \cite{amex-data}, which we will abbreviate as the Amex
-\marginpar{\scriptsize Double check $N$?}
-dataset, contains $N=458\,913$ customers, entries of length $T=13$
-$d=188$ features.  For each customer, there is a binary label $y \in \{0,1\}$
-indicating whether the customer defaulted or not, that is, whether they were
-able to pay back their credit card balance amount within 120 days after their
-latest statement date \citep{amex-data}.  In the dataset provided by
+The Amex dataset contains data from $N=458\,913$ customers. For each customer
+$i=1,2,\dots,N$, a vector of $d=188$ aggregated profile features have been
+recorded at $T=13$ different credit card statement dates, giving a multivariate
+time-series $\bfX^{(i)}\in \R^{d \times T}$. Given this, the task is to predict
+the binary label $y^{(i)} \in \{0,1\}$ indicating whether customer $i$
+defaulted or not, that is, whether they were able to pay back their credit card
+balance amount within 120 days after their latest credit card statement date
+\citep{amex-data}. This is done by creating a model that takes input
+$\bfX^{(i)} \in \R^{d \times T}$ and outputs the probability of a default
+event, that is $\mathbb{P}(Y^{(i)}=1)$.  In the dataset provided by
 \cite{amex-data}, the non-default records have been \textit{down-sampled} such
-that final default rate in the dataset is about 25\%. The problem task is to
-predict the probability that a customer will be default or not, that is
-$\mathbb{P}(Y=1)$.  To do this, we are given $d=188$ aggregated profile
-features, recorded at up to $T=13$ different credit card statement dates.  The
+that the final default rate in the dataset is about 25\%.  Additionally, the
 feature names have all been anonymized, but they can be categorised into the
 five categories: delinquency variables, spend variables, payment variables,
-balance variables and risk variables \citep{amex-data}.  Additionally, 11 of
+balance variables, and risk variables \citep{amex-data}.  Additionally, 11 of
 the 188 features are categorical, so only the 177 numerical features will be
 considered during preprocessing experiments in this thesis.
 
@@ -1667,8 +1702,8 @@ considered during preprocessing experiments in this thesis.
 The Amex dataset is very suitable for research on preprocessing techniques for
 deep learning.  The dataset exhibits many traits commonly observed in
 real-world datasets, such as skewed distributions, multiple modes, unusual
-peaks, and extreme values (citation needed). It also has a lot of missing values, also common in
-real-world dataset (citation needed). As such, if one discovers novel preprocessing methods that
+peaks, and extreme values \citep{nawi}. It also has a lot of missing values, also common in
+real-world dataset \citep{nawi, brits}. As such, if one discovers novel preprocessing methods that
 work well on this dataset, they are likely to generalise well to other real-world datasets as well.
 % TODO: include some EDA plots for this
 
@@ -1678,30 +1713,30 @@ work well on this dataset, they are likely to generalise well to other real-worl
 \subsection{Initial data preprocessing}% {{{
 \label{sub:Data formatting}
 
-For privacy reasons, before data published by \cite{amex-data}, it was Min-Max
-normalized to $[0, 1]$ and then an additive noise $\bm\epsilon \sim
-\textrm{U}[-0.01,+0.01]$ was added to each variable. For more accurate
-experimentation, I tried to undo this process: First, cite Raddar, denoise
-numerical and categorical features, then randomly generate scale and shift of
-data to undo Min-Max normalization, done using parameters TODO TODO
-% TODO: can do brief summary here, then move detailed explanation to the appendix, such
-%       as what parameters used to sample the scale and shift ....
+For privacy reasons, before the data was published by \cite{amex-data}, it was Min-Max
+normalized to the range $[0, 1]$. Then a random noise term $\bm\epsilon \sim
+\textrm{U}[-0.01,+0.01]$ was added to each variable for each sample.
+For more accurate experimentation, I tried to undo this process. This was
+done by first de-noising the dataset, and then undoing the Min-Max normalization by selecting
+a random scale and shift for each variable. More details on the exact procedure can be found
+in  \cref{ch:undo_amex_pre}.
 
-Raw dataset has a lot of missing values, some variables up to 90\% missing
+The raw dataset contains many missing values, with some variables having up to 90\% missing
 values.  Across the whole dataset, 8.50\% of the numeric data points are
 missing. Five variables also have more than 91\% of their data points missing,
 and only 138 out of the 177 numeric variables have less than 1\% missing
-values.  Despite missing values being a problematic issue in deep learning
-(citation needed), this project will not focus on this issue.  Instead, we
+values. How to best handle missing values is its own active research area in deep learning
+\citep{weerakody2023,brits}, but this project will not focus on that.  Instead, we
 focus on preprocessing techniques applied to a dataset where the missing values
 have already been handled. However, our neural network cannot process input
-data that is not fully numeric, so we will need to handle the missing values,
-since every single time-series has at least one missing value. One common way
-of doing this is filling (citation needed), where missing values are simply
-replaced with a constant. Since the data is normalized to fall in the range
-$[0,1]$, I chose to fill all missing values with the value $-0.5$, to create
-some distance between existing values and missing ones. For the categorical
-entries, the missing values are padded with -1.
+data that is not fully numeric, so we will need to fill in the missing values.
+Dropping the time-series with missing values is also not an option
+since every single time-series has at least one missing value. We choose the simplest
+option of handling missing values, that is, replacing them with a constant.
+Since the data is normalized to fall in the range
+$[0,1]$, I chose to fill all the missing values with the value $-0.5$, to avoid
+camouflaging the missing values among the non-missing ones.
+For the categorical entries, the missing values are replaced with -1.
 
 In addition to missing values, some customers also have fewer than 13 credit
 statements recorded. This makes some time-series shorter than others in the
@@ -1709,11 +1744,8 @@ dataset, which is problematic for the preprocessing techniques that are applied
 with the time- and dimension-axis.  Additionally, it makes batching the data
 cumbersome. Therefore, the shorter time-series are \textit{padded} with numeric
 constants such that they are all of length $T=13$. For this, I chose to pad the
-numeric values with -1 and the categorical values with -2, to separate padded
-values and missing values.
-
-
-The final dataset $\mathcal{D}=\{ \bfX^{(i)} \in \R^{d \times T}\}$ with $N=?$
+numeric values with -1 and the categorical values with -2, to distinguish between
+padded values and missing values.
 
 % }}}
 
@@ -1722,19 +1754,21 @@ The final dataset $\mathcal{D}=\{ \bfX^{(i)} \in \R^{d \times T}\}$ with $N=?$
 \label{sec:amex_meth}
 
 Before looking at the preprocessing experiment results on the Amex dataset in \cref{sub:amex_res},
-we first describe how the experiments are conducted, involving the choice of sequence model,
-and how it is trained and evaluated. In each experiment, we split the training data into five
+we first describe how the experiments are conducted, including the choice of sequence model,
+and a description of how it is trained and evaluated. In each experiment, we split the training data into five
 20\% splits. We then train and evaluate the model using 5-fold cross-validation, which works
 as follows: If relevant, we fit the preprocessing method on the 80\% training data split and use
 it to transform all of the data. The sequence model is the trained using the 80\% training data
-split, and its prediction on the remaining 20\% are used for evaluation using our metrics.
+split, and its predictions on the unseen  20\%  split are used for computing validation losses
+and evaluation metrics.
 This is repeated for each of the five splits, giving us five different validation losses and
 evaluation metric values.
-This subsection is structured as follows.
+This subsection is structured as follows:
 We first present the architecture of the deep sequence model used for predicting the probability of
 a default event for each customer. We then move onto describing the hyperparameters associated with
-optimising this model, including choices such as loss function and choice of optimizer. Then we
-go over the evaluation metrics used for this particular dataset.
+optimising this model, including choices such as the loss function and the optimizer. Then we
+go over the evaluation metrics used for this particular dataset, which are computed on the 20\%
+validation splits described earlier.
 
 
 \subsubsection{Sequence model}%
@@ -1743,32 +1777,38 @@ go over the evaluation metrics used for this particular dataset.
 We chose to use a relatively simple \ac{RNN} sequence model, with a classifier head, as our
 baseline model.
 It consists of two stacked \ac{GRU} \ac{RNN} cells, both with a hidden dimensionality of 128.
-We also use a dropout with 20\% probability. We also have 11 categorical features. These are
+Between these cells, there is a dropout layer with the dropout probability set to 20\%.
+\marginpar{\scriptsize Dropout is not explained anywhere. Reader might get confused.}
+We also have 11 categorical features. These are
 passed through seperate embedding layers, each with a dimensionality of 4. The outputs of the
-embedding and numeric columns passed through the two \ac{GRU} units are then combined and
-passed through the classifier head, which consists of 2 linear units with 128 and 64 units,
-respectively, and seperated by a \ac{ReLU} activation function. The output is then fed through
-a linear layer with a single output neuron, followed by a sigmoid activaiton function to constrain
-the output to be a probability in the range $(0,1)$. Then we can feed in a time-series
-$\bfX^{(i)} \in \R^{d \times T}$ to the model and get a probability $p_i \in (0,1)$ as the
-output.
+embedding layers and the numeric columns, after passing them through the two \ac{GRU} units,
+are then combined and passed to the classifier head. The classifier head is a conventional 
+linear neural network consisting of 2 linear layers with
+128 and 64 units each, respectively, and separated by a \ac{ReLU} activation function.
+The output is then fed through
+a linear layer with a single output neuron, followed by a sigmoid activation function to constrain
+the output to be a probability in the range $(0,1)$. This allows feeding the model with
+a multivariate time-series $\bfX^{(i)} \in \R^{d \times T}$ and get a probability
+$p_i \in (0,1)$ as the output, which we interpret as the probability of a default event.
 
 \subsubsection{Optimising the model}%
 \label{ssub:Optimising the model}
 
 Since the targets are binary labels $y_1,y_2,\dots,y_N \in \{0,1\}$ and our predictions are
-probabilities $p_1,p_2,\dots,p_N \in (0,1)$, a suitable loss is binary cross entropy loss.
+probabilities $p_1,p_2,\dots,p_N \in (0,1)$, a suitable loss function is binary cross entropy loss.
 This gives the criterion
 \begin{equation}
     \mathcal{L}(p_i,y_i)=- \left\{y_i \log p_i + (1-y_i) \log\left( 1- p_i \right)\right\}.
 \end{equation}
-After preprocessing the data according to whatever method being experimented on, the data is fed
+After preprocessing the data according to whatever preprocessing method we are evaluating,
+the data is fed
 in batches to the \ac{GRU} \ac{RNN} model and its unknown parameters are optimised according
-to the description in \cref{sec:Deep learning}. This was done using a batch size of 1024 and
+to the description in \cref{sec:Deep learning}. This is done using a batch size of 1024 and
 a base learning rate of $\eta=10^{-3}$. The optimizer used was the Adam optimizer proposed by
 \cite{adam}, with the momentum parameters set to $\beta_1=0.9$ and $\beta_2=0.999$.
-Due to (TODO: citation needed), one can train \acp{RNN} in a more stable fashion by using a
-learning rate scheduler. For this, I used a multi-step learning rate scheduler with milestones
+Model training efficiency and convergence speed can be improved by selecting a suitable learning
+rate during model training, which is easier with dynamic learning rates selected by a learning
+rate scheduler \citep{lr_demyst}. Therefore, we use a multi-step learning rate scheduler with milestones
 at 4 and 7 epochs, and a stepsize of $\gamma=0.1$. This means that the learning rate for epochs
 1 to 3 is $\eta$, from 4 to 6 is $\gamma\eta$ and from epoch 7 and beyond is $\gamma^2\eta$.
 The maximum number of epochs was set to 40, but we also used an early stopper on the validation loss
@@ -1779,42 +1819,47 @@ The details on how all of these hyperparameters were selected can be found in \c
 \label{ssub:Evaluation metrics}
 
 %%% The metric used %%%
-The Amex metric, is 50\%-50\% weighted split between the normalized Gini coefficient, $G$ and
-the default rate captured at 4\%, denoted $D$ \citep{amex-data}.
+For evaluating the performance on the Amex dataset, we will consider the binary cross-entropy loss
+computed on the 20\% validation split, referred as the \textit{validation loss}. Additionally,
+we will use a metric referred to as the \textit{Amex metric }, proposed for use on this dataset
+by \cite{amex-data}. The Amex metric is 50\%-50\% weighted split between the
+normalized Gini coefficient, $G$ and the default rate captured at 4\%, denoted $D$
+\citep{amex-data}.
 
-Assume made predictions $p_1,p_2,\dots,p_N$ for each of the $N$ customers, and assume these
-predicted default probabilities are sorted in non-increasing order. Also assume they have
-associated normalized weights $w_1,w_2,\dots,w_N$ that sum to 1.
-Then we take the top predictions $p_1,p_2,\dots,p_\omega$
-captured within the highest-ranked 4\% of our predictions, that is, setting $\omega$ to be
-the highest integer such that
-Then we get the default rate
+Assume we have made predictions $p_1,p_2,\dots,p_N$ for each of the $N$ customers, and assume these
+predicted default probabilities have been sorted in non-increasing order. Also assume they have
+associated normalized weights $w_1,w_2,\dots,w_N$ such that $\sum_{i=1}^N w_i=1$.
+To compute $D$, we take the predictions $p_1,p_2,\dots,p_\omega$
+captured within the highest-ranked 4\% of our predictions considering the
+weights $w_1,w_2,\dots,w_N$. Then, we look at the default rate within these predictions, normalized
+by the overall default rate. In other words,
 \begin{equation}
     D= \frac{\sum^{\omega}_{i=1} y_i}{\sum^{N}_{i=1} y_i},
     \textrm{ where } \omega \textrm{ is the highest integer such that }
-    \sum^{\omega}_{i=1} w_i \leq 0.04 %\cdot\sum^{N}_{i=1} w_i.
+    \sum^{\omega}_{i=1} w_i \leq 0.04. %\cdot\sum^{N}_{i=1} w_i.
 \end{equation}
 
 % TODO: change notation to k_i or something to make it clear what the k does on the RHS of the
 %       equation.
+We describe how to compute $G$.
 From \cite{gini}, we know the Normalized Gini coefficient can be computed as
 \begin{equation}\label{eq:fdjf09j}
-    G_k=2  \sum^{N}_{i=1} w_i \left(\frac{p_i - \overline{p}}{\overline{p}}\right)
-    \left(\hat{F}_i - \overline{F} \right),
+    G_k=2  \sum^{N}_{j=1} w_{i^{(k)}_j} \left(\frac{p_{i^{(k)}_j} - \overline{p}}{\overline{p}}\right)
+    \left(\hat{F}_{i^{(k)}_j} - \overline{F} \right),
 \end{equation}
-where $\hat{F}_i=\frac{w_i}{2} +\sum^{i+1}_{j=1} w_i$ and $\overline{p}=\sum^{N}_{i=1} w_i p_i$ and
-$\overline{F}=\sum^{N}_{i=1} w_i \hat{F}_i$.
+where $\hat{F}_{i^{(k)}_j}={w_{i^{(k)}_j}}\big/{2} +\sum^{j+1}_{\ell=1}
+w_{i^{(k)}_\ell}$ and $\overline{p}=\sum^{N}_{j=1} w_{i^{(0)}_j}
+p_{i^{(0)}_j}=\sum^{N}_{j=1} w_{i^{(1)}_j} p_{i^{(1)}_j}$
+and $\overline{F}=\sum^{N}_{j=1} w_{i^{(0)}_j}
+\hat{F}_{i^{(0)}_j}=\sum^{N}_{j=1} w_{i^{(1)}_j} \hat{F}_{i^{(1)}_j} $.
 To compute the normalized Gini coefficient, we first sort the predictions in non-decreasing order
-by the true labels $y_1,y_2,\dots,N$, and consider $p_1,p_2,\dots,p_N$ and $w_1,w_2,\dots,w_N$
-accordingly. Let $G_0$ denote the result of computing \cref{eq:fdjf09j} with this sorting.
-Then we sort the values by the predicted probabilities $p_1,p_2,\dots,p_N$ in non-decreasing order.
+by the \textit{true labels} $y_1,y_2,\dots,N$, and denote this ordering $i^{(0)}_1, i^{(0)}_2, \dots, i^{(0)}_N$.  Let $G_0$ denote the result of computing \cref{eq:fdjf09j} with this sorting.
+Then we sort the values by the \textit{predicted probabilities} $p_1,p_2,\dots,p_N$ in non-decreasing order, denoting this ordering as $i^{(1)}_1, i^{(1)}_2, \dots, i^{(1)}_N$.
 Let the value of \cref{eq:fdjf09j} computed with this ordering be denoted $G_1$.
 The normalized Gini coefficient is then $G=G_1/G_0$, which is what we use in the final metric
 \begin{equation}
-    \textrm{Amex metric}=\frac{1}{2} \left(G +D \right).
+    \textrm{Amex metric}=\frac{1}{2} \left(G +D \right)= \frac{1}{2} \left(\frac{G_1}{G_0}  +D \right).
 \end{equation}
-
-We also consider the validation loss as one of our metrics.
 
 % }}}
 
@@ -1824,32 +1869,34 @@ We also consider the validation loss as one of our metrics.
 
 For the preprocessing method experiments on the Amex dataset, we look at the performance of
 the three novel methods I proposed in \cref{sec:EDAIN-method,sec:EDAIN-KL-method,sec:PREPMIX-CAPS-method}, that is, the \ac{EDAIN} method, the \ac{EDAIN-KL} method and the \ac{PREPMIX-CAPS} method.
-All these methods were compared to the state of the art in adaptive dynamic preprocessing techniques
-for multivariate time-series data, which includes the \ac{DAIN} method by \cite{dain} and the
-\ac{BIN} method by \cite{bin}. Additionally, as a baseline method, we also compare the
-aforementioned methods to standard scaling applied across time, as this is a standard
-preprocessing procedure in many works (citation needed).
-Before going into the results, we briefly go over the hyperparameters chosen for each of the
-preprocessing methods.
+All these methods were compared to the state of the art in adaptive preprocessing techniques
+for multivariate time-series data, which includes the \ac{DAIN} method proposed
+by \cite{dain} and the
+\ac{BIN} method proposed by \cite{bin}. Additionally, as a baseline method, we also compare the
+aforementioned methods to standard scaling applied across time, as this is a commonly used
+preprocessing method \citep{singh,nawi,stanislav}.
+Before providing an overview of the results found, we briefly go over the
+hyperparameters chosen for each of the preprocessing methods tested.
 
-\subsubsection{Learning rate tuning}%
+\subsubsection{Hyperparameters}%
 \label{ssub:Learning rate tuning}
 
 As described in \cref{sub:edain_opt_sgd}, when optimising the adaptive preprocessing methods
 through stochastic gradient descent, we should select individual learning rates for each part
 of the adaptive preprocessing layer, lest the convergence might be unstable.
-As the \ac{DAIN} and \ac{BIN} layer has never been applied to the Amex dataset, these learning
-rates need to be manually tuned. The details of how I performed this tuning is found in
+As the \ac{DAIN} and \ac{BIN} layer has never been applied to the Amex dataset, we need
+to tune these learning rates ourselves. The details of how I performed this tuning is found in
 \cref{ch:lr_tuning}.
 
 % Move onto specific mentions of learning rates for the different layers
 For the DAIN layer, the optimal learning rate parameter for the shift layer
 and scale layer were found to be $\eta_{\textrm{shift}}=\eta_{\textrm{scale}}=1.0$. Recall that
 the actual learning rate is this parameter multiplied by the base learning rate $\eta$.
-Despite the \ac{DAIN} layer consisting of three layers, an adaptive shift layer, an adaptive
+Despite the \ac{DAIN} layer consisting of three sublayers, an adaptive shift layer, an adaptive
 scale layer, and an adaptive gating layer, the adaptive gating layer is not used in my
-experiments because \cite{dain} found in inclusion of the adaptive gating layer to decrease
-performance when used together with an \ac{RNN} sequence model.
+experiments because \cite{dain} found the inclusion of the adaptive gating layer to decrease
+performance when used together with an \ac{RNN} sequence model, likely due to the \ac{GRU} 
+\ac{RNN} model having its own gating mechanism.
 For the \ac{BIN} layer, the optimal learning rate modifiers for the different parameters were
 found to be $\eta_\beta=10.0$, $\eta_\gamma=1.0$ and $\eta_\lambda=10^{-6}$.
 For the \ac{EDAIN} layer, the optimal learning rate modifiers were found to be
@@ -1857,15 +1904,15 @@ $\eta_{\textrm{scale}}=10^{-2}$, $\eta_{\textrm{shift}}=10^{-2}$, $\eta_{\textrm
 and $\eta_{\textrm{power}}=10$. Additionally, for this method, we only consider the global-aware
 mode as the local-aware mode was designed to handle more multimodal datasets, of which the Amex
 dataset is not. The local-ware \ac{EDAIN} method is thus not expected to outperform the global-aware
-version in this case.
+version on the Amex dataset.
 
 % Tuning for EDAIN-KL and PREPMIX-CAPS
 The \ac{PREPMIX-CAPS} and \ac{EDAIN-KL} layers also have hyperparameters that need
 tuning. With the \ac{PREPMIX-CAPS} routine, we need to select $k$. The optimal $k \in \mathbb{N}$
 was found to be $k=20$, and the detail of how this was found is in \cref{ch:lr_tuning}.
-Additionally, the statistics clustering method was used instead of the \ac{KL-divergence}-based
+Additionally, the statistics-based clustering method was used instead of the \ac{KL-divergence}-based
 method, and the linkage criteria was set to \textit{average}. Additionally, the number of bins
-was set to be $n_{\textrm{num. bins}}=5000$. For the \ac{EDAIN-KL} layer, the optimal learning
+was set to be $n_{b}=5000$. For the \ac{EDAIN-KL} layer, the optimal learning
 rate modifiers were found to be
 $\eta_{\textrm{scale}}=10$, $\eta_{\textrm{shift}}=10$, $\eta_{\textrm{outlier}}=10^{2}$,
 and $\eta_{\textrm{power}}=10^{-7}$.
@@ -1898,7 +1945,8 @@ and $\eta_{\textrm{power}}=10^{-7}$.
         applied to the American Express dataset when training a \ac{RNN} binary classification model.
         The cross-validation was done using five disjoint 20\% validation sets.
         The dot highlights the earliest epoch where all five models are deemed to have converged by
-        the early stopper, and can be interpreted as the convergence speed.
+        the early stopper, and can be interpreted as the convergence speed. A dot further left is
+        better.
     }%
     \label{fig:amex_performance}
 \end{figure}
@@ -1910,7 +1958,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
     \centering
     \begin{tabular}{lcc}
         \toprule
-        Method & Validation loss & AMEX metric \\
+        Method & Validation loss & Amex metric \\
         \midrule
         Standard scaling & $0.2213 \pm 0.0039$ & $0.7872 \pm 0.0068$ \\
         PREPMIX-CAPS (k=20) & $0.2208 \pm 0.0033$ & $0.7875 \pm 0.0053$ \\
@@ -1922,7 +1970,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
     \end{tabular}%
     \caption{
         Evaluation results using the American Express default prediction dataset. Lower validation
-        loss and higher AMEX metric is better.
+        loss and higher Amex metric is better.
         All confidence intervals are based on evaluation metrics from 5 cross-validation folds,
         and are asymptotic normal 95\% confidence intervals.
         The experiment methodology, including a description of the metrics,
@@ -1933,6 +1981,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
 % }}}
 
 % Amex fold breakdown
+% TODO: augment with plot of the metric folds as well!
 % figure {{{
 \begin{figure}[htp]
     \begin{center}
@@ -1947,26 +1996,27 @@ and $\eta_{\textrm{power}}=10^{-7}$.
 In \cref{fig:amex_performance}, we see the average validation loss and Amex metric for the
 5-fold cross-validaiton experiments using the different preprocessing methods. From the plots,
 we see that the global-aware \ac{EDAIN} out-performs all the other methods tested, both
-when looking at the average validation loss and when looking at the average metric value.
+when looking at the average validation loss and when looking at the average Amex metric value.
 However, it is slightly slower to convergence when compared to standard scaling,
 \ac{EDAIN-KL} and \ac{BIN}, but not by many epochs.
 % The subfigures:
 % In \cref{fig:amex_performance_loss} and \cref{fig:amex_performance_metric},
-In \cref{tab:amex_performance}, we show a confidence interval for the validation loss and Amex
-metric, based on the 5 different folds. From the 95\% confidence intervals, we see that for both
-the Amex metric and validation loss, that all the methods overlap. As such, from this table
-alone, we cannot prove that the proposed global-aware \ac{EDAIN} is significantly better than
-the competition. However, most of the variance comes from the folds themselves. Consider the
+In \cref{tab:amex_performance}, we present a confidence interval for the validation loss and Amex
+metric, based on the 5 different folds. For both
+the Amex metric and validation loss, 
+these 95\% confidence intervals overlap for all the methods. As such, from this table
+alone, we cannot conclude that the proposed global-aware \ac{EDAIN} is significantly better than
+the other methods. However, most of the variance comes from the folds themselves. Consider the
 validation loss shown for each of the 5 folds in \cref{fig:amex_folds}. Here, we see that despite
 the validation loss varying from fold-to-fold, the global-aware \ac{EDAIN} method beats the
 competition on all folds. From this plot, we can also rank the methods with \ac{EDAIN} as the
 best performing, \ac{PREPMIX-CAPS} in second place, and standard scaling in third place.
 The performance difference between \ac{EDAIN-KL} and \ac{DAIN} is then somewhat overlapping,
-but \ac{BIN} performs the worst out of the methods attempt on this particular dataset.
+but \ac{BIN} performs the worst out of the methods tested on the Amex dataset.
 Looking at the average validation loss and Amex metric in \cref{tab:amex_performance}, we notice
 that all the methods, even standard scaling, improves upon \ac{DAIN} and \ac{BIN}, even though
 the latter methods are recent, novel preprocessing methods. A possible explanation for this
-observation is presented in later in \cref{sub:local_vs_global}.
+observation is presented later in \cref{sub:local_vs_global}.
 
 % TODO: also integrate comments from Francesco on the results plot in this section!
 
@@ -1976,31 +2026,57 @@ observation is presented in later in \cref{sub:local_vs_global}.
 \section{FI-2010 Limit order book dataset}%%%  LOB dataset %%%
 \label{sec:American Express default prediction dataset}%%%%%%%%
 
+% Introduction
+% {{{
+
+The second real-world dataset we apply the proposed preprocessing techniques to
+is a publicly available%
+\footnote{\url{https://etsin.fairdata.fi/dataset/73eb48d7-4dbc-4a10-a52a-da745b47a649}},
+large-scale dataset called FI-2010, which contains several \ac{LOB} records from
+a high-frequency stock market \citep{lob-data}.
+We start this section of by providing a more detailed description of the \ac{LOB} dataset,
+as well as some relevant terminology. Then we go through the methodology used for evaluating
+the preprocessing techniques, including descriptions of the sequence model  architecture,
+how it is optimised, and what evaluation metrics we use. Lastly, we look at the performance
+of the proposed local-aware and global-aware \ac{EDAIN}  method and the proposed \ac{EDAIN-KL}
+method, and compare it to the state of the art \ac{DAIN} and \ac{BIN} methods proposed
+by \cite{dain} and \cite{bin}, respectively.
+
+% }}}
+
 % Description
-\subsection{Description}% {{{
+\subsection{Description and terminology}% {{{
 \label{sub:Description}
 
 % TODO: clean this up!
-The second real-world dataset considered in our experimental evaluation is a publicly available,
-large-scale dataset called FI-2010, which contains several \ac{LOB} records
-\citep{lob-data}.
+We start of by explaining some of the terminology related to the FI-2010 \ac{LOB} dataset.
+A limit order is an order to buy or sell an asset or stock with a restriction on the maximum 
+or minimum price, respectively.
 There are two types of limit orders: A bid order indicates the highest price at
 which someone is willing to buy an asset, while an ask order is the lowest
 price at which someone is willing to sell their asset \citep{gould2013limit}.
-The FI-2010 dataset contains high-frequency \acp{LOB}, that is,
-records of limit orders, from 10 business days in June 2010 \citep{lob-data}.
-The data collected from five Finnish companies. Also
-note that only the ten lowest and highest ask and bid order prices were recorded.
+The FI-2010 dataset contains \acp{LOB},that is,
+records of limit orders, recorded from a high-frequency stock market.
+The data was collected over 10 business days in June 2010
+from five Finnish companies \citep{lob-data}. Note
+that only the ten lowest and ten highest ask and bid order prices were recorded.
 The data from \cite{lob-data} was cleaned and features were extracted based on the pipeline
 proposed by \cite{lob_preprocess}, of which \cite{dain} has made publicly available%
 \footnote{The preprocessed FI-2010 dataset can be found here: \url{https://github.com/passalis/dain}}.
-This resulted in $N=453\,975$ vectors of dimensionality $d=144$. To
-use window $T=15$.
+%
+This resulted in $N=453\,975$ vectors of dimensionality $d=144$, which can all be ordered by their
+timestep.
+To use this data most efficiently, we slide across the vectors using a window of 
+$T=15$ timesteps.
 The task is then to predict whether the \textit{mid price} will increase, decrease or remain
-stationary in in $H$ timesteps after the window. The integer $H$ is called the
-horizon, and to follow suite with the experiments of \cite{dain}, we use the horizon $H=10$.
-The mid price is the average of  the highest bid price and the lowest ask price. We label a stock
-as stationary if the mid price changes by less than 0.01\% in the horizon of $H=10$ timesteps.
+stationary $H$ timesteps after the end of the current window. That is, given a multivariate
+time-series $\bfX^{(i)} \in \R^{d \times T}$ with $d=144$ and $T=15$, predict whether the
+mid price will decrease, remain stationary or increase $H=10$ timesteps into the future.
+The integer $H$ is called the
+\textit{horizon}, and to follow suite with the experiments conducted by \cite{dain},
+we use the horizon $H=10$.
+The mid price is the average of the highest bid price and the lowest ask price. We label a stock
+as stationary if the mid price changes by less than 0.01\% within the horizon of $H=10$ timesteps.
 
 
 % }}}
@@ -2009,14 +2085,24 @@ as stationary if the mid price changes by less than 0.01\% in the horizon of $H=
 \subsection{Evaluation methodology}% {{{
 \label{sec:lob_meth}
 
+In this subsection, we describe the methodological approach to using the FI-2010 \ac{LOB}
+dataset for evaluating the preprocessing techniques. Like with the Amex dataset, we split our
+data into several folds, fit the preprocessing techniques and sequence model on the training
+data, and evaluate the fit using various evaluation metrics on the corresponding validation split.
+However, the splitting of the dataset, the model and loss function used, and the evaluation metrics
+considered differ from our experiments on the Amex dataset. Therefore, in this subsection, we first
+describe how cross-validation is done using the \ac{LOB} dataset. Then we describe the sequence
+model used. After this, we describe the loss function and optimizer being used to fit the sequence
+model. Finally, we consider the evaluation metrics.
+
 \subsubsection{Cross-validation}%
 \label{ssub:Cross-validation}
 
 We use the \textit{anchored cross-validation scheme}  proposed by \cite{lob-data}.
-This consists of using the first day of data to train the model, then evaluate it on the second
+This means we use the first day of data to train the model, then evaluate it on the second
 day of data. Afterwards, the first two days of data is used for training, and the third day
 for evaluation. This is repeated until we use the first 9 days of data and the 10th day for evaluation. This scheme is illustrated in \cref{fig:lob_anchor}.
-In total, this means we evaluate the models and preprocessing methods in 9 different folds.
+In total, we evaluate the model and preprocessing methods on 9 different folds.
 
 % This figure was produced by running
 %     pdfcrop --margins '0 0 0 -377' lob_paper_p12.pdf lob_cross_val_diagram.pdf
@@ -2025,23 +2111,31 @@ In total, this means we evaluate the models and preprocessing methods in 9 diffe
 \begin{center}
     \includegraphics[width=\textwidth]{diagrams/lob_cross_val_diagram.pdf}
 \end{center}
-\caption{Anchored cross-validation experimental setup framework}
+\caption{Anchored cross-validation experimental setup framework. This diagram is taken from
+page 12 of \cite{lob-data}.}
 \label{fig:lob_anchor}
 \end{figure}
 
 \subsubsection{Sequence model}%
 \label{ssub:Sequencemodel2}
 
-Used a similar \ac{GRU} model as with Amex dataset, but changed parameters to match \ac{RNN}
-model used by \cite{dain} in order to get a fair comparison to their \ac{DAIN} methods, evaluated
-on the same dataset. The architecture is  similar to the \ac{RNN} model used for the Amex dataset
-and described in \cref{ssub:Sequence model}. However, instead of using two stacked \ac{GRU} cells,
-we just have one with 256 units. The classifier head that follows then consists of one linear
-layer with 512 units, followed by a \ac{ReLU} layer and a dropout layer with probability $p=0.5$.
-The output layer is
+For the FI-2010 \ac{LOB} dataset, we use
+a similar \ac{GRU} \ac{RNN} model as with the Amex dataset, but change the architecture slightly
+to match the \ac{RNN}
+model used by \cite{dain} in their paper. This was done to make the comparison between the
+proposed \ac{EDAIN} method and their \ac{DAIN} method more fair, seeing as they also used the
+\ac{LOB} dataset to evaluate \ac{DAIN}.
+We now describe the model architecture.
+Instead of using two stacked \ac{GRU} cells as described in 
+\cref{ssub:Sequence model}, we just have one with 256 units.
+We also do not need any embedding layers seeing as all the predictor variables are numeric and not
+categorical.
+The classifier head that follows the \ac{GRU} cells then consists of one linear
+layer with 512 units, followed by a \ac{ReLU} layer and a dropout layer with dropout probability
+set to$p=0.5$.  The output layer is
 a linear layer with 3 units, as we are classifying the multivariate time-series into one of
 three classes, $\mathcal{C}=\{\textrm{decrease}, \textrm{stationary}, \textrm{increase}\}$.
-These outputs are then passed to a softmax activation function such that the
+These outputs are then passed to a \textit{softmax} activation function such that the
 output is a probability distribution over the three classes and sums to 1.
 The softmax activation function is defined as
 \begin{equation}
@@ -2052,8 +2146,8 @@ In our case, we have $k=3$.
 \subsubsection{Optimising the model}%
 \label{ssub:as8dhasdh}
 
-The targets are ternary labels $y_1,y_2,\dots,y_N \in \{0,1,2\}$, denoting whether the mid-price
-decreased, remain stationary, or increased. The output of the model is, as discussed above,
+Recall that the targets are ternary labels $y_1,y_2,\dots,y_N \in \{0,1,2\}$, denoting whether the mid-price
+decreased, remained stationary, or increased. The output of the model is, as discussed above,
 probability vectors $\mathbf{p}_1, \mathbf{p}_2,\dots, \mathbf{p}_N \in
 (0,1)^3$. Therefore, a suitable loss function is the cross-entropy loss
 function, defined as
@@ -2061,34 +2155,37 @@ function, defined as
     \mathcal{L}(\mathbf{p}_i, y_i)=-\sum^{2}_{c=0} \mathbb{I}\{y_i=c\} \log \left( p_{i,c} \right),
 \end{equation}
 where $p_{i,c}$ denotes the predicted probability of class $c$ for the $i$th input sample.
+For example, we interpret $p_{42,0}$ as the predicted probability that the mid price will decrease
+based on 42$^{\textrm{nd}}$ multivariate time-series sample.
 The \ac{GRU} \ac{RNN} model was then trained according to the description in
+\marginpar{\scriptsize Is ``generalization performance'' explained anywhere? Add this to background}
 \cref{sec:Deep learning}. This was done using a batch size of 128. The optimizer used
 was the RMSProp optimizer proposed by \cite{rmsprop}. The base learning rate was set to
-$\eta=10^{-4}$. No learning rate scheduler nor early stoppers%
+$\eta=10^{-4}$. No learning rate scheduler nor early stoppers were used%
 \footnote{%
     Despite not using any early stoppers,
     all the metrics were computed based on the model state at the epoch where the validation loss
-    was lowest. This was due to
-    the generalization performance starting to decline in the middle of training in most cases.
-}
-were used in order to best reproduce
-the methodology used by \cite{dain}. At each validation folds, the model was trained for 20
-epochs. The details on how all these hyperparameters were tuned can be found in
+    was lowest. This was because
+    the generalization performance started to decline in the middle of training in most cases.
+}.
+This was done to best reproduce the methodology used by \cite{dain}.
+At each validation fold, the model was trained for 20
+epochs. The details on how all these hyperparameters were selected can be found in
 \cref{ch:hyp_lob}.
 
 \subsubsection{Evaluation metrics}%
 \label{ssub:Evaluation metrics}
 
-For evaluating the model performance on the FI-2010 \ac{LOB} dataset, we consider look at the
+For evaluating the model performance on the FI-2010 \ac{LOB} dataset, we look at the
 macro-$F_1$ score and Cohen's $\kappa$ metric.
 Recall that we have three classes for our true labels,
 $\mathcal{C}=\{\textrm{decrease}, \textrm{stationary}, \textrm{increase}\}$.
-We consider the predicted label to be the entry with the highest probability in the predicted
-probability vector $\mathbf{p} \in (0,1)^3$
+We consider the predicted label to be the entry with the highest probability in the
+probability vector $\mathbf{p}_i \in (0,1)^3$, which is the output of the model.
 Then, let $\textrm{TP}_c$, $\textrm{FP}_c$, $\textrm{TN}_c$
 and $\textrm{FN}_c$ denote the true-positive, false-positive, true-negative and
 false-negative rates for each class $c \in \mathcal{C}$. We then have that the precision and
-recall for a class $c \in \mathcal{C}$ is defined as
+recall for class $c \in \mathcal{C}$ is defined as
 \begin{equation}
     \textrm{precision}_c= \frac{\textrm{TP}_c}{\textrm{TP}_c+\textrm{FP}_c}
     \qquad \textrm{recall}_c=\frac{\textrm{TP}_c}{\textrm{TP}_c+\textrm{FN}_c}.
@@ -2103,7 +2200,7 @@ the different classes, that is
     \textrm{macro-}F_1=\frac{1}{|\mathcal{C}|}  \sum^{}_{c \in \mathcal{C}}  F_1^{(c)}.
 \end{equation}
 
-Cohen's $\kappa$ metric is computed as
+The second metric we consider is Cohen's $\kappa$ metric, which is computed as
 \begin{equation}
     \kappa=\frac{p_o-p_e}{1-p_e} \in [-1,+1],
 \end{equation}
@@ -2112,7 +2209,9 @@ predicted label, and $p_e$ denotes the \textit{expected} agreement between the t
 labels, assuming they are independently resampled from a distribution matching the empirical
 distribution of the true labels and predicted labels, respectively \citep{kappa}.
 Thus, this metric measures the level of agreement between the predicted and true labels,
-accounting for agreement by chance.
+accounting for agreement by chance. Perfect agreement is indicated by $\kappa=1$, and a value of
+$\kappa=0$ indicates that there is no agreement between the predictions and the true labels,
+other than what would be expected by chance \citep{kappa}.
 
 % }}}
 
@@ -2120,13 +2219,33 @@ accounting for agreement by chance.
 \subsection{Preprocessing method experiments}% {{{
 \label{sub:Preprocessing method experiments}
 
-TODO: make this similar to Amex discussion part
+For the preprocessing method experiments on the FI-2010 \ac{LOB} dataset, we look at the
+performance of the proposed \ac{EDAIN} method, including both its local-aware and global-aware
+mode, the proposed \ac{EDAIN-KL}. The performance of the proposed methods
+are compared to the state of the art among
+the adaptive preprocessing techniques for multivariate time-series, those being the
+\ac{DAIN} method and the \ac{BIN}, both of which have already been evaluated on the \ac{LOB}
+dataset by \cite{dain} and \cite{bin}, respectively. We also make comparisons to baseline
+preprocessing methods such as standard scaling and min-max scaling. However, before looking
+at all of these results, we briefly go over the hyperparameters selected for each of the
+adaptive preprocessing methods tested.
 
-\subsubsection{Learning rate tuning}%
+\subsubsection{Learning rate hyperparameters}%
 \label{ssub:Learning rate tuning}
 
-Mention that use learning rate tunes from papers, but did it mnaually for BIN because not
-present in their paper.
+As with the Amex dataset, we should also tune the individual learning rates of the sublayers in
+all the adaptive preprocessing methods, otherwise convergence might be unstable.
+Both \ac{DAIN} and \ac{BIN} have been applied to the \ac{LOB} dataset, but only \ac{DAIN} has been
+used with an identical \ac{RNN} architecture as what we use in this thesis \citep{dain}. Therefore, the
+optimal learning rate modifiers found by \cite{dain} for the \ac{DAIN} layer will be used
+in our testing, those being $\eta_{\textrm{shift}}=10^{-2}$ and $\eta_{\textrm{scale}}=10^{-8}$.
+For the \ac{EDAIN} and  \ac{BIN} methods, a grid search was performed to find the optimal learning
+rates. This gave $\eta_\beta=1$, $\eta_\gamma=10^{-8}$, and $\eta_\lambda=10^{-1}$ for \ac{BIN},
+$\eta_{\textrm{scale}}=\eta_{\textrm{shift}}=10$, $\eta_{\textrm{out}}=10^{-6}$ and $\eta_{\textrm{pow}}=10^{-3}$ for
+global-aware \ac{EDAIN}, and 
+$\eta_{\textrm{scale}}=10^{-4}$, $\eta_{\textrm{shift}}=10^{-2}$, $\eta_{\textrm{out}}=10$ and $\eta_{\textrm{pow}}=10^{-1}$ for
+local-ware \ac{EDAIN}.
+More details on the procedure for determining these modifiers can be found in \cref{ch:hyp_lob}.
 
 \subsubsection{Overview of results}%
 \label{ssub:Overview of results}
@@ -2178,21 +2297,55 @@ For both metrics, the different preprocessing methods' performance fall into two
 The first group consists of standard scaling, min-max scaling, global-aware \ac{EDAIN} and
 \ac{EDAIN-KL}, all of which achieve similar performance with average $\kappa$ metric values
 in the range 0.26-0.29 and macro-$F_1$ values around 0.49-0.51. The second group of methods,
-involving \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN}, all perform noticeably better than the
+ \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN}, all perform noticeably better than the
 first group, with average $\kappa$ values in the range 0.36-0.38 and mean macro-$F_1$ scores around
 0.58-0.59. This is likely because all the methods in the second group do
 \textit{local-aware normalization} where the shift and scale depends on summary statistics computed
-for each sample. None of the methods in the first group does this. This phenomenon will be
-discussed in greater detail in \cref{sub:local_vs_global}.
+for each sample. None of the methods in the first group do this. This phenomenon will be
+discussed further  in \cref{sub:local_vs_global}.
 % Mention how EDAIN ga and EDAIN-KL still better than ss
 Within the first group, we notice that global-aware \ac{EDAIN} and \ac{EDAIN-KL} both slightly
 outperform standard scaling. This is also somewhat evident in \cref{fig:lob_folds}, where
 especially \ac{EDAIN-KL} beats standard scaling on most of the folds.
 % Mention that EDAIN la still slightly better than BIN and DAIN
-In the second group, the mean $\kappa$ metric and mean macro-$F_1$ score is higher for the
+In the second group, the mean $\kappa$ metric and mean macro-$F_1$ score are higher for the
 proposed local-aware \ac{EDAIN} method when compared to the existing \ac{BIN} and \ac{DAIN}
 methods. However, when considering the per-fold performance in \cref{fig:lob_folds}, there are some
-folds where either \ac{BIN} or \ac{DAIN} outperform the proposed \ac{EDAIN} method.
+folds where either \ac{BIN} or \ac{DAIN} outperform the proposed local-aware \ac{EDAIN} method.
+
+% }}}
+
+\section{Conclusion}% 
+\label{sec:Conclusion} % Conclusion {{{
+
+In this chapter, we applied all the preprocessing methods from \cref{ch:Methods} to real-world
+datasets and found that the proposed \ac{EDAIN} method performed the best in almost all cases.
+% Amex dataset
+We started of by applying the proposed global-aware \ac{EDAIN}, \ac{EDAIN-KL}, and
+\ac{PREPMIX-CAPS} on the Amex dataset.  This dataset contains several
+multivariate time-series for credit card customers, and the task was to predict
+the probability of a default event.  Before starting the experiments, we looked
+at the initial data preprocessing that was done to the data, covered our
+methodological approach to evaluating the different preprocessing techniques,
+and gave a description of the hyperparameters selected.  Our experiments
+showed that the proposed global-aware \ac{EDAIN} preprocessing technique
+outperformed all the other methods it was tested against, including standard
+scaling and other adaptive methods from recent literature.  Additionally, the
+\ac{PREPMIX-CAPS} procedure showed promising results, ranking second.
+% LOB dataset
+Also applied the proposed \ac{EDAIN-KL} method and both modes of the \ac{EDAIN} method 
+on the \ac{LOB} dataset, which
+contains \acp{LOB} from a volatile stock market.
+Like with the Amex dataset, we covered our evaluation methodology, the sequence model used,
+how it was trained, and what metrics were used to evaluate its performance.
+When looking at the results, we found that the local-aware adaptive preprocessing methods like
+\ac{BIN}, \ac{DAIN} and the proposed local-aware \ac{EDAIN} method gave the best results, with the
+proposed \ac{EDAIN} method ranking the highest. However, this was not as clear as with the Amex
+dataset since both \ac{BIN}, \ac{DAIN} and \ac{EDAIN} had very similar performance on the
+\marginpar{\scriptsize This page will not be a single line when I add the synthetic data experiments}
+\ac{LOB} dataset.
+
+% Plan for Saturday...
 
 % }}}
 
@@ -2438,17 +2591,28 @@ from the neural network training.
 % * Additionally, interesting to see the mixture of the preprocessing methods selected for
 %   the method. See appendix ....
 
-No advantages, just limitations :(
+Performance-wise, the \ac{PREPMIX-CAPS} routine has the second-best performance on the Amex dataset
+out of the methods compared, outperforming standard scaling slightly while underperforming the
+proposed global-aware \ac{EDAIN} method. However, the method comes with several limitations.
 
 \subsection{Limitations}%
 \label{sub:Limitations}
 
-% TODO TODO TODO: Write the limitations of the PREPMIX-CAPS next...
+One of \ac{PREPMIX-CAPS}'s biggest limitations is its computational inefficiency. As discussed in
+\cref{sub:prep_determine}, to determine what preprocessing method to use for each cluster of predictor variables, 
+$(m-1)k+1$ experiments need to be ran. Even though this search can be parallelised across multiple \acp{GPU}, it still takes
+a significant amount of time, especially compared to the other preprocessing methods such as Standard scaling and
+the overhead of \ac{EDAIN}, \ac{BIN} or \ac{DAIN}. This problem becomes even worse when it comes to tuning the hyperparameter $k$,
+that is, the number of clusters. For each candidate value for $k$, we need to run all the $(m-1)k+1$ experiments again.
+In addition to the slow fit procedure, the preprocessing method also leads to slow convergence when fitting the neural network.
+As we saw \cref{fig:amex_performance}, with the \ac{PREPMIX-CAPS} procedure, the neural network took a bit more than twice as many
+epochs to converge compared to with standard scaling or \ac{EDAIN}.
+A third limitation is that the method cannot perform local-aware transformations like the \ac{EDAIN}, \ac{BIN} and \ac{DAIN} layers,
+as the procedure is not an adaptive one. It might therefore not be suitable for highly multimodal datasets unless one of the $m$
+static preprocessing techniques can handle multiple modes well.
 
-Very computationally inefficient
-
-Not adaptive, so cannot learn a local-aware transformation like \ac{EDAIN},
-\ac{BIN} and \ac{DAIN}, so not suitable for highly multimodal datasets
+% TODO: talk about how very similar performance to standard scaling in \cref{fig:amex_performance_metric}, so might just use standard
+%       scaling on the important variables...
 
 % }}}
 
@@ -2518,6 +2682,15 @@ TODO: add plot of learning rate tuning for \ac{PREPMIX-CAPS}, showing how $k=20$
 \label{ch:hyp_lob}
 
 TODO
+
+\chapter{Reversing the initial preprocessing of the Amex dataset}%
+\label{ch:undo_amex_pre}
+
+First, cite Raddar, denoise
+numerical and categorical features, then randomly generate scale and shift of
+data to undo Min-Max normalization, done using parameters TODO TODO
+% TODO: can do brief summary here, then move detailed explanation to the appendix, such
+%       as what parameters used to sample the scale and shift ....
 
 % }}}
 

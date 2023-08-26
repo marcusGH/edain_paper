@@ -13,8 +13,8 @@
 %%% For formatting text and spacing nicely %%%
 
 % Use the setspace package instead because it only affects text
-% \usepackage{setspace} 
-% \onehalfspacing % Remove this if report becomes longer than 70 pages
+\usepackage{setspace} 
+\onehalfspacing % Remove this if report becomes longer than 70 pages
 
 % For not doing indent on new paragraphs
 \usepackage{parskip} 
