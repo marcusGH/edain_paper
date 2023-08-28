@@ -138,8 +138,6 @@ The introduction section goes here\footnote{Tip: write this section last.}.
 % Introduction
 % Introduction {{{
 
-\marginpar{\scriptsize Comment: In this copy, I have set the line-spacing to \texttt{$\backslash$onehalfspacing} (1.5 times the regular line-spacing) as I believe it makes the paragraphs nicer to read. Let me know if I should revert this change.}
-
 In this project, we make extensive use of deep learning methods, especially sequence models, as
 both of the real-world datasets and synthetic dataset we will be working with all contain
 multivariate time-series.  Therefore, we start this chapter off with a background on deep
@@ -1696,16 +1694,36 @@ balance variables, and risk variables \citep{amex-data}.  Additionally, 11 of
 the 188 features are categorical, so only the 177 numerical features will be
 considered during preprocessing experiments in this thesis.
 
+% EDA plot
+% figure {{{
+\begin{figure}
+\begin{center}
+    \includegraphics[width=\textwidth]{figures/amex_data_eda_plot.pdf}
+\end{center}
+\caption{
+    Exploratory data analysis plot for the American Express default prediction
+    dataset.  The bottom-right plot show a correlation matrix between each pair
+    of the $d=188$ predictor variables. All correlations are computed using
+    Pearson's correlation coefficient, $\rho$, and the colour indicates the
+    value of the coefficient.  The other five plots show histograms of five
+    different predictor variables, chosen to give a representative overview of
+    how the different variables in the dataset are distributed.
+}
+\label{fig:amex_eda}
+\end{figure}
+
+% }}}
 
 % talk about motivation, why stuiable for preprocessing research, refer to EDA
 % plots etc.
 The Amex dataset is very suitable for research on preprocessing techniques for
-deep learning.  The dataset exhibits many traits commonly observed in
+deep learning. As we see in \cref{fig:amex_eda}, the dataset exhibits many traits commonly observed in
 real-world datasets, such as skewed distributions, multiple modes, unusual
 peaks, and extreme values \citep{nawi}. It also has a lot of missing values, also common in
-real-world dataset \citep{nawi, brits}. As such, if one discovers novel preprocessing methods that
+real-world dataset \citep{nawi, brits}. Moreover, most of the predictor variables are heavily
+correlated, as seen in \cref{fig:amex_eda}, which is also common in real-world data.
+As such, if one discovers novel preprocessing methods that
 work well on this dataset, they are likely to generalise well to other real-world datasets as well.
-% TODO: include some EDA plots for this
 
 % }}}
 
@@ -2034,6 +2052,8 @@ is a publicly available%
 \footnote{\url{https://etsin.fairdata.fi/dataset/73eb48d7-4dbc-4a10-a52a-da745b47a649}},
 large-scale dataset called FI-2010, which contains several \ac{LOB} records from
 a high-frequency stock market \citep{lob-data}.
+Due to the differing characteristics between the stocks in this market, this dataset is a lot
+more multi-modal compared to the Amex dataset, as evident from \cref{fig:lob_eda}.
 We start this section of by providing a more detailed description of the \ac{LOB} dataset,
 as well as some relevant terminology. Then we go through the methodology used for evaluating
 the preprocessing techniques, including descriptions of the sequence model  architecture,
@@ -2048,7 +2068,26 @@ by \cite{dain} and \cite{bin}, respectively.
 \subsection{Description and terminology}% {{{
 \label{sub:Description}
 
-% TODO: clean this up!
+% EDA plot
+% figure {{{
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/lob_data_eda_plot.pdf}
+    \end{center}
+    \caption{
+        Exploratory data analysis plot for the FI-2010 \ac{LOB} dataset.
+        The bottom-right plot show a correlation matrix between each pair
+        of the $d=144$ predictor variables. All correlations are computed using
+        Pearson's correlation coefficient, $\rho$, and the colour indicates the
+        value of the coefficient.  The other five plots show histograms of five
+        different predictor variables, chosen to give a representative overview of
+        how the different variables in the dataset are distributed.
+    }
+    \label{fig:lob_eda}
+\end{figure}
+
+% }}}
+
 We start of by explaining some of the terminology related to the FI-2010 \ac{LOB} dataset.
 A limit order is an order to buy or sell an asset or stock with a restriction on the maximum 
 or minimum price, respectively.
@@ -2353,14 +2392,60 @@ dataset since both \ac{BIN}, \ac{DAIN} and \ac{EDAIN} had very similar performan
 \chapter{Discussion} %%%%    Discussion        %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% TODO: introduction to this chapter
+% Introduction
+% Introduction {{{
+
+Start our discussion with the \ac{EDAIN} method, where we look at both its local-aware and
+global-aware mode and compare them with the other local-aware preprocessing methods such as
+\ac{DAIN} and \ac{BIN} and with the global-aware \ac{EDAIN-KL}.
+In doing so, we provide some
+interesting insight on how ``local-awareness'' or ``global-awareness'' of a preprocessing method
+affects the performance on the two datasets, as well as provide illustrative plots highlighting
+their difference.
+We then move onto discussing the \ac{EDAIN-KL} method and highlight some of its key advantages
+that sets it apart from all the other preprocessing methods discussed in this thesis. Finally,
+we discuss the \ac{PREPMIX-CAPS} routine briefly. For all the preprocessing methods proposed,
+we also provide a detailed discussion on their limitations.
+
+% }}}
+
+% Examples figure
+% figure {{{
+\begin{figure}
+\begin{center}
+    \includegraphics[scale=1]{figures/lob_example_transformations.pdf}
+\end{center}
+\caption{
+    Examples of applying the different preprocessing methods to three different predictor
+    variables from the FI-2010 \ac{LOB} dataset. In each plot, we consider the
+    data points
+    $\mathcal{X}=\left\{x^{(i)}_{j,t}\right\}_{i=1,2,\dots,N,t=1,2,\dots,T}$,
+    where $j$ is specified in the column title.
+    The 14$^{\textrm{th}}$, 51$^{\textrm{st}}$ and 91$^{\textrm{st}}$ predictor variables
+    were chosen because they illustrate the different types of distributions found in
+    the \ac{LOB} dataset.
+    The preprocessing method used in each plot is specified by the left row title, where the top
+    row shows the unprocessed, raw data.
+}
+\label{fig:lob_examples}
+\end{figure}
+% }}}
 
 % EDAIN
 \section{EDAIN}% {{{
 \label{sec:EDAIN-discuss}
 
-We now present some insights related to the performance of the proposed \ac{EDAIN} method,
-based on the results observed in \cref{ch:Results}.
+Based on the results observed in \cref{ch:Results},
+we now present some insights related to the performance of the proposed
+\ac{EDAIN} method, considering both its local-aware and global-aware modes.
+As the local-aware \ac{EDAIN} resembles the
+\ac{DAIN} and \ac{BIN} methods, and the global-aware \ac{EDAIN} method works similarly
+to \ac{EDAIN-KL}, this discussion is expanded to compare all of these methods. In doing this,
+we provide a holistic explanation for several of the observations related to
+the methods' performance made in \cref{ch:Results}.
+We also augment this explanation with illustrative plots on how the different preprocessing
+methods transform real-world data.
+Lastly, we discuss some of the limitations of the \ac{EDAIN} layer.
 
 \subsection{Local vs.\ global normalization}%
 \label{sub:local_vs_global}
@@ -2379,27 +2464,34 @@ preprocessing methods on the two datasets:
 \end{enumerate}
 We now present some insight on the difference between local-aware and global-aware
 normalization, which can explain why these phenomena occur.
-
-First of all, the we note that the \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN} methods are
+%
+First of all, we note that the \ac{BIN}, \ac{DAIN} and local-aware \ac{EDAIN} methods are
 all local-aware as the normalization applied also depends on instance-specific summary statistics.
 On the other hand, standard scaling, \ac{EDAIN-KL}, and the global-aware \ac{EDAIN} methods are
 all global-aware as they all apply the same transformation to each sample. This categorisation
 correlates with observations (i) and (ii): All the local-aware methods perform well on the
 \ac{LOB} dataset, while the global-aware methods perform poorly.
-This can be explained by the nature of the \ac{LOB} datasets: It contains limit orders from several
+This can be explained by the nature of the \ac{LOB} dataset: It contains limit orders from several
 different company stocks, which gives rise to a mixture of data generation mechanisms within the
 data. Aiming for a global normalization where all the samples are normalized equally does not bode
 well for performance in such a case, hence observation (ii). Instead, it would make more sense to
-condition the normalization on what data generation mechanism the sample
+condition the normalization on what data generation mechanism, or mode in the data, the sample
 originated from, which is what the local-aware adaptive preprocessing methods
-all learn to do during training. As such, it is expected that they perform better on this dataset
-than the preprocessing methods they treat all the samples the same, hence observation (i).
+all learn to do during training. As such, it is expected that they perform better on this dataset,
+compared to the preprocessing methods that treat all the samples the same, hence observation (i).
+All this is clearly illustrated with the 51$^{\textrm{st}}$ predictor variable
+in \cref{fig:lob_examples}:
+The three local-aware methods are able to condition the normalization on which
+of the five modes the sample came from, which allows them to transform all the samples into a common
+unimodal representation space. The two global-aware methods, however, are not able to do this,
+leading to a multimodal distribution after the transformation, which the neural network might
+struggle to process.
 
 We now turn our attention to the Amex dataset, of which all the local-aware methods performed very
 poorly on based on observation (iv), but the global-aware \ac{EDAIN} method performed very well on
 according to observation (iii).
-In the Amex datasets, the samples are not that different. They all come from a
-similar data generation mechanism, so can be thought of as just random samples
+In the Amex dataset, the samples are not that different. They all come from a
+similar data generation mechanism, so they can be thought of as just random samples
 from some global unimodal distribution.
 Therefore, it makes more sense to aim for a global instance-agnostic
 normalization procedure, where all the samples are transformed by the same transformation.
@@ -2430,7 +2522,28 @@ of the Amex dataset.
 \subsection{Examples}%
 \label{sub:Examples}
 
-TODO
+In \cref{fig:lob_examples}, we highlight some example transformations from the adaptive
+preprocessing methods.
+The three local-aware methods, \ac{DAIN}, \ac{BIN} and local-aware \ac{EDAIN}, are all able
+to transform
+the multimodal distribution in the second column into a unimodal distribution, if we look aside
+from the spikes. However, the local-aware \ac{EDAIN} seems more apt at removing skewness.
+In the first column, the data transformed by \ac{DAIN} seems especially skewed.
+The data transformed by \ac{BIN} and local-aware \ac{EDAIN} appears more normal and less skewed,
+albeit somewhat bimodal.
+We also notice that \ac{EDAIN} is better at centring the data at mean 0, compared to \ac{BIN}
+and \ac{DAIN}. However, this may be due to the standard scaling applied before feeding the data
+into the \ac{EDAIN} method to avoid numerical errors in the power transform sublayer.
+
+We can also see the difference between  the local-aware and global-aware preprocessing methods in
+\cref{fig:lob_examples}.
+The local-aware methods are all able to turn the multimodal distribution into a more unimodal
+one, while the global-aware methods mostly just change the scale and shift of the overall
+distribution to make the range of values more standard normal, but do not change the appearance of the
+multimodal distribution much. However, they are better at transforming the unimodal distributions
+in the first and third column. For example, both global-aware \ac{EDAIN} and \ac{EDAIN-KL}
+are able to flatten the histogram to some degree and remove the outliers in the far-right of the
+tail for $j=14$.
 
 % Learns whether to apply a tanh activation or not, and as saw in \ac{PREPMIX-CAPS}, often mixture
 % of tanh and standard scaler, so adaptive version???
@@ -2449,6 +2562,8 @@ the \ac{EDAIN} layer. One last limitation has do with coupling the training of t
 layer together with the training of the neural network model: If one wants to use a different
 neural network architecture for the task, the \ac{EDAIN} will also need to be retrained as the
 learned transformations might be dependent on the specific neural network architecture used.
+This last limitation also applies to the \ac{BIN} and \ac{DAIN} layers, but is not present for
+\ac{EDAIN-KL}.
 
 % }}}
 
@@ -2460,13 +2575,25 @@ learned transformations might be dependent on the specific neural network archit
 %       performs poorly in the introduction with 2-3 sentences, then move onto discussing
 %       the other aspects of this method
 
-Observations when it comes to performance:
-* It outperforms standard scaling and min-max scaling on the \ac{LOB} dataset
-* It is beaten by standard scaling on Amex dataset, even though it should theoretically be able
-  to generalise standard scaling with its shift and scale layers
+We now discuss the second proposed preprocessing method of this thesis, the \ac{EDAIN-KL} method.
+We start this by section of by looking at some example transformations from this
+preprocessing method. Then, we look at a big advantage of \ac{EDAIN-KL} when it comes to applying
+it to unsupervised learning problems or for preprocessing data for non-neural-network models.
+Finally, we look at some of the limitations of this preprocessing method, including a discussion
+on its performance on the Amex dataset and \ac{LOB} dataset.
 
 \subsection{Examples}%
 \label{sub:Examples}
+
+In the last row of \cref{fig:lob_examples}, we can see some example transformations from the
+\ac{EDAIN-KL} method.
+From the $j=14$ and $j=91$ plots, we see that the \ac{EDAIN-KL} method is able to handle outliers
+well, as most of the low-density areas in the raw data has been pushed closer to the higher
+density areas of the histogram. We also see in the histogram in the $j=14$ plot that
+the skewness has been handled to some degree as well, but the histogram still do not resemble that
+of a normal distribution. Additionally, in the $j=51$ plot, we see that the \ac{EDAIN-KL} method
+is not able to preprocess the multimodal data well, as it looks very similar to the raw data,
+except for the scale and shift to make it more standardized.
 
 \subsection{Advantages}%
 \label{sub:Advantages}
@@ -2476,11 +2603,11 @@ The first advantage comes from \ac{EDAIN-KL} being fully unsupervised, that is,
 the target labels are not needed during the fitting of the bijector.  This
 allows the method to preprocess data for unsupervised machine learning tasks
 such as dimensionality reduction, clustering, or anomaly detection.
-Additionally, these task are not required to fit into the deep learning
-framework because the \ac{EDAIN-KL} bijector is trained completely separate of
+Additionally, these tasks are not required to fit into the deep learning
+framework because the \ac{EDAIN-KL} bijector is trained completely separate from
 the model the preprocessed data is fed to afterwards. This allows the \ac{EDAIN-KL} method to
 be used for a wider range of problems compared to \ac{EDAIN}, which also includes supervised
-machine learning models not based on neural network.
+machine learning models not based on neural networks.
 However, as the scope of this thesis did not cover non-neural network models
 nor unsupervised learning problems, the effectiveness of the \ac{EDAIN-KL}
 preprocessing method has not been evaluated on such tasks. Despite this, we will still discuss some
@@ -2525,12 +2652,12 @@ in \cref{sub:edain_arch} used summary representations
     \sigma_\bfx^{(i)}=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2}
 \end{equation}
 in the expressions for the shift and scale operations, respectively, we would need to be able to
-invert these summaries to get an expression for the inverse shift and scale operation. However,
+invert these summaries to get an expression for the inverse shift and scale operations. However,
 that is not possible as taking the sum of the data along the time-axis discards information.
 Therefore, with a local-aware shift and scale operation, we cannot fulfil the requirements
 we set out in \cref{sub:opt_with_kl} for optimising the layer with \ac{KL-divergence}.
 This constrains the \ac{EDAIN-KL} layer to only being able to perform global-aware normalization,
-so it cannot be used for highly multimodal datasets such as the \ac{LOB} dataset.
+so it cannot be made suitable for highly multimodal datasets such as the \ac{LOB} dataset.
 
 \marginpar{\scriptsize Should the paragraph on ``why this method perform poorly
   on datasets'' be in the ``Limitations'' subsection? Or make separate subsection
@@ -2550,7 +2677,7 @@ so it cannot be used for highly multimodal datasets such as the \ac{LOB} dataset
 % standard scaling in theory, so even more flexible. Why worse?
 
 Another limitation of the \ac{EDAIN-KL} method is its relatively poor performance on the two
-datasets that the methods have been evaluated on in this thesis. Although the
+datasets that the method have been evaluated on in this thesis. Although the
 \ac{EDAIN-KL} methods outperforms min-max scaling and standard scaling on the
 \ac{LOB} dataset, its performance is nowhere near that of the local-aware preprocessing
 methods. Additionally, it underperforms standard scaling on the Amex dataset despite
@@ -2591,28 +2718,70 @@ from the neural network training.
 % * Additionally, interesting to see the mixture of the preprocessing methods selected for
 %   the method. See appendix ....
 
-Performance-wise, the \ac{PREPMIX-CAPS} routine has the second-best performance on the Amex dataset
-out of the methods compared, outperforming standard scaling slightly while underperforming the
-proposed global-aware \ac{EDAIN} method. However, the method comes with several limitations.
+We now look at the third proposed preprocessing method, the \ac{PREPMIX-CAPS} procedure.
+Performance-wise, \ac{PREPMIX-CAPS} achieves the second-best performance on the Amex dataset
+out of all the methods tested, outperforming standard scaling slightly while underperforming the
+proposed global-aware \ac{EDAIN} method. However, the method comes with several limitations, which
+we will now discuss.
 
 \subsection{Limitations}%
 \label{sub:Limitations}
 
-One of \ac{PREPMIX-CAPS}'s biggest limitations is its computational inefficiency. As discussed in
-\cref{sub:prep_determine}, to determine what preprocessing method to use for each cluster of predictor variables, 
-$(m-1)k+1$ experiments need to be ran. Even though this search can be parallelised across multiple \acp{GPU}, it still takes
-a significant amount of time, especially compared to the other preprocessing methods such as Standard scaling and
-the overhead of \ac{EDAIN}, \ac{BIN} or \ac{DAIN}. This problem becomes even worse when it comes to tuning the hyperparameter $k$,
-that is, the number of clusters. For each candidate value for $k$, we need to run all the $(m-1)k+1$ experiments again.
-In addition to the slow fit procedure, the preprocessing method also leads to slow convergence when fitting the neural network.
-As we saw \cref{fig:amex_performance}, with the \ac{PREPMIX-CAPS} procedure, the neural network took a bit more than twice as many
-epochs to converge compared to with standard scaling or \ac{EDAIN}.
-A third limitation is that the method cannot perform local-aware transformations like the \ac{EDAIN}, \ac{BIN} and \ac{DAIN} layers,
-as the procedure is not an adaptive one. It might therefore not be suitable for highly multimodal datasets unless one of the $m$
-static preprocessing techniques can handle multiple modes well.
+One of \ac{PREPMIX-CAPS}'s biggest limitations is its computational
+inefficiency. As discussed in \cref{sub:prep_determine}, to determine what
+preprocessing method to use for each cluster of predictor variables, $(m-1)k+1$
+experiments need to be ran. Even though this search can be parallelised across
+multiple \acp{GPU}, it still takes a significant amount of time, especially
+compared to the other preprocessing methods such as Standard scaling and the
+overhead of \ac{EDAIN}, \ac{BIN} or \ac{DAIN}. This problem becomes even worse
+when it comes to tuning the hyperparameter $k$, that is, the number of
+clusters. For each candidate value for $k$, we need to run all the $(m-1)k+1$
+experiments again.  In addition to the slow fit procedure, the preprocessing
+method also leads to slow convergence when fitting the neural network.  As we
+saw \cref{fig:amex_performance}, with the \ac{PREPMIX-CAPS} procedure, the
+neural network took a bit more than twice as many epochs to converge compared
+to with standard scaling or \ac{EDAIN}.  A third limitation is that the method
+cannot perform local-aware transformations like the \ac{EDAIN}, \ac{BIN} and
+\ac{DAIN} layers, as the procedure is not an adaptive one. It might therefore
+not be suitable for highly multimodal datasets unless one of the $m$ static
+preprocessing techniques can handle multiple modes well.
 
 % TODO: talk about how very similar performance to standard scaling in \cref{fig:amex_performance_metric}, so might just use standard
 %       scaling on the important variables...
+
+% }}}
+
+\section{Conclusion}%
+\label{sec:Conclusion} %%% Conclusion {{{
+
+In this chapter, we discussed the effectiveness of the main contributions of
+this thesis--% the \ac{EDAIN}, \ac{EDAIN-KL}, and \ac{PREPMIX-CAPS}
+preprocessing techniques--% by explaining the results observed in
+\cref{ch:Results} and looking at the methods' limitations.  We started by
+considering \ac{EDAIN} and similar methods, where we found that the local-aware
+adaptive preprocessing methods all performed well on the \ac{LOB} dataset. This
+was likely because they were able to transform the multimodal predictor
+variables into a common unimodal representation space. Through the example
+transformation plots, we also saw this happening in practice.  We also
+discussed reasons why the local-aware methods did not perform well on Amex
+dataset. This dataset has more unimodal predictor variables, so global-aware
+preprocessing methods perform better.  The skewness and outliers present in the
+dataset may also explain why the global-aware \ac{EDAIN} performed so well on
+this dataset.  We also saw how both the \ac{EDAIN} and \ac{EDAIN-KL} methods
+were limited by their many hyperparameters that need to be tuned, as well as
+possible numerical errors that may occur in the power transform sublayer when
+receiving extreme values.  Moving onto the \ac{EDAIN-KL} method, we discussed
+its advantage when working with unsupervised learning tasks or to non-neural
+network models, such as \ac{OLS} regression models or \ac{PCA} models for
+dimensionality reduction. However, the \ac{EDAIN-KL} is limited by not having a
+local-aware mode, and it performs somewhat poor on the two real-world datasets
+considered, possible due to its training objective being disjoint from the task
+objective.  Finally, we briefly discussed the \ac{PREPMIX-CAPS} routine, mainly
+focusing on its major limitation which is computational inefficiency, which
+makes tuning its hyperparameters very slow.
+\marginpar{\scriptsize I will fix these empty pages at the end with some \texttt{$\backslash$vspace*\{-Xcm\} }}
+
+
 
 % }}}
 
@@ -2624,7 +2793,6 @@ static preprocessing techniques can handle multiple modes well.
 %   information
 % * If I want to add this discussion point, I should also include the other
 %   standard scaling method in my benchmarking experiments in the results chapter
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion} %%%%     Conclusion      %%%%
