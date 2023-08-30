@@ -1621,6 +1621,7 @@ cluster.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{ch:Results}
 
+% Introduction
 % Introduction {{{
 
 In this chapter, we apply the methods proposed in \cref{ch:Methods} on both
@@ -1643,40 +1644,53 @@ methods from the literature \citep{dain,bin}.
 \section{Simulation study}%%%  Simulation study   %%
 \label{sec:Simulation study}%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Small introduction, including motivation
+% Introduction
+% {{{
+Before evaluating the different preprocessing methods proposed in \cref{ch:Methods} on real-world
+data, we apply them to synthetic multivariate time-series data. This way, we can build
+insight on how the different preprocessing methods transform the data and how effective the
+transformations are, all in a controlled setup. As the different preprocessing techniques are
+designed to handle irregularly-distributed data that might be skewed or contain outliers, just like
+real-world data, we will synthesize data with such characteristics.
+In this section, we first go through the novel data generation algorithm I proposed, which
+has several desirable properties for assessing the effectiveness of preprocessing
+techniques. After this, we look at examples of how distributions
+are transformed by the different preprocessing techniques. Then, we assess
+their performance discuss the results.
 
 % TODO: add some benchmark times for how long it takes to generate samples?
 
+% }}}
+
 % Multivariate time-series data generation algorithm
 \subsection{Multivariate time-series data generation algorithm}% {{{
-\label{sub:Multivariate time-series data generation algorithm}
+\label{sub:data_gen}
 
-In this thesis, we want to construct automatic preprocessing layers and assess how well
-they can handle predictor variables of with different distribution
+In this thesis, we want to construct automated preprocessing layers and assess how well
+they can handle predictor variables with different distribution
 characteristics. As such, it will be very useful to have full control over how
-the covariates are distributed, ideally through only needing to specify an
-arbitrary unnormalized \ac{pdf} function for each variable.  Additionally, we
-want the generated data to have a covariance structure that resembles that of a
+the variables are distributed, ideally through only needing to specify an
+unnormalized \ac{pdf} function for each variable.  Additionally, we
+want the covariance structure of the generated data to resemble that of a
 multivariate time-series. Lastly, as the time-series will be used in supervised
-learning, in this case a classification problem, we also want to generate a
-response $y \in \{0,1\}$ that is based on the covariates. During research, I
-was unable to find any algorithms that met all of these criteria. As such,  I
-created my own data generation procedure that meets all of these criteria,
-while being very computationally efficient.
+learning, we also want to generate a response $y \in \{0,1\}$ that is based on the
+covariates. To my knowledge, there are no publicly-available
+algorithms that meet all of these criteria, so I propose my own
+data generation procedure that meets all of these criteria.
 
-We start by providing a general overview of the generation procedure, then go more in-depth into
+We start by providing a general overview of the algorithm, then go more in-depth into
 each part of it later.
-The main input to the data generation procedure is the multivariate time-series
-length $T \in \mathbb{N}$ and the number of predictor variables at each
-timestep, denoted $d \in \mathbb{N}$. For each predictor variable $j=1,2,\dots,d$,
+The main input to the data generation procedure is the length of the time-series,
+$T \in \mathbb{N}$, and the number of predictor variables, denoted $d \in \mathbb{N}$.
+For each predictor variable $j=1,2,\dots,d$,
 we also specify an unnormalized \ac{pdf}, $f_j : \R \rightarrow {\R}^{+}$.
 The multivariate time-series data generation procedure then generates a
-multivariate time-series covariate and a corresponding response in three steps,
+multivariate time-series covariate $\bfX \in \R^{d\times T}$ and a corresponding response $y \in \{0,1\}$ in three steps,
 each step providing one of the functional requirements we highlighted earlier. 
-Note that this procedure is repeated $N$ times if we want to, say, generate a
+Note that this procedure is repeated $N$ times to, say, generate a
 dataset of $N$ samples.
 An overview of the these three steps of the data generation algorithm is shown in
-\cref{eq:synth_algo1,eq:synth_algo2,eq:synth_algo3} below. Each row corresponds to the different
+\cref{eq:synth_algo1,eq:synth_algo2,eq:synth_algo3} below. Each row in the three matrices corresponds to the different
 timesteps of a particular predictor variable.
 % Algorithm (equation diagram) TODO: add sample indices ^{(i)} to all the samples ?
 % Also change all to lower-case to indiicate we are working with samples?
@@ -1862,38 +1876,177 @@ because \acp{CDF} are monotonically increasing.
 
 % }}}
 
-
 % Preprocessing method experiments
 \subsection{Preprocessing method experiments}% {{{
 \label{sub:Preprocessing method experiments}
+
+We now use the data generation procedure described in \cref{sub:data_gen} to synthesize some
+multivariate time-series data in order to assess the different preprocessing methods proposed
+in \cref{ch:Methods}. We also use this synthetic data to illustrate how the different methods
+transform the data distribution.
+% Explaining the pdfs
+To effectively asses how well the different preprocessing method work, and
+to stretch them to their limits, we want to design variable distributions that are
+highly irregular and infeasible for a simple linear transformation, like
+standard scaling, to undo. We also note that these distributions are based on real-world
+data like the Amex dataset and the FI-2010 LOB dataset, as we will see in
+\cref{sec:amex_data} and \cref{sec:lob_data}.
+In our experiments, we consider the following three \acp{pdf}:
+\begin{align}
+    f_1(x)&= 10 \cdot\Phi_{\mathcal{N}}\left(10\left\{x+4\right\}\right)\cdot p_{\textrm{N}}(x+4)
+    +  \mathbb{I}(8 < x < 9.5) \frac{e^{x-8}}{10} \label{eq:synth_pdf1}\\
+    f_2(x)&= \left\{
+        \renewcommand\arraystretch{2}
+        \begin{matrix*}[l]
+            20 \cdot p_{\mathcal{N}}(x-20), & \textrm{ if } x > \pi, \\
+            e^{x/6}\cdot\left(10\sin(x)+10 \right), & \textrm{ if } x \leq \pi
+        \end{matrix*}
+    \right. \label{eq:synth_pdf2}\\
+        f_3(x)&=
+        2 \cdot \Phi_{\mathcal{N}}\left(-4 \{ x-4\}\right) \cdot p_{\mathcal{N}}(x-4), \label{eq:synth_pdf3}
+\end{align}
+where $p_{\mathcal{N}}(\cdot)$ and $\Phi_{\mathcal{N}}(\cdot)$ denotes the \ac{pdf}
+and \ac{CDF} of the standard normal distribution, respectively.
+Qualitatively, the first variable has skewed normal distribution centred at $x=-4$ with some
+outliers in the range $8 < x < 9.5$. The second variable has a multimodal distribution with
+exponentially decaying mode heights as $x$ decreases, and there is a standard Gaussian peak
+at $x=20$. The third variable is simply a skewed normal distribution centred at
+$x=4$ with shape parameter $\alpha=-4$. Samples generated from the three distributions is
+visualised in the first row of \cref{fig:synth_examples}.
+
+% Experiment setup paragraph
+For our synthetic data experiment, I synthesized $N_\mathcal{D}=100$ datasets, each with
+$N=50\;000$ multivariate time-series of length $T=10$ and  $d=3$ predictor variables at each
+timestep $t=1,2,\dots,T$. The predictor variables were configured to distributed according to
+the \acp{pdf} specified in \cref{eq:synth_pdf1,eq:synth_pdf2,eq:synth_pdf3}. Note that due to
+an efficient implementation of the data generation procedure described in
+\cref{sub:data_gen}, generating all this data took less than 10 seconds.
+For each of the $N_{\mathcal{D}}$ datasets, we perform a 80\%-20\% train-test split and train
+a new \ac{GRU} \ac{RNN} model on the training data after
+using one of our preprocessing techniques to transform the whole dataset. The trained model
+was then evaluated using the remain 20\% of the data, that is the validation data, using
+the loss, the binary classification accuracy, and the Amex metric, which is described
+in \cref{sec:amex_meth}. The full details of the hyperparameters selected can be found in
+\cref{ch:synth_data_appendix}. This was repeated for standard scaling, the \ac{BIN} method
+proposed by \cite{bin}, the \ac{DAIN} method proposed by \cite{dain}, the \ac{EDAIN-KL} method,
+the local-aware \ac{EDAIN} method and the global-aware \ac{EDAIN} method, all proposed by me.
+Additionally, we evaluate the model on unprocessed raw data and using a gold standard which I will
+refer to as ``\ac{CDF} inversion''. This last method assumes we have perfect information about the
+data generation procedure, which means we know both $f_1,f_2,f_3$ and hence can
+estimate their \acp{CDF} $\widehat{F_1},\widehat{F_2},\widehat{F_3}$.
+This means we can transform the samples from $X_{j,t}$ using the transformation
+\begin{equation}
+    \tilde{x}_{j,t}=\Phi_{\mathcal{N}}^{-1}\left(\widehat{F_j}(x_{j,t})\right),
+\end{equation}
+which gives $\tilde{X}_{j,t} \sim \mathcal{N}(0,1)$, which is a lot easier for the \ac{RNN} model
+to handle compared to the irregularly-distributed samples from the unprocessed data.
+In the last row of \cref{fig:synth_examples}, we can see how this method works in practice,
+noting that it is able to perfectly transform each predictor variable such that the resulting
+distribution is standard normal.
 
 % Example transformation figure
 % figure {{{
 \begin{figure}
     \begin{center}
-        \includegraphics[width=\textwidth]{figures/synthetic_data_example_transformations.pdf}
+        \includegraphics[scale=1]{figures/synthetic_data_example_transformations.pdf}
     \end{center}
-    \caption{TODO}
+    \caption{%
+        Examples of applying the different preprocessing methods on the $d=3$ different
+        predictor variables from the synthesized multivariate time-series dataset.
+        In each plot, we consider the data points
+        $\mathcal{X}=\left\{x^{(i)}_{j,t}\right\}_{i=1,2,\dots,N,t=1,2,\dots,T}$ where
+        $j \in \{1,2,3\}$ is specified by the column title.
+        Additionally, the data points are only from the first of the
+        $N_{\mathcal{D}}=100$ different dataset, and the preprocessing models are those that were
+        fit on this dataset.
+    }
     \label{fig:synth_examples}
 \end{figure}
 % }}}
 
-Write down the PDFs, and refer to their plots. Also refer to appendix where all hyperparameters
-specified.
+% Discussing example transformation paragraph
+We now look more closely at how each of the proposed methods transform data in a visual manner.
+Consider \cref{fig:synth_examples}, where I have plotted the unprocessed data along with the same
+data transformed by each of the trained preprocessing models. We first
+notice how standard scaling is not able to handle this data well as even the transformed data still
+has many irregularities like significant outliers. Considering the local-aware \ac{EDAIN} method
+next, we see how it is able to condition the transformation on the mode each sample from variable
+2 came from. This allows it to push all the modes closer together in order to get closer to a
+standardized Gaussian distribution, but we still note that the result is still multimodal.
+Likewise, the local-aware method was able to merge the two modes seen in variable 1.
+Turning our attention to the global-aware \ac{EDAIN} method, we see how it is able to utilise
+the power transform and outlier removal sublayers to reduce the skewness and push the outlier
+samples closer to the main distribution, respectively. The former is especially noticeable in
+variable 3. The \ac{EDAIN-KL} method works similarly, but is able to reduce the skewness seen
+in variable 3 to a greater extent since its optimisation objective is the normality of each
+variable, not a low classification loss.
+As discussed earlier, the \ac{CDF} inversion method is able to perfectly normalize each variable
+because it assumes full knowledge of the data generation mechanism.
 
-Refer to example transformation plots and explain CDF inversion method
+% Synthetic data experiment table
+% Table {{{
+\begin{table}[htp]
+    \centering
+    \begin{tabular}{l|ccc}
+        \toprule
+        Method        & Validation loss &     Validation Amex metric &            Validation ACC\% \\
+        \midrule
+        Unprocessed data           & $0.1900 \pm 0.0362$ & $0.8268 \pm 0.0359$ & $0.9168 \pm 0.0168$  \\
+        Standard scaling      & $0.1873 \pm 0.0108$ & $0.8306 \pm 0.0136$ & $0.9173 \pm 0.0065$  \\
+        \ac{CDF} inversion  & $\mathbf{ 0.1627 \pm 0.0094}$ & $0.8504 \pm 0.0123$ & $\mathbf{0.9289 \pm 0.0055}$  \\
+        BIN           & $0.2191 \pm 0.0103$ & $0.8009 \pm 0.0120$ & $0.9036 \pm 0.0059$  \\
+        DAIN          & $0.2153 \pm 0.0146$ & $0.8077 \pm 0.0152$ & $0.9048 \pm 0.0078$  \\
+        EDAIN (local)  & $0.2099 \pm 0.0095$ & $0.8110 \pm 0.0109$ & $0.9071 \pm 0.0057$  \\
+        EDAIN (global) & $0.1636 \pm 0.0086$ & $\mathbf{0.8506 \pm 0.0110}$ & $0.9283 \pm 0.0051$  \\
+        EDAIN-KL      & $0.1760 \pm 0.0094$ & $0.8402 \pm 0.0111$ & $0.9224 \pm 0.0059$  \\
+        \bottomrule
+    \end{tabular}%
+    \caption{
+        Evaluation results using the synthesized datasets. Lower validation is better, and
+        higher Amex metric and ACC\% is better. All the confidence intervals are 95\% asymptotic
+        normal confidence intervals based on $N_{\mathcal{D}}=100$ different metric values for
+        each method.
+    }%
+    \label{tab:synth_results}
+\end{table}
+% }}}
 
-Then refer to table of results, and do a bit of discussion, highlighting how performance improved
-when apply preprocessing, especially with CDF inversion where data is normally distributed
+% Discussing experiment results table
+For each of the preprocessing methods considered, we also recorded performance metrics for each
+of the $N_{\mathcal{D}}=100$ times we trained each model on a new dataset. The results are
+shown in \cref{tab:synth_results}. We first notice how the performance metrics are more unstable
+if the data is not preprocessed, as evident from the high variance. Second, we see how the
+performance can be improved a lot by applying a suitable preprocessing method instead of just
+using the unprocessed data. Moreover, we notice how there is more to preprocessing data than just
+applying standard scaling as for instance the global-aware \ac{EDAIN} method
+gives a significantly lower validation loss at significance level $\alpha=5\%$, when
+compared to standard scaling. In fact, standard scaling barely improves on the unprocessed data,
+likely due to irregularity of the data and the fact that a non-linear transformation is required
+to normalize the variables.  This is a great motivation for the research conducted on more advanced
+preprocessing methods in this thesis.
 
-Talk about how this is motivating examples for the research question in general
-
+Another key takeaway from \cref{tab:synth_results} is that sequence
+models such as \acp{RNN} handle normally-distributed data a lot better than irregularly-distributed
+data. This is evident from how the \ac{CDF} inversion case gives the best performance, with the
+transformed data being samples from a standard Gaussian distribution. This further motivates this
+thesis' research on coming up with sophisticated preprocessing methods to normalize irregular data.
+Since the \ac{CDF} inversion gives the best performance and it assumes perfect information of the
+data generation mechanism, we can think of it as the ``gold standard'' in this experiment.
+Yet, the global-aware \ac{EDAIN} method achieves very similar performance as their
+average performance metric values only differ at the third or fourth decimal point. This highlights
+how well the global-ware \ac{EDAIN} method can the most suitable non-linear transformation to
+apply to the data in order to improve performance as much as possible.
+Lastly, we note that three local-aware normalization methods, \ac{BIN},
+\ac{DAIN} and local-aware \ac{EDAIN}, all perform worse than unprocessed data.
+This is likely due to them not being monotonic like the rest of the methods,
+which hurt performance in this case due to the response being generated from a
+linear combination of the hidden uniform random variables.
 
 % }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{American Express default prediction dataset}%%%  Amex dataset %%%
-\label{sec:American Express default prediction dataset}%%%%%%%%%%%%%%%%%%%%
+\label{sec:amex_data}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Introduction
 % {{{
@@ -1944,7 +2097,7 @@ considered during preprocessing experiments in this thesis.
 % figure {{{
 \begin{figure}
 \begin{center}
-    \includegraphics[width=\textwidth]{figures/amex_data_eda_plot.pdf}
+    \includegraphics[scale=1]{figures/amex_data_eda_plot.pdf}
 \end{center}
 \caption{
     Exploratory data analysis plot for the American Express default prediction
@@ -2191,7 +2344,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
     \centering
     \begin{subfigure}[b]{0.99\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/amex_performance_convergence.pdf}
+        \includegraphics[scale=.9]{figures/amex_performance_convergence.pdf}
         \caption{Average cross-validation loss of \ac{RNN} model after each training epoch.
         Lower is better.}
         \label{fig:amex_performance_loss}
@@ -2199,7 +2352,7 @@ and $\eta_{\textrm{power}}=10^{-7}$.
     \hfill
     \begin{subfigure}[b]{0.99\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/amex_performance_convergence_metric.pdf}
+        \includegraphics[scale=.9]{figures/amex_performance_convergence_metric.pdf}
         \caption{Average cross-validation American Express competition metric of the \ac{RNN} model
         after each training epoch. Higher is better.}
         \label{fig:amex_performance_metric}
@@ -2288,7 +2441,7 @@ observation is presented later in \cref{sub:local_vs_global}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{FI-2010 Limit order book dataset}%%%  LOB dataset %%%
-\label{sec:American Express default prediction dataset}%%%%%%%%
+\label{sec:lob_data}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Introduction
 % {{{
@@ -2318,7 +2471,7 @@ by \cite{dain} and \cite{bin}, respectively.
 % figure {{{
 \begin{figure}
     \begin{center}
-        \includegraphics[width=\textwidth]{figures/lob_data_eda_plot.pdf}
+        \includegraphics[scale=1]{figures/lob_data_eda_plot.pdf}
     \end{center}
     \caption{
         Exploratory data analysis plot for the FI-2010 \ac{LOB} dataset.
@@ -2571,7 +2724,7 @@ More details on the procedure for determining these modifiers can be found in \c
     \includegraphics[width=\textwidth]{figures/lob_performance_per_fold.pdf}
 \end{center}
 \caption{Validation $\kappa$ and average $F_1$-value at convergence for each of the
-    nine folds in the FI-2010 limit order book dataset.}
+    nine folds in the FI-2010 limit order book dataset. TODO TODO}
 \label{fig:lob_folds}
 \end{figure}
 % }}}
@@ -2665,7 +2818,7 @@ we also provide a detailed discussion on their limitations.
     Examples of applying the different preprocessing methods to three different predictor
     variables from the FI-2010 \ac{LOB} dataset. In each plot, we consider the
     data points
-    $\mathcal{X}=\left\{x^{(i)}_{j,t}\right\}_{i=1,2,\dots,N,t=1,2,\dots,T}$,
+    $\mathcal{X}=\left\{x^{(i)}_{t,j}\right\}_{i=1,2,\dots,N,t=1,2,\dots,T}$,
     where $j$ is specified in the column title.
     The 14$^{\textrm{th}}$, 51$^{\textrm{st}}$ and 91$^{\textrm{st}}$ predictor variables
     were chosen because they illustrate the different types of distributions found in
@@ -3040,6 +3193,13 @@ makes tuning its hyperparameters very slow.
 % * If I want to add this discussion point, I should also include the other
 %   standard scaling method in my benchmarking experiments in the results chapter
 
+% TODO:
+% * Nice discussion point about synthetic: On the local-aware EDAIN, it did not merge the
+%   modes in the synthetic data because the relative ordering of the data points (monotonicty)
+%   was what affected the response. However, in the LOB dataset, it was the relative mode-based
+%   variations of each data point was carried the important imformation for classification, hence
+%   modes being merged in this case
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion} %%%%     Conclusion      %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3049,9 +3209,7 @@ makes tuning its hyperparameters very slow.
 \label{sec:Summary}
 
 
-
 Conclusion goes here.
-
 
 
 % }}}
@@ -3106,8 +3264,41 @@ data to undo Min-Max normalization, done using parameters TODO TODO
 % TODO: can do brief summary here, then move detailed explanation to the appendix, such
 %       as what parameters used to sample the scale and shift ....
 
+\chapter{Synthetic data experiments}
+\label{ch:synth_data_appendix}
+
+Used bounds
+$(A_1,B_1)=(-8, 10)$, $(A_2,B_2)=(-30, 30)$, and $(A_3, B_3)=(-1, 7)$.
+Thetas were all with $q=3$, and then
+\begin{equation}
+    \bm\theta=\begin{bmatrix}
+        \bm\theta_1 \\
+        \bm\theta_2 \\
+        \bm\theta_3
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        -1 & \frac{1}{2} & -\frac{1}{5} & \frac{4}{5} \\
+        -1 & \frac{3}{10} & \frac{9}{10} & 0 \\
+        -1 & \frac{4}{5} & \frac{3}{10} & -\frac{9}{10} 
+    \end{bmatrix}
+\end{equation}
+Then $\sigma_{\textrm{cov}}=1.4$, $\sigma_{\eta}=\frac{1}{2}$, $\sigma_\beta=2$.
+
+The training was done using the Adam optimizer proposed by \cite{adam} using a base learning
+rate of $\eta=10^{-3}$ and the model was trained for 30 epochs. I also used a multi-step
+learning rate scheduler with decay $\gamma=\frac{1}{10}$ at the 4th and 7th epoch.
+Additionally, an early stopper was used on the validation loss with a patience of 5.
+The \ac{GRU} \ac{RNN} architecture consisted of two \ac{GRU} cells with a dimensionality
+of 32 and dropout layer with $p=\frac{1}{5} $ between these cells. This was followed by
+a linear neural network with 3 fully-connected layers separated by a \ac{ReLU} activation
+function of 64, 32 and 1 units, respectively. The output was then passed through
+a sigmoid layer to produce a probability $p \in (0,1)$. The model was trained using
+binary cross-entropy loss. The batch size was 128.
+
 % }}}
 
+% References
 % References {{{
 %%References part of appendices
 % References: modify the file refs.bib

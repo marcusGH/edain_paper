@@ -46,6 +46,7 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{amsthm}
+\usepackage{mathtools}
 
 % for bold symbols, e.g. bold Greek symbols, use the bm package
 \usepackage{bm} 
