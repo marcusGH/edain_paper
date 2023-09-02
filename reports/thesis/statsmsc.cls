@@ -76,6 +76,7 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
 % for clickable table of content entries
 \usepackage{color}
 \usepackage{xcolor}
+\PassOptionsToPackage{hyphens}{url}% to line-break long URLs
 \usepackage{hyperref}
 \definecolor{linkcolor}{rgb}{0.0,0.0,0.3}
 \hypersetup{

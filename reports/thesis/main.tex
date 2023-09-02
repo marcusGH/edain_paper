@@ -37,13 +37,50 @@
 \declarationdate{\today}
 \declaration
 
-
 \begin{abstract}
-    ABSTRACT GOES HERE
+    This project proposes and compares different approaches to data preprocessing for
+    increasing the predictive performance of neural networks.
+    Data preprocessing is an important part of any machine learning modelling task, and
+    can have a significant impact on both performance and training efficiency, especially
+    if the dataset contains irregularities such as skewness, outliers, or multiple modes.
+    All these characteristics are common in real-world datasets, yet a lot of papers only consider
+    simple and traditional preprocessing methods such as min-max normalization and standard scaling, which might
+    not properly handle these irregularities. 
+    In this thesis, three novel more sophisticated preprocessing methods are proposed.
+    Instead of using a fixed normalization scheme like traditional methods do, the
+    proposed methods adapts the normalization to the given task, giving significant
+    performance improvements. These methods are applied
+    and evaluated on three datasets: a synthetic dataset, a credit default prediction
+    time-series dataset provided by American Express, and a real-world financial forecasting dataset.
+    The methods are also compared to related work on time-series preprocessing by \cite{dain} and \cite{bin}.
+
 \end{abstract}
 
 \begin{acknowledgements}
-    ANY ACKNOWLEDGEMENTS GO HERE
+    First and foremost, I want to thank my supervisors Francesco Sanna Passino,
+    Leonie Tabea Goldmann, and Anton Hinel for the continued guidance and help they
+    have provided me throughout the project. Their advice and ideas have been very
+    helpful.
+    I also want to thank Andy Thomas and the Department of Mathematics for providing me with
+    access to a powerful GPU system that proved very useful during my computational experiments.
+    Lastly, I want to thank my parents Alexander and Sarah, my sister Olivia, and my dog Milo, as seen in
+    \cref{fig:milo}, for their unconditional love and encouragement.
+
+    \begin{flushright}
+        \textit{-Marcus}
+    \end{flushright}
+
+    {
+        \begin{figure}[htp]
+        \begin{center}
+            \vspace*{70pt}
+            \includegraphics[width=0.5\textwidth,angle=-90,trim={40cm 0 5cm 0},clip]{figures/dog.jpg}
+        \end{center}
+        \caption{Milo}
+        \vspace*{-50pt}
+        \label{fig:milo}
+        \end{figure}
+    }
 \end{acknowledgements}
 
 {\thispagestyle{plain}
@@ -63,7 +100,7 @@
 
     $\bfx^{(i)}_t \in \R^d$ denotes the $d$-dimensional feature vector at timestep $t$ in the $i$th sample in the dataset
 
-    $\bfx^{(i)}_{*,k} \in \R^T$ denotes the $T$-dimensional slice of the $i$th time-series sample, only including the $k$th feature at each timestep.
+    $\bfx^{(i)}_{*,k} \in \R^T$ denotes the $T$-dimensional slice of the $i$th time-series sample, only including the $k$th feature at each timestep
 
     $x^{(i)}_{t,j}\in\R$ is the $j$th feature at timestep $t$ in the $i$th sample in the dataset
 
@@ -71,23 +108,23 @@
 
     $\mathbf{f}(\bfx)$ denotes a vector function $\mathbf{f}:\R^d \rightarrow {\R^d}$ applied to a $d$-dimensional vector
 
-    $\oplus, \ominus, \odot$, and $\oslash$ denotes addition, subtraction, multiplication, and division, respectively, applied element-wise between two $d$-dimensional vectors. For example, $\bfx \oslash \bfy$.
+    $\oplus, \ominus, \odot$, and $\oslash$ denotes addition, subtraction, multiplication, and division, respectively, applied element-wise between two $d$-dimensional vectors. For example, $\bfx \oslash \bfy$ denotes the vector where each element of $\bfx$ has been divided by the corresponding element of $\bfy$
 
     $\mathcal{D}$ denotes a dataset
 
     $\mathcal{B}$ denotes a set of indices from a dataset, referred to as a \textit{batch}
 
     $\mathbf{J}_{\bfZ \rightarrow {\bfY}}$ denotes the Jacobian matrix of a function $\mathbf{f} : \R^d \rightarrow {\R^d}$ that maps samples $\bfz \sim \bfZ$ to samples $\bfy \sim \bfY$, that is,
-    $\bfy=\mathbf{f}(\bfz)$.
+    $\bfy=\mathbf{f}(\bfz)$
 
     $\mathbb{I}(p)$ denotes the indicator function and takes value 1 when condition $p$ is true,
     0 otherwise.
 
-    $\#A$ and $|A|$ both refer to the cardinality of a set $A$, that is, the number of elements contained in $A$.
+    $\#A$ and $|A|$ both refer to the cardinality of a set $A$, that is, the number of elements contained in $A$
 
     $\mathcal{N(\cdot,\cdot)}$ denotes a normal, also known as Gaussian,
     distribution. For example, $X \sim \mathcal{N}(\mu=0, \sigma=5)$ means $X$
-    is a random normal variable with mean 0 and variance 25.
+    is a random normal variable with mean 0 and variance 25
 
 % }}}
 
@@ -114,6 +151,7 @@
         \acro{OLS}{ordinary least squares}
         \acro{PCA}{principal component analysis}
         \acro{RV}{Random variable}
+        \acro{EDA}{Exploratory data analysis}
     \end{acronym}
 }
 
@@ -128,22 +166,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Introduction {{{
 
-The introduction section goes here\footnote{Tip: write this section last.}.
-
 % TODO: in addition to methods as part of **MAIN CONTRIBUTIONS**, also present that additional
 %       contribution is some novel insight on local- vs. global-ware normalization.
 
 % Main content:
-% * 4-5 lines on general setup, with description of machine learning pipeline
-% * "One often overlooked part is the preprocessing step \citep{....}", and not
-%   many research papers on it
-% * Yet this can have a significant impact on the performance \citep{....}
-% * As such **present <research question>
-% * (Also including **motivating example from Amex dataset**, e.g. mention
-%    skewed distributions, outliers, etc.)
-% * Present strategy for approach the research question, which also ties in with structure of
-%   the thesis?
-% * Highlight the contributions of the project
+
 
 % Tips for writing the introduction:
 % * Make it very clear what the **message** of the project is
@@ -152,11 +179,126 @@ The introduction section goes here\footnote{Tip: write this section last.}.
 %   citations/papers to back it up. Looks very bad if making bold statements in
 %   introduction without a paper backing it up!
 
+% <<<<<<<<<<<<<<<<<<< Intro starts >>>>>>>>>>>>>>>>
+
+% First paragraph: Narrowing in on research question/objective
+% * 4-5 lines on general setup, with description of machine learning pipeline
+% * "One often overlooked part is the preprocessing step \citep{....}", and not
+%   many research papers on it
+% * Yet this can have a significant impact on the performance \citep{....}
+% * As such **present <research question>**
+% * (Also including **motivating example from Amex dataset**, e.g. mention
+%    skewed distributions, outliers, etc.)
+% Note: the literature references in this paragraph focuses on honing in on
+% preprocessing in machine learning in general, while the third paragraph picks
+% up on this thread, and goes from preprocessing in ML to sophisticated
+% preprocessing in deep learning for time-series data
+
+% Explain pipeline
+Deep neural networks have contributed to remarkable progress
+for artificial intelligence, and have been applied in a wide
+variety of fields with great success \citep{dnn_survey}.
+There are many steps required when applying deep neural networks--%
+or more generally, any machine learning model--to a problem. First, 
+the data needs to be gathered, cleaned, and formatted into numerical,
+machine-readable values. Then, these numerical values need to be
+\textit{preprocessed} to facilitate model learning.
+After this, features are designed from the processed data.
+The model architecture, its hyperparameters, or both, then needs to be
+chosen appropriately. This is followed by model optimisation and
+evaluation using suitable metrics. These steps may then be reiterated
+several times.
+
+% Present some research
+One step that is often overlooked or not given enough attention is the
+\textit{preprocessing step} \citep{stanislav}. Yet, applying appropriate
+preprocessing to the data can have significant impact on both performance and
+training efficiency \citep{preprocess_origin,nawi,singh,dain,bin,mixture_ct}.
+\marginpar{\scriptsize Should I drop the ``automated'' part here? Focus in thesis has mostly been on improving performance, but the methods to do so are also automated as an additional benefit}
+However, determining the most suitable preprocessing method can be time-consuming,
+as such, the main purpose of this thesis is: \textit{\textbf{increasing the
+predictive performance of neural networks through automated data preprocessing}}.  In
+particular, we focus on preprocessing multivariate time-series data with the
+intention of applying our discoveries to the credit default prediction dataset
+provided by American Express. As we will see later in the thesis, this dataset
+contains missing values, variables with skewed distributions and outliers, all
+common characteristics in real-world datasets \citep{nawi,brits}. This makes our
+results applicable to other real-world datasets as well.
+
+
+% Second paragraph
+% * Present strategy for approach the research question, which also ties in with structure of
+%   the thesis?
+% * Highlight the contributions of the project
+To approach the research problem in question, we first studied existing preprocessing methods
+from the literature. We found that many of these were too simple and thus unable to handle
+the many irregularities observed in our datasets. Therefore, more sophisticated adaptive
+preprocessing methods were considered, and three new preprocessing methods were proposed.
+These methods, along with other commonly used preprocessing methods,
+were then evaluated on three different
+datasets, chosen for their highly different characteristics to give a better picture of the
+methods' effectiveness and limitations in different scenarios.
+In particular, the first method proposed, named \acs{EDAIN}, demonstrated a clear-cut
+higher performance than the traditional standard scaling on all three datasets considered.
+% Link to code
+An open-source implementation of all the preprocessing methods proposed, along with scripts
+to reproduce the experiments conducted in the thesis, can be found at
+\url{https://github.com/marcusGH/automated-preprocessing-for-deep-neural-networks}.
+
+% Third paragraph:
+% Bit of an overview of the existing literature, narrowing in on time-series, DNNs, adaptive etc.
+% * Many works study time-series(?) data preprocessing is a widely-studied area of
+%   machine learning research, in deep learning? (insert many citations)
+% * However, most of these methods are relatively simple static transformations,
+%   therefore unable to handle the many irregularities commonly observed in real-world
+%   datasets, such as multiple modes, skewness and outliers (cite dain, rdain, nawi)
+% * There are more sophisticated adaptive preprocessing layers widely studied, but most of
+%   these focus on preprocessing activations within the neural network (cite
+%   batchnorm, improving batchnorm, etc.)
+% * To the best of my knowledge, only \cite{dain,rdain} and \cite{bin} have looked at more
+%   sophisticated methods for preprocessing time-series data before it enters the neural network
+% * However, all of these methods have primarily been designed for financial time-series forecasting,
+%   not general time-series data, which is the focus of this thesis.
+
+\clearpage
+Many works in the literature study how preprocessing methods can improve predictive performance
+of machine learning models in various fields
+\citep{preprocess_origin,nawi,singh,dain,bin,mixture_ct}. However, most of these works
+\citep{preprocess_origin,nawi,singh,mixture_ct} use traditional static transformations
+and would therefore not be appropriate for handling the many irregularities and temporal
+aspect present in the  time-series datasets considered in this thesis and certain other
+real-world scenarios \citep{nawi,dain,rdain,bin}.
+There are many sophisticated adaptive preprocessing methods
+for normalizing data in neural network models \citep{huang2020,yu2022,batchnorm}, but most
+of these focus on normalizing the activations within the neural network.
+To the best of my knowledge, only \cite{dain,rdain,bin} have looked at more sophisticated
+methods for preprocessing time-series data prior to it entering the neural network.
+However, these works have primarily focused on normalizing financial time-series for
+forecasting tasks. As such, this thesis will shed some light on how more sophisticated
+preprocessing methods can best be applied to time-series data in a general setting.
+
+% Fourth paragraph: structure of the thesis
+The remainder of the thesis is structured as follows. \Cref{ch:Background}
+provides an overview of the deep learning models and techniques that were used
+throughout the thesis. Additionally, an overview of existing preprocessing
+methods from the literature are presented in this chapter. In
+\cref{ch:Methods}, we present the main contributions of the thesis: Three novel
+preprocessing methods, named \acs{EDAIN}, \acs{EDAIN-KL}, and \acs{PREPMIX-CAPS},
+respectively. Then, in \cref{ch:Results}, the performance of the
+proposed preprocessing methods are assessed and compared to existing work by
+evaluating them on three different datasets: a synthetic dataset, the default
+prediction dataset provided by American Express, and a financial forecasting
+dataset. We then discuss the experimental results and highlight the different
+preprocessing methods' advantages and limitations in \cref{ch:Discussion}.  In
+\cref{ch:Conclusion}, we end the thesis with a conclusion and plans for future
+work.
+
 % }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background} %%%%        Background       %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ch:Background}
 
 % Introduction
 % Introduction {{{
@@ -178,6 +320,10 @@ fashion as neural networks.
 \section{Deep learning}% Deep learning
 % Methods: Deep learning {{{
 \label{sec:Deep learning}
+
+% TODO: change wording somewhere to highlight that the multi-layer perceptron (MLP) model
+%       is in fact non-linear by having non-linear activation functions between the layers.
+%       Nvm, MLP is misnomer, so better to refer to it as feed-forward neural network
 
 Deep learning has played a significant role in improving predictive performance in many fields,
 ranging from financial forecasting \citep{dain,rdain,bin} to machine
@@ -532,7 +678,7 @@ fashion is most suitable for the particular task and model architecture being us
         \includegraphics[width=\textwidth]{diagrams/dain_diagram.pdf}
     \end{center}
     \caption{Architecture of the \acf{DAIN} layer, proposed by \citeauthor{dain}. The diagram
-    is taken from page 2 of \cite{dain}.}
+    is taken from fig.\ 1 on page 2 of \cite{dain}.}
     \label{fig:dain-arch}
 \end{figure}
 
@@ -817,7 +963,8 @@ skewness of the input data.
 \begin{center}
     \includegraphics[width=\textwidth]{diagrams/edain-diagram.pdf}
 \end{center}
-\caption{An overview of the architecture of the proposed \ac{EDAIN} normalization layer.}
+\caption{An overview of the architecture of the proposed \ac{EDAIN} normalization layer. The
+style and colours chosen in the diagram is based on fig.\ 1 in \cite{dain}.}
 \label{fig:edain-arch}
 \end{figure}
 
@@ -1647,16 +1794,16 @@ methods from the literature \citep{dain,bin}.
 % Introduction
 % {{{
 Before evaluating the different preprocessing methods proposed in \cref{ch:Methods} on real-world
-data, we apply them to synthetic multivariate time-series data. This way, we can build
+data, we apply them on synthetic multivariate time-series data. This way, we can build
 insight on how the different preprocessing methods transform the data and how effective the
 transformations are, all in a controlled setup. As the different preprocessing techniques are
 designed to handle irregularly-distributed data that might be skewed or contain outliers, just like
 real-world data, we will synthesize data with such characteristics.
 In this section, we first go through the novel data generation algorithm I proposed, which
 has several desirable properties for assessing the effectiveness of preprocessing
-techniques. After this, we look at examples of how distributions
-are transformed by the different preprocessing techniques. Then, we assess
-their performance discuss the results.
+techniques. After this, we look at examples of how the distributions of the predictor variables
+change when the dataset is transformed by the different preprocessing techniques. Then, we assess
+their performance and discuss the results.
 
 % TODO: add some benchmark times for how long it takes to generate samples?
 
@@ -1666,9 +1813,9 @@ their performance discuss the results.
 \subsection{Multivariate time-series data generation algorithm}% {{{
 \label{sub:data_gen}
 
-In this thesis, we want to construct automated preprocessing layers and assess how well
-they can handle predictor variables with different distribution
-characteristics. As such, it will be very useful to have full control over how
+The goal of the thesis is to design preprocessing methods that can increase performance,
+ideally on a wide variety of irregular datasets.
+As such, it will be very useful to have full control over how
 the variables are distributed, ideally through only needing to specify an
 unnormalized \ac{pdf} function for each variable.  Additionally, we
 want the covariance structure of the generated data to resemble that of a
@@ -1676,22 +1823,22 @@ multivariate time-series. Lastly, as the time-series will be used in supervised
 learning, we also want to generate a response $y \in \{0,1\}$ that is based on the
 covariates. To my knowledge, there are no publicly-available
 algorithms that meet all of these criteria, so I propose my own
-data generation procedure that meets all of these criteria.
+data generation procedure with these properties.
 
 We start by providing a general overview of the algorithm, then go more in-depth into
 each part of it later.
-The main input to the data generation procedure is the length of the time-series,
-$T \in \mathbb{N}$, and the number of predictor variables, denoted $d \in \mathbb{N}$.
+The main input to the data generation procedure is the time-series length,
+$T \in \mathbb{N}$, and the number of features, $d \in \mathbb{N}$.
 For each predictor variable $j=1,2,\dots,d$,
 we also specify an unnormalized \ac{pdf}, $f_j : \R \rightarrow {\R}^{+}$.
-The multivariate time-series data generation procedure then generates a
+The  data generation procedure then generates a
 multivariate time-series covariate $\bfX \in \R^{d\times T}$ and a corresponding response $y \in \{0,1\}$ in three steps,
 each step providing one of the functional requirements we highlighted earlier. 
 Note that this procedure is repeated $N$ times to, say, generate a
 dataset of $N$ samples.
-An overview of the these three steps of the data generation algorithm is shown in
-\cref{eq:synth_algo1,eq:synth_algo2,eq:synth_algo3} below. Each row in the three matrices corresponds to the different
-timesteps of a particular predictor variable.
+An overview of the the three steps of the data generation algorithm is shown in
+\cref{eq:synth_algo1,eq:synth_algo2,eq:synth_algo3} below. Each row in the
+three matrices corresponds to one predictor variable and the column specifies the timestep.
 % Algorithm (equation diagram) TODO: add sample indices ^{(i)} to all the samples ?
 % Also change all to lower-case to indiicate we are working with samples?
 % Synth algo equation diagram {{{
@@ -1732,7 +1879,7 @@ timesteps of a particular predictor variable.
     \end{matrix}\right.
     % Uniform form response
     \stackrel{\textrm{Form response}}{\xrightarrow{\hspace*{2cm} }}
-    y=\mathbb{I}\left(\sum^{d}_{j=1} \sum^{T}_{t=1} \beta_{j,t} U_{j,t}+\zeta > \frac{1}{2}  \right)
+    Y=\mathbb{I}\left(\sum^{d}_{j=1} \sum^{T}_{t=1} \beta_{j,t} U_{j,t}+\zeta > \frac{1}{2}  \right)
     \addtocounter{equation}{1}\tag{\theequation}\label{eq:synth_algo2} \\
      % Arrow down
      &\qquad\qquad\qquad\bigg\downarrow\quad X_{j,t}=\widehat{F^{-1}_j}\left(
@@ -1751,21 +1898,26 @@ timesteps of a particular predictor variable.
          X_{d,1} & X_{d,2} & \cdots & X_{d,T}
      \end{matrix}\right.
     \addtocounter{equation}{1}\tag{\theequation}\label{eq:synth_algo3}
-\end{align*} % }}}
+\end{align*} 
+% }}}
+
 In the first step in \cref{eq:synth_algo1}, we generate Gaussian random variables that have
-a similar covariance structure as multivariate time-series. This is to ensure the covariates'
-covariance resemble that of real-world data more closely. In the second step, shown in
+a similar covariance structure as a multivariate time-series. This is to ensure the covariates'
+covariance resemble that of real-world sequence data more closely. In the second step, shown in
 \cref{eq:synth_algo2}, we convert the Gaussian random variables into uniform random variables using
-the inverse normal \ac{CDF}. In this step, we also form the response through a linear combination
+the inverse normal \ac{CDF}, after standardizing each variable.
+In this step, we also form the response through a linear combination
 of unknown parameters $\bm\beta$ and the uniform random variables. This ensures there is
-some mutual information between the response and the covariates that are generated in step three.
-In step three, shown in \cref{eq:synth_algo3}, we form the final covariates using the provided
+some mutual information between the response and the covariates that are generated in the
+final step.
+In step 3, shown in \cref{eq:synth_algo3}, we form the final covariates using the provided
 \acp{pdf} $f_1,f_2,\dots,f_d$. This is done by estimating each \ac{pdf}'s inverse \ac{CDF} using
 numerical methods, and transforming the uniform random variables with these. This makes the samples
 come from a distribution matching that of the provided \acp{pdf}.
-We also note that the covariance structure created in step one is somewhat
-maintained between all the steps as the
-transformations are all monotonic, but the magnitude might change to some degree.
+We also note that the ``high-level covariance structure'' created in step 1 is maintained between
+all the steps as the transformations are all monotonic, but the magnitudes might change somewhat.
+Moreover, in \cref{eq:synth_algo1,eq:synth_algo2,eq:synth_algo3} we use random variable notation
+for each of the steps, but in practice, all the transformations are applied on samples from these.
 
 \subsubsection{Step 1: Generating random variables with a time-series covariance structure}%
 \label{ssub:Step 1: Generating correlated random variables}
@@ -1788,18 +1940,21 @@ future is
     \theta_j \theta_{j+\tau}.
 \end{equation}
 We will not be generating our covariates using the model in \cref{eq:hs08da9sd} as this would
-make it difficult to transform them to allow the distributions of arbitrary \acp{pdf}. However,
+make it difficult to get distributions that follow arbitrary \acp{pdf}. However,
 we can use the covariance formula from \cref{eq:osmmfoieie9} to set the covariance between each
 pair of variables generated. To do this, we first specify the parameters $q$, $\sigma_\epsilon$, and
 $\theta_0,\dots,\theta_q$ for each of the $d$ predictor variables. Then, image stacking the
 Gaussian random variables $N_{1,1}, N_{1,2}, \dots, N_{2,1}, N_{2,2}, \dots,
 N_{d,T}$ in \cref{eq:synth_algo1} row-wise so that they form a $dT$-long vector. Let $\Sigma \in \R^{dT\times dT}$ denote the covariance matrix of this $dT$-long Gaussian multivariate random variable.
-While still thinking of each row as its own univariate time-series, fill out the entries in
+While still thinking of each $T$-length row as its own univariate time-series, fill out the 
+entries in
 $\Sigma$ based on \cref{eq:osmmfoieie9}, using the parameters specified for each of the $d$
 time-series. The remaining entries of $\Sigma$ are randomly initialised with samples from
 $\mathcal{N}(\mu=0,\sigma=\sigma_{\textrm{cor}})$, where
-$\sigma_{\textrm{cor}}$ is a hyperparameter for the data synthesis.
-However, in order to use $\Sigma$ as a valid covariance matrix for sampling from the
+$\sigma_{\textrm{cor}}$ is a hyperparameter for the data synthesis, with the motivation being
+to create some cross-dependence between each time-series.
+In order to use $\Sigma$ as a valid covariance matrix for sampling from the
+$dT$-dimensional
 multivariate normal distribution, it needs to be
 \textit{symmetric positive semi-definite}. The $\Sigma$ matrix we have constructed so far has no
 guarantee of satisfying this. Therefore, we use the algorithm proposed by
@@ -1821,18 +1976,21 @@ a uniform random variable. Therefore, we do this for each of the normal random v
 in the transition between \cref{eq:synth_algo1} and \cref{eq:synth_algo2}, giving $d$ time-series
 of uniform random variables, each of length $T$.
 
-The form the response, we randomly sample a noise term $\zeta \sim \mathcal{N}(0,\sigma_\zeta^2)$
+To form the response, we randomly sample a noise term $\zeta \sim \mathcal{N}(0,\sigma_\zeta^2)$
 and set
 \begin{equation}
-    y=\mathbb{I}\left(\sum^{d}_{j=1} \sum^{T}_{t=1} \beta_{j,t} U_{j,t}+\zeta > \frac{1}{2}  \right).
+    Y=\mathbb{I}\left(\sum^{d}_{j=1} \sum^{T}_{t=1} \beta_{j,t} U_{j,t}+\zeta > \frac{1}{2}  \right).
 \end{equation}
-The idea behind this is making sure each variable contributes to the response, but the contribution
-of each variable might differ.
-Note that the noise term is regenerated for each multivariate time-series we generate, while the
+The idea behind this is to make sure each variable contributes to the response, but the contribution
+of each variable might differ and some might be completely irrelevant, just like in real-world
+data.
+Note that the noise term $\zeta$ 
+is regenerated for each multivariate time-series $\bfX \in \R^{d \times T}$
+we generate, while the
 parameters $\bm\beta \in \R^{d \times T}$ are held-fixed for each synthetic dataset.
 When synthesizing a new dataset of say $N$ samples, we first generate \textit{one set} of
 $\bm\beta \in \R^{d \times T}$ unknown parameters with
-$\beta_{1,1},\dots,\beta_{d,T} \sim \mathcal{N}\left(\frac{1}{dT},\sigma_{\beta}^2\right)$, where
+$\beta_{1,1},\dots,\beta_{d,T} \stackrel{\textsc{iid}}{\sim} \mathcal{N}\left(\frac{1}{dT},\sigma_{\beta}^2\right)$, where
 $\sigma_\beta$ is another hyperparameter for the dataset synthesis. The mean $\frac{1}{dT}$
 was set to
 ensure the dataset generated is balanced. To show this, we first note that
@@ -1845,9 +2003,9 @@ ensure the dataset generated is balanced. To show this, we first note that
     \mathbb{E}\left(U_{j,t} \right), \textrm{ as } U_{j,t}, \beta_{j,t}\textrm{ are uncorrelated}\nonumber \\
     &=\sum^{d}_{j=1} \sum^{T}_{t=1} \frac{1}{dT} \frac{1}{2} =\frac{1}{2} \label{eq:s9sad}.
 \end{align}
-As the $\beta_{j,t}$s, $U_{j,t}$ and $\zeta$ all comes from symmetric distributions, it can
+As the variables $\beta_{j,t}$s, $U_{j,t}$ and $\zeta$ are all symmetrically distributed, it can
 be shown that the term inside the $\mathbb{E}(\cdot)$ is also symmetric, so it follows from
-\cref{eq:s9sad} that $\mathbb{P}(Y=1)=\frac{1}{2}$. This makes the class distribution in the
+\cref{eq:s9sad} that $\mathbb{E}(Y)=\mathbb{P}(Y=1)=\frac{1}{2}$. This makes the class distribution in the
 synthesized dataset balanced, which is a nice property to have.
 
 \subsubsection{Step 3: Transforming the variables based on provided PDFs}%
@@ -1860,16 +2018,16 @@ a sample from the distribution specified by $f_j$. To do this, we need to estima
 \ac{CDF} function $\widehat{F^{-1}_j}(\cdot)$ using only $f_j$. This is done by evaluating
 $f_j$ on a fine-grid of values $\mathcal{X}=\{A_j,A_j+\delta,A_j+2\delta,\dots,B_j\}$, where
 $A_j$, $B_j$, and $\delta$ are additional
-hyperparameters set in conjunction with the \ac{pdf} $f_j$.
+hyperparameters specified in conjunction with the \ac{pdf} $f_j$.
 Then we use trapezoidal numerical integration \citep{num_anal} to estimate
 $\widehat{F_j}(x)=\int_{-\infty}^x f_j(x') dx'$  for all $x \in \mathcal{X}$. Since the provided
-\acp{pdf} are unnormalized, we normalize the \ac{CDF} estimates using $\widehat{F_j}(B_j)$
-after doing this.
+\acp{pdf} are unnormalized, we normalize the \ac{CDF} estimates by dividing them by
+$\widehat{F_j}(B_j)$.
 To get $\widehat{F_j^{-1}}(\cdot)$, we create an inverse \textit{look-up table} that maps the
 $\widehat{F_j}(x)$-values to the corresponding $x$-values. When implementing this procedure,
-the table is \textit{cached} to ensure the integration only needs to be done
+the look-up table is \textit{cached} to ensure the integration only needs to be done
 once for each $x \in \mathcal{X}$. Then, to evaluate $\widehat{F^{-1}_j}(u)$ for some $u \in (0,1)$,
-we perform a \textit{binary-search} in the look-up table to find the smallest $x \in \mathcal{X}$ such that
+we perform a \textit{binary-search} on the look-up table to find the smallest $x \in \mathcal{X}$ such that
 $\widehat{F_j}(x) \geq u$, which can efficiently be done since the values are already in sorted order
 because \acp{CDF} are monotonically increasing.
 
@@ -1907,31 +2065,32 @@ In our experiments, we consider the following three \acp{pdf}:
 \end{align}
 where $p_{\mathcal{N}}(\cdot)$ and $\Phi_{\mathcal{N}}(\cdot)$ denotes the \ac{pdf}
 and \ac{CDF} of the standard normal distribution, respectively.
-Qualitatively, the first variable has skewed normal distribution centred at $x=-4$ with some
+Qualitatively, the first variable has a skewed normal distribution centred at $x=-4$ with some
 outliers in the range $8 < x < 9.5$. The second variable has a multimodal distribution with
-exponentially decaying mode heights as $x$ decreases, and there is a standard Gaussian peak
+exponentially decaying mode heights as $x$ decreases, and there is a Gaussian mode
 at $x=20$. The third variable is simply a skewed normal distribution centred at
-$x=4$ with shape parameter $\alpha=-4$. Samples generated from the three distributions is
+$x=4$ with shape parameter $\alpha=-4$. Samples generated from the three distributions are
 visualised in the first row of \cref{fig:synth_examples}.
 
 % Experiment setup paragraph
 For our synthetic data experiment, I synthesized $N_\mathcal{D}=100$ datasets, each with
 $N=50\;000$ multivariate time-series of length $T=10$ and  $d=3$ predictor variables at each
-timestep $t=1,2,\dots,T$. The predictor variables were configured to distributed according to
+timestep $t=1,2,\dots,T$. The predictor variables were configured to be distributed according to
 the \acp{pdf} specified in \cref{eq:synth_pdf1,eq:synth_pdf2,eq:synth_pdf3}. Note that due to
 an efficient implementation of the data generation procedure described in
 \cref{sub:data_gen}, generating all this data took less than 10 seconds.
 For each of the $N_{\mathcal{D}}$ datasets, we perform a 80\%-20\% train-test split and train
 a new \ac{GRU} \ac{RNN} model on the training data after
 using one of our preprocessing techniques to transform the whole dataset. The trained model
-was then evaluated using the remain 20\% of the data, that is the validation data, using
-the loss, the binary classification accuracy, and the Amex metric, which is described
-in \cref{sec:amex_meth}. The full details of the hyperparameters selected can be found in
+was then evaluated using the remaining 20\% of the data, that is, the validation data.
+The loss, the binary classification accuracy, and the Amex metric, which is described
+in \cref{sec:amex_meth}, were used to evaluate each preprocessing method.
+The full details of the hyperparameters used for all these experiments can be found in
 \cref{ch:synth_data_appendix}. This was repeated for standard scaling, the \ac{BIN} method
 proposed by \cite{bin}, the \ac{DAIN} method proposed by \cite{dain}, the \ac{EDAIN-KL} method,
 the local-aware \ac{EDAIN} method and the global-aware \ac{EDAIN} method, all proposed by me.
 Additionally, we evaluate the model on unprocessed raw data and using a gold standard which I will
-refer to as ``\ac{CDF} inversion''. This last method assumes we have perfect information about the
+refer to as ``\ac{CDF} inversion''. This gold standard method assumes we have perfect information about the
 data generation procedure, which means we know both $f_1,f_2,f_3$ and hence can
 estimate their \acp{CDF} $\widehat{F_1},\widehat{F_2},\widehat{F_3}$.
 This means we can transform the samples from $X_{j,t}$ using the transformation
@@ -2013,7 +2172,8 @@ because it assumes full knowledge of the data generation mechanism.
 
 % Discussing experiment results table
 For each of the preprocessing methods considered, we also recorded performance metrics for each
-of the $N_{\mathcal{D}}=100$ times we trained each model on a new dataset. The results are
+of the $N_{\mathcal{D}}=100$ times we trained it with an \ac{RNN} model on a new dataset.
+The results are
 shown in \cref{tab:synth_results}. We first notice how the performance metrics are more unstable
 if the data is not preprocessed, as evident from the high variance. Second, we see how the
 performance can be improved a lot by applying a suitable preprocessing method instead of just
@@ -2034,12 +2194,12 @@ Since the \ac{CDF} inversion gives the best performance and it assumes perfect i
 data generation mechanism, we can think of it as the ``gold standard'' in this experiment.
 Yet, the global-aware \ac{EDAIN} method achieves very similar performance as their
 average performance metric values only differ at the third or fourth decimal point. This highlights
-how well the global-ware \ac{EDAIN} method can the most suitable non-linear transformation to
-apply to the data in order to improve performance as much as possible.
+how well the global-aware \ac{EDAIN} method is able to learn what sort of transformation
+is most suitable to apply to the data in order to improve performance as much as possible.
 Lastly, we note that three local-aware normalization methods, \ac{BIN},
-\ac{DAIN} and local-aware \ac{EDAIN}, all perform worse than unprocessed data.
+\ac{DAIN} and local-aware \ac{EDAIN}, all perform worse than when the data is unprocessed.
 This is likely due to them not being monotonic like the rest of the methods,
-which hurt performance in this case due to the response being generated from a
+which hurts performance in this case due to the response being generated from a
 linear combination of the hidden uniform random variables.
 
 % }}}
@@ -2100,7 +2260,7 @@ considered during preprocessing experiments in this thesis.
     \includegraphics[scale=1]{figures/amex_data_eda_plot.pdf}
 \end{center}
 \caption{
-    Exploratory data analysis plot for the American Express default prediction
+    \ac{EDA} plot for the American Express default prediction
     dataset.  The bottom-right plot show a correlation matrix between each pair
     of the $d=188$ predictor variables. All correlations are computed using
     Pearson's correlation coefficient, $\rho$, and the colour indicates the
@@ -2474,7 +2634,7 @@ by \cite{dain} and \cite{bin}, respectively.
         \includegraphics[scale=1]{figures/lob_data_eda_plot.pdf}
     \end{center}
     \caption{
-        Exploratory data analysis plot for the FI-2010 \ac{LOB} dataset.
+        \ac{EDA} plot for the FI-2010 \ac{LOB} dataset.
         The bottom-right plot show a correlation matrix between each pair
         of the $d=144$ predictor variables. All correlations are computed using
         Pearson's correlation coefficient, $\rho$, and the colour indicates the
@@ -2790,19 +2950,18 @@ dataset since both \ac{BIN}, \ac{DAIN} and \ac{EDAIN} had very similar performan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Discussion} %%%%    Discussion        %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ch:Discussion}
 
 % Introduction
 % Introduction {{{
 
-Start our discussion with the \ac{EDAIN} method, where we look at both its local-aware and
-global-aware mode and compare them with the other local-aware preprocessing methods such as
-\ac{DAIN} and \ac{BIN} and with the global-aware \ac{EDAIN-KL}.
+We start our discussion with the \ac{EDAIN} method, comparing its local-aware mode
+with the other local-aware preprocessing methods such as
+\ac{DAIN} and \ac{BIN}, and compare its global-aware mode with \ac{EDAIN-KL}.
 In doing so, we provide some
-interesting insight on how ``local-awareness'' or ``global-awareness'' of a preprocessing method
-affects the performance on the two datasets, as well as provide illustrative plots highlighting
-their difference.
-We then move onto discussing the \ac{EDAIN-KL} method and highlight some of its key advantages
-that sets it apart from all the other preprocessing methods discussed in this thesis. Finally,
+interesting insight on how the ``local-awareness'' or ``global-awareness'' of a preprocessing method
+affects its performance on the two datasets, and illustrate this difference with plots. We then move onto discussing the \ac{EDAIN-KL} method and highlight some of its key advantages
+that sets it apart from some of the other preprocessing methods discussed in this thesis. Finally,
 we discuss the \ac{PREPMIX-CAPS} routine briefly. For all the preprocessing methods proposed,
 we also provide a detailed discussion on their limitations.
 
@@ -2842,9 +3001,9 @@ As the local-aware \ac{EDAIN} resembles the
 to \ac{EDAIN-KL}, this discussion is expanded to compare all of these methods. In doing this,
 we provide a holistic explanation for several of the observations related to
 the methods' performance made in \cref{ch:Results}.
-We also augment this explanation with illustrative plots on how the different preprocessing
+This explanation is augmented  with illustrative plots showing how the different preprocessing
 methods transform real-world data.
-Lastly, we discuss some of the limitations of the \ac{EDAIN} layer.
+Lastly, limitations of the \ac{EDAIN} layer are discussed.
 
 \subsection{Local vs.\ global normalization}%
 \label{sub:local_vs_global}
@@ -2995,7 +3154,7 @@ is not able to preprocess the multimodal data well, as it looks very similar to 
 except for the scale and shift to make it more standardized.
 
 \subsection{Advantages}%
-\label{sub:Advantages}
+\label{sub:edain_kl_advantages}
 
 % Unsupervised learning, no need to have responses
 The first advantage comes from \ac{EDAIN-KL} being fully unsupervised, that is,
@@ -3178,7 +3337,6 @@ considered, possible due to its training objective being disjoint from the task
 objective.  Finally, we briefly discussed the \ac{PREPMIX-CAPS} routine, mainly
 focusing on its major limitation which is computational inefficiency, which
 makes tuning its hyperparameters very slow.
-\marginpar{\scriptsize I will fix these empty pages at the end with some \texttt{$\backslash$vspace*\{-Xcm\} }}
 
 
 
@@ -3203,22 +3361,149 @@ makes tuning its hyperparameters very slow.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Conclusion} %%%%     Conclusion      %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ch:Conclusion}
 
-% Summary
+To conclude the thesis, we provide summaries of the three novel preprocessing methods proposed,
+the results we observed when applying them to three different datasets, and related
+discussions. Afterwards, we clearly list the main contributions of the thesis, and then
+encourage some future work that builds upon the contributions of this thesis.
+
+% Summary (1 - 1+1/2 pages of summary of thesis)
+% TODO: shorten this summary so that total conclusion length is just 3 pages...
 \section{Summary}% {{{
 \label{sec:Summary}
 
+% Summarise the three methods proposed
+% EDAIN:
+% * Inspired by DAIN and BIN \cite{dain} and \cite{bin}
+% * prepend this adaptive preprocessing layer to the deep sequence model that will be used for the task,
+%   and unknown parameters of both optimised simultaneously in end-to-end fashion while backprop
+% * consists of four adaptive sublayers: outlier removal, shift, scale, and  power transform
+% * two different modes: in the global-aware mode, the same shift and scale is
+%   applied to all samples, while in local-aware mode, the amount of shifting and
+%   scaling might also depend on summary statistics computed for the sample. The mode also affects
+%   how the mean estimate is computed in the adaptive outlier sublayer.
+% * The unknown parameters of the four sublayers are optimised with backpropagation while the
+%   deep sequence model is being trained
+In this thesis, we proposed three novel preprocessing methods for multivariate time-series data.
+The first method, abbreviated \ac{EDAIN}, is based on existing work by \cite{dain} and
+\cite{bin}. It contains four adaptive sublayers: an outlier removal layer, a shift layer,
+a scale layer, and a power transform layer. It also has two normalization modes: In the local-aware
+mode, the amount of shifting and scaling applied to each sample also depends on summary
+statistics computed for that sample; In the global-aware mode, the same amount
+of shifting and scaling is applied to each sample. 
+% All the unknown parameters of the preprocessing
+% layer is optimised in an end-to-end fashion through backpropagation by attaching the \ac{EDAIN}
+% layer in front of the deep sequence model that is to be trained.
+% EDAIN-KL:
+% * similar architecture as EDAIN and also inverted, but instead of attach to deep sequece model,
+%   optimised seperately using ideas from normalizing flows
+% * The layer is trated as an invertible transformation and we optimise its parameters
+%   by minimize the \ac{KL-divergence} between the empirical distribution and a multivariate
+%   independent normal distribution, our base distribution, that has been transfromed by the
+%   \ac{EDAIN-KL} layer. Then, when it is time to normalize the data, we apply the inverse \ac{EDAIN-KL}
+%   transformation to each sample in the dataset.
+The second method proposed was \ac{EDAIN-KL}. Its architecture has the same four sublayers of
+\ac{EDAIN}, but they are simplified slightly and are all inverted. Unlike \ac{EDAIN}, the
+unknown parameters of \ac{EDAIN-KL} are optimised separately from the deep neural network by
+using ideas from normalizing flows. % The preprocessing layer is treated as an invertible
+% transformation we optimise its parameters by minimizing the \ac{KL-divergence} between the
+% empirical distribution of the dataset and a multivariate normal
+% distribution--our base distribution--that has been transformed by the
+% \ac{EDAIN-KL} layer.
+Then, to normalize the data, we apply \ac{EDAIN-KL} in reverse to each sample.
+% PREPMIX-CAPS:
+% * auaomated pipeline for selecting which static preprocessing method to apply to each variable
+% * done by first clustering the predictor variables, and then running several experiments in parallel
+%   to select the optimal preprocesing method for each cluster of variables. This method then applied to each
+%   variable in that cluster
+The third preprocessing method proposed is \ac{PREPMIX-CAPS}.
+This method is an automated pipeline for selecting which static preprocessing method to apply
+to each variable, which is done using clustering and running several experiments in parallel to
+determine which preprocessing method to apply in each cluster.
 
-Conclusion goes here.
+% Summarise the experiments conducted (3 datasets)
+% The methods were then evaluated on three different datasets.
+% * First synthetic data considered, where we saw how the global-aware \ac{EDAIN}
+%   method almost performed as well as if the data was perfectly normalized to a
+%   standard Gaussian
+% * (Mention how generated very irregular data)
+% * We then assessed the methods on the Amex dataset, where we found the
+%   global-aware methods work best, with global-ware \ac{EDAIN} outperforming all
+%   the other methods
+% * Then looked at the FI-2010 \ac{LOB} dataset, where the local-ware methods performed the best,
+% with all of \ac{DAIN}, \ac{BIN} and proposed local-ware \ac{EDAIN} performing very closely at top,
+% but latter with a slightly higher mean performance
+All the methods proposed, except \ac{PREPMIX-CAPS}, were all evaluated on three different
+datasets having very different characteristics. We also compared them to existing work by
+\cite{dain} and \cite{bin}, and other common preprocessing methods in the literature.
+The first dataset considered  was a synthetic dataset
+that has been configured to contain very irregularly-distributed data. 
+When we evaluated the performance of the different preprocessing methods on this dataset, we found
+the global-aware \ac{EDAIN} method to perform very closely to the gold-standard method.
+We then evaluated all the methods on the Amex dataset, where we also found the
+global-aware \ac{EDAIN} method to clearly outperform all the other methods. On
+this dataset, the local-aware methods performed poorly. Finally, we looked at
+the methods' performance on the FI-2010 \ac{LOB} dataset, where the local-aware
+methods all performed very well, compared to the global-aware preprocessing
+methods. The proposed local-aware \ac{EDAIN} method had slightly higher mean metric values
+than the \ac{DAIN} and \ac{BIN} methods, but there were no clear-cut best performing method.
+% Summarise the discussion, including advantages, main results, **limitations** etc.
+% Discussion:
+% * discussed potential reasons for why the local-aware performed so well on the LOB data, but poorly on Amex data, and why
+%   global-aware methods worked best on Amex data
+% * also augmented this discussion with visual plots of the key differences and
+%   cahracteristics of the two approaches to normalizing time-series data
+After evaluating all the methods, we discussed potential reasons for why the local-aware methods
+all perform very well on the \ac{LOB} dataset, but poorly on the Amex dataset,
+which was likely due to the different underlying data generation mechanisms in each dataset.
+This discussion was augmented with illustrative plots that showed how the different
+preprocessing methods transformed the data distribution in practice.
+Afterwards, we looked at some of the limitations of each of the three preprocessing
+methods proposed.
 
+% Also talk about main limitations of this study in general
+% * Only applied to two real-world datasets, and experiments with synthetic
+%   dataset were far from exhaustive
+% * Only considered one type of sequence model architecture, a RNN model with GRU cells
+% * ...
 
 % }}}
 
-% Main contributions
+% Main contributions (just bullet point of everything, underlining them very clearly)
 \section{Main contributions}% {{{
 \label{sec:Main contributions}
 
-This section is very important!
+The main contributions of this thesis can be summarised as follows:
+\begin{itemize}
+    \item Proposed a new adaptive preprocessing method, named \ac{EDAIN}.
+        This method extends the \ac{DAIN} layer proposed by \cite{dain} with an
+        adaptive outlier removal sublayer and a power transform sublayer. It showed comparable
+        performance to existing methods on the FI-2010 \ac{LOB} dataset.
+    \item Further extended the proposed \ac{EDAIN} method with a completely novel global-aware
+        mode, which allows it to efficiently normalize data from more unimodal data generation
+        mechanisms, such as what underlies the Amex dataset. The global-aware \ac{EDAIN} method
+        outperformed all the other methods, including those proposed by \cite{dain} and
+        \cite{bin}, on both the Amex dataset and the synthetic dataset. On the latter dataset,
+        it almost performs as well as the gold-standard.
+    \item Proposed a second adaptive preprocessing method, named \ac{EDAIN-KL}.
+        Like \ac{EDAIN}, this method can normalize skewed data with outliers, but
+        in an unsupervised fashion and can be used in conjunction with non-neural-network models.
+    \item Proposed a third automated preprocessing method, named \ac{PREPMIX-CAPS}.
+        This method is an automated procedure for selecting how best to apply a
+        mixture of preprocessing methods to a dataset.
+    \item Proposed and implemented a novel and efficient synthetic multivariate
+        sequence data generation algorithm. This generation mechanism has many
+        desirable properties for generating synthetic data for use in researching
+        preprocessing methods, such as allowing the user to specify arbitrary
+        \acp{pdf} to generate samples from.
+    \item Applied two state of the art preprocessing methods proposed by \cite{dain} and \cite{bin}
+        on two new datasets, the Amex dataset and the synthetic data, in
+        addition to the already considered FI-2010 \ac{LOB} dataset. Their performance
+        on the three datasets were analysed and compared to that of the
+        preprocessing methods proposed in this thesis. This led to interesting insight on
+        local-aware vs.\ global-aware approaches to data normalization.
+\end{itemize}
 
 % }}}
 
@@ -3226,9 +3511,65 @@ This section is very important!
 \section{Future work}% {{{
 \label{sec:Future work}
 
+% Evaluate on other sequence models
+In this thesis, we only considered \ac{GRU} \ac{RNN} models, but there are other types of
+deep sequence models such as \acp{LSTM} \citep{lstm} and the more 
+sophisticated transformer architecture proposed by \cite{attention}. It is unknown how effective
+the proposed adaptive preprocessing techniques are when using these alternative architectures, so
+this would be suitable and relevant extensions to the project. Additionally, 
+\cite{dain,rdain} found their adaptive local-aware preprocessing methods to significantly improve
+the predictive performance of conventional feed-forward neural networks, so it would be
+interesting to assess the effectiveness of the two modes of \ac{EDAIN} when using this
+architecture.
+% EDAIN (global) on non-sequence tasks
+In fact, the global-aware \ac{EDAIN} method do not make any assumption on the
+dataset being a multivariate time-series as we do not compute summary representations of each
+sample. Therefore, it could also be used to preprocess non-sequence data such as conventional
+tabular data for use in  feed-forward neural networks.
+
+% Handling missing values with BRITS model
+When applying our methods to the Amex dataset, we handled the missing values in
+a very straightforward manner by simply replacing them with predetermined constants.
+\cite{brits} propose a data-driven adaptive imputation method for sequence data
+that makes minimal assumptions on the data generation mechanism.  Their method
+integrates the imputation procedure into the \ac{RNN} model and learns how to
+fill the missing values while training the neural network with backpropagation,
+just as how \ac{EDAIN} learns how to preprocess data while the model is being
+trained. As \cite{nawi,brits} observe, missing values are very common in
+real-world sequence datasets, which we also confirmed during our \ac{EDA} of
+the Amex dataset. Therefore, extending the proposed \ac{EDAIN} method with the
+missing value imputation technique proposed by \cite{brits} could increase
+the effectiveness  of our work in real-world applications.
+
+% EDAIN-KL on unsupervised tasks
+In  \cref{sub:edain_kl_advantages}, we talked about \ac{EDAIN-KL}'s potential
+advantages when applied in unsupervised learning problems or for preprocessing data
+for non-neural-network models. However, the effectiveness of the \ac{EDAIN-KL}
+method in these settings were never tested and evaluated.
+This deserves further investigation.
+
+% More investigation of PREPMIX-CAPS
+The \ac{PREPMIX-CAPS} method has a lot of potential for deriving new insight
+related to automated preprocessing of predictor variables, which was not
+investigated in depth in this thesis. For instance, after clustering the
+predictor variables and determining the optimal static distribution
+transformation to apply to each variable, one could reason about the characteristics
+of the variables with the preprocessing technique selected for
+them in mind. This way, one can build insight on what specific characteristics of a
+variable makes a certain preprocessing method work well.
+% Working toward replacing brute-force search with heuristic-based selection
+This builds towards eliminating the main limitation of \ac{PREPMIX-CAPS}, which
+is the brute-force search for the optimal preprocessing technique. In building
+this insight, one could start working towards developing heuristics for
+automatically selecting the preprocessing methods, without needing to train a
+neural network.
+% TODO: write about the thing with feature importance...
+
 % }}}
 
-% Appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Appendix {{{
 \clearpage
  %% reset page counter and start appendix pages with A
@@ -3237,6 +3578,35 @@ This section is very important!
 
 %% Appendix goes here
 \appendix
+
+\chapter{Implementation and hardware notes}%
+\label{cha:Implementation notes}
+
+\section{Deep learning frameworks used}%
+\label{sec:Deep learning frameworks used}
+
+pytorch
+
+\section{Repository overview}%
+\label{sec:Repository overview}
+
+TODO: write something about repository/code structure and a count of how many lines
+of Python code written.
+
+Also mention use of PyTorch, pyro, etc.\ for implementing the different parts.
+
+\section{Hardware notes}%
+\label{sec:Hardware notes}
+
+All experiments were run on the \texttt{nvidia6} cluster offered by the Department of Mathematics
+at Imperial College London. This machine has the following specifications:
+\begin{itemize}
+    \item two 16-core CPUs of model \texttt{Intel(R) Xeon(R) Gold 6242 CPU @ 2.80GHz}
+    \item 896 GiB of system memory
+    \item eight GPUs of model \texttt{NVIDIA GeForce RTX 3090}, each with
+        $24\;576~\textrm{MiB}$ of video memory (VRAM)
+
+\end{itemize}
 
 \chapter{Hyperparameter selection for American Express experiments}
 \label{ch:hyp_amex}
@@ -3271,7 +3641,7 @@ Used bounds
 $(A_1,B_1)=(-8, 10)$, $(A_2,B_2)=(-30, 30)$, and $(A_3, B_3)=(-1, 7)$.
 Thetas were all with $q=3$, and then
 \begin{equation}
-    \bm\theta=\begin{bmatrix}
+    \bm\Theta=\begin{bmatrix}
         \bm\theta_1 \\
         \bm\theta_2 \\
         \bm\theta_3
@@ -3296,6 +3666,10 @@ function of 64, 32 and 1 units, respectively. The output was then passed through
 a sigmoid layer to produce a probability $p \in (0,1)$. The model was trained using
 binary cross-entropy loss. The batch size was 128.
 
+% TODO: squeeze in somewhere the specs of the machine all the experiments were ran on
+
+% TODO: also find somewhere to mention the PyTorch libraries used
+
 % }}}
 
 % References
@@ -3304,8 +3678,6 @@ binary cross-entropy loss. The batch size was 128.
 % References: modify the file refs.bib
 \bibliographystyle{plainnat}
 \bibliography{refs}
-
-
 % }}}
 \end{document}
 % vim: set foldmethod=marker:
