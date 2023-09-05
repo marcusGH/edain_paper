@@ -85,7 +85,10 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
     linkcolor=black,  %choose some color if you want links to stand out
     citecolor=linkcolor,
 }
-\usepackage{cleveref} 
+\usepackage[noabbrev,nameinlink]{cleveref} 
+% For using capitalised references
+% (e.g. "as seen in Figure 1" instead of "as seen in figure 1")
+\renewcommand{\cref}[1]{\Cref{#1}}
 % For handling acronyms
 \usepackage{acronym} 
 
