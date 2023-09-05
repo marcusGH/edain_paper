@@ -589,14 +589,14 @@ giving
 \begin{equation}\label{eq:pp4}
     \tilde{x}_j=f\left(\frac{x_j-\mu_j}{\sigma_j}\right).
 \end{equation}
-For example, \citeauthor{mixture_ct} use $f(\cdot)=\tanh(\cdot)$ to constrain the data into domain $[-1,+1]$.
+For example, \cite{mixture_ct} use $f(\cdot)=\tanh(\cdot)$ to constrain the data into domain $[-1,+1]$.
 Another option is decimal scaling, which is the operation
 \begin{equation}\label{eq:pp5}
     \tilde{x}_j=\frac{x_j}{10^{a_j}}, \quad \textrm{ where } a_j
     \textrm{ is the smallest integer that satisfies }
         \left|\frac{x_j^{(max)}}{10^{a_j}}  \right|<1.
 \end{equation}
-We also have the Box-Cox transformation, proposed by \citeauthor{boxcox}:
+We also have the Box-Cox transformation, proposed by \cite{boxcox}:
 \begin{equation}\label{eq:pp6}
     \tilde{x}_j=\left\{
         \begin{array}{ll}
@@ -616,30 +616,68 @@ where $q_j^{(\beta)}$ denotes the $\beta$th quantile along the $j$th dimension o
 $\mathcal{D}$. The effect of this preprocessing method for handling outliers has been
 studied by \cite{winsorization}.
 
+% Types of preprocessing methods diagram fig:local_vs_global
+% figure {{{
+% \begin{equation}
+%     % Used this for the first one
+%     \mathbf{X}^{(i)}=
+%     \begin{bmatrix}
+%         x_{1,1}^{(i)} & \cdots & x_{1,j}^{(i)} &\cdots & x_{1,d}^{(i)} \\
+%         \vdots & \ddots & \vdots & \ddots & \vdots \\
+%         x_{t,1}^{(i)} & \cdots & x_{t,j}^{(i)} & \cdots & x_{t,d}^{(i)} \\
+%         \vdots & \ddots & \vdots & \ddots & \vdots \\
+%         x_{T,1}^{(i)} & \cdots & x_{T,j}^{(i)} & \cdots & x_{T,d}^{(i)}
+%     \end{bmatrix}
+%     % Used this for the second one
+%     \tilde{\mathbf{X}}^{(i)}=
+%     \begin{bmatrix}
+%         \tilde{x}_{1,1}^{(i)} & \cdots & \tilde{x}_{1,j}^{(i)} &\cdots & \tilde{x}_{1,d}^{(i)} \\
+%         \vdots & \ddots & \vdots & \ddots & \vdots \\
+%         \tilde{x}_{t,1}^{(i)} & \cdots & \tilde{x}_{t,j}^{(i)} & \cdots & \tilde{x}_{t,d}^{(i)} \\
+%         \vdots & \ddots & \vdots & \ddots & \vdots \\
+%         \tilde{x}_{T,1}^{(i)} & \cdots & \tilde{x}_{T,j}^{(i)} & \cdots & \tilde{x}_{T,d}^{(i)}
+%     \end{bmatrix}
+%     % Used this one for the blue box
+%     \tilde{x}^{(i)}_{t,j} = f\left(x_{t,j}^{(i)} ; \lambda_j,\theta_j\right)
+% \end{equation}
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=\textwidth]{diagrams/local-vs-global-diagram.pdf}
+    \end{center}
+    \caption{The four different approaches to preprocessing a time-series sample. For the adaptive
+        preprocessing methods, where the normalization parameters are learned with backpropagation, there
+        are two types: local-aware and global-aware normalization. There are also two ways to apply
+    static preprocessing methods, one across time and with both the time- and dimension-axis.}
+    \label{fig:local_vs_global}
+\end{figure}
+% }}}
+
 So far, we have only considered $d$-dimensional datasets, but when working with multivariate
-time-series, there is also a temporal dimension $T$, giving samples of the form
-$\bfX \in \R^{d\times T}$. There are two approaches to applying the
+time-series, there is also a temporal dimension, giving samples of the form
+$\bfX \in \R^{d\times T}$. There are two approaches to applying the static
 transformations in \cref{eq:pp1,eq:pp2,eq:pp3,eq:pp4,eq:pp5,eq:pp6,eq:pp7}
-to such datasets. Say we are working with a transformation $\mathbf{f}: \R^d \rightarrow {\R^d}$, where the
-parameters such as $\bm\mu$, $\bm\sigma$, $\bfx^{(min)}$, and $\bfx^{(max)}$ have been learned
-from a set of samples $\mathcal{D}$. The first approach, which I will refer to as
+to such datasets, both of which are illustrated in the lower section of \cref{fig:local_vs_global}.
+Say we are working with a transformation $\mathbf{f}: \R^d \rightarrow {\R^d}$, where the \textit{normalization statistics}, such as $\bm\mu$, $\bm\sigma$, $\bfx^{(min)}$, and $\bfx^{(max)}$, have been learned
+from the dataset $\mathcal{D}$. The first approach, which I will refer to as
 \textit{preprocessing across time}, involves merging the time-axis with the sample-axis, giving
 an augmented dataset $\mathcal{D}'=\{\bfx^{(i\cdot T +t)}\}_{i=1,2,\dots,N,t=1,2,\dots,T}$
 containing $N \cdot T$ samples, each of dimensionality $d$. This dataset $\mathcal{D}'$ is then
-used to estimate the transformation parameters, and to transform each sample, we do
-$\tilde{x}_{t,j}=f_j(x_{t,j})$ for all $t=1,2,\dots,T$ is. In other words, we apply the same
+used to compute the normalization statistics $\bm\lambda \in \R^d$, and to transform each sample, we do
+$\tilde{x}_{t,j}=f(x_{t,j};\lambda_j)$ for all $t=1,2,\dots,T$ is. In other words, we apply the same
 transformation \textit{across time}.
-
+%
 In the second approach, which will be referred to as
 \textit{preprocessing with time- and dimension-axis}, we do not augment the dataset. Instead,
-we merge the time-axis and dimension-axis, and learn the transformation parameters for
+we merge the time-axis and dimension-axis, and compute normalization statistics for
 each of the $d \cdot T$ ``new features''. That is, we let
 $\mathcal{D}''=\left\{\left[\bfx^{(i)}_{1} \; \bfx^{(i)}_{2} \; \cdots \; \bfx^{(i)}_{T} \right]^\top \right\}_{i=1,2,\dots,N}$ be our new dataset of $N$ samples, each $d\cdot T$-dimensional.
-This dataset is then used to find the transformation parameters.
+This gives normalization statistics on the form $\bm\lambda \in \R^{d\times T}$.
 When transforming a data-point $x^{(i)}_{t,j}\in\R$, the transformation depends on both $j$ and $t$,
-unlike the first method which only depended on $j$.
+unlike the first method which only depended on $j$. This difference is also illustrated
+in \cref{fig:local_vs_global}.
 
 % }}}
+
 
 % Adaptive distribution transformation
 \subsection{Adaptive distribution transformations}% {{{
@@ -648,11 +686,14 @@ unlike the first method which only depended on $j$.
 We now move onto the adaptive preprocessing techniques. The static
 preprocessing techniques have unknown parameters that can be fully represented
 by summary statistics, for instance the mean and standard deviation of the
-training dataset. The adaptive preprocessing technique, however, have unknown
+training dataset. The adaptive preprocessing techniques, however, have unknown
 parameters that need to be trained with the problem setting and neural network in
-mind.  That is, they are inferred in an end-to-end fashion. That way, the
+mind. As we see in \cref{fig:local_vs_global}, this makes the adaptive preprocessing methods
+not rely on any normalization statistics directly computed from the training dataset.
+That is, they are inferred in an end-to-end fashion. That way, the
 preprocessing layers can \textit{adapt} to normalize the data in whatever
 fashion is most suitable for the particular task and model architecture being used.
+
 
 % DAIN layer subsection
 \subsubsection{DAIN}% {{{
@@ -676,6 +717,24 @@ fashion is most suitable for the particular task and model architecture being us
 % * Designed around application to financial forecasting problems, where dataset highly multimodal
 % * local-aware normalization, which transforms all time-series into common representation space
 
+
+The \acf{DAIN} layer, proposed by \cite{dain}, is one of the earliest preprocessing methods that can
+handle highly multimodal and non-stationary multivariate time-series in an adaptive,
+end-to-end fashion.
+This layer was designed for financial forecasting tasks, where highly multi-modal
+time-series are common. Additionally, these time-series are often non-stationary, that is, the
+mean and variance of the data no not remain constant across time.
+Both of these aspects makes Z-score normalization unsuitable as the statistics can differ
+from one timestep to another, and Z-score scaling is not suitable on multimodal distributions.
+The \ac{DAIN} layer handles these issues through three adaptive sublayers that all depend
+on both summary statistics of the current time-series sample being normalized, as well as unknown normalization
+parameters that are trained for the specific dataset and problem task considered.
+As we see in \cref{fig:dain-arch}, the first sublayer is an adaptive shift layer
+that centres the data. The second sublayer is an adaptive scaling layer that can increase or
+reduce the variance of each sample. The third sublayer is a non-linear gating operation
+that can suppress irrelevant features, that is, perform feature selection.
+
+
 % To produce the diagram, run
 %     pdfcrop --margins '-15 -30 0 -560' dain_paper_page2.pdf dain_diagram.pdf
 % on the second page of a PDF copy of the DAIN paper by Passalis et al.
@@ -687,22 +746,6 @@ fashion is most suitable for the particular task and model architecture being us
     is taken from fig.\ 1 on page 2 of \cite{dain}.}
     \label{fig:dain-arch}
 \end{figure}
-
-The \acf{DAIN} layer, proposed by \cite{dain}, is one of the earliest preprocessing methods that can
-handle highly multimodal and non-stationary multivariate time-series in an adaptive,
-end-to-end fashion.
-This layer was designed for financial forecasting tasks, where highly multi-modal
-time-series are common. Additionally, these time-series are often non-stationary, that is, the
-mean and variance of the data no not remain constant across time.
-Both of these aspects makes Z-score normalization unsuitable as the statistics can differ
-from one timestep to another, and Z-score scaling is not suitable on multimodal distributions.
-The \ac{DAIN} layer handles these issues through three adaptive sublayers that all depend
-on both summary statistics of the current sample being normalized, as well as unknown transformation
-parameters that can be tuned for the specific dataset being used.
-As we see in \cref{fig:dain-arch}, the first sublayer is an adaptive shift layer
-that centres the data. The second sublayer is an adaptive scaling layer that can increase or
-reduce the variance of each sample. The third sublayer is a non-linear gating operation
-that can suppress irrelevant features, that is, perform feature selection.
 
 Before delving deeper into how exactly the sublayers operate, we consider an illustrative
 example of what might cause a high number of modes in financial data and why this might
@@ -716,12 +759,17 @@ be problematic for deep sequence models. In
     models will only observe very small variations around two
     very distant modes (if the raw time series are fed to the model).}''
 \end{quote}
-By normalizing each time-series in what I will refer to as a
-\textit{local-aware} fashion, that is, make the normalization also depend on summary statistics
-based on the particular sample being normalized,
-the amount of shifting and scaling can depend on what particular mode in the dataset the sample
-came from, and this information can be discarded. This allows transforming all the samples into
-a common more unimodal representation space, despite the input data being highly multimodal.
+Therefore, the time-series are normalized in what I will refer to as a
+\textit{local-aware} fashion, that is, the transformation applied also depends
+on summary statistics
+computed from  the particular time-series being normalized. This local-aware method of normalization
+is illustrated in \cref{fig:local_vs_global}, and it allows
+the amount of shifting and scaling to also depend on the particular mode in the dataset the sample
+came from, and this information can then be discarded.
+This enables transforming all the samples into a common more unimodal
+representation space, despite the input data being highly multimodal.
+Illustrative plots of this happening in practice are presented later in the thesis in
+\cref{sub:local_vs_global}.
 
 We now look more closely at  the \ac{DAIN} architecture, of which an overview is shown
 in \cref{fig:dain-arch}. The unknown parameters are the weight matrices
@@ -916,7 +964,7 @@ to each sample. The \ac{BIN} method does this over both the time- and dimension-
 
 % Introduction
 % Introduction {{{
-In this chapter, I present the main contribution of this thesis: three novel
+In this chapter, I present the main contributions of this thesis: three novel
 preprocessing methods. The first method, abbreviated \acs{EDAIN}, is based on
 existing work by \citeauthor{dain} and \citeauthor{bin}. It is an adaptive
 preprocessing method, so it performs a sequence of parametrised transformations
@@ -982,15 +1030,17 @@ global-aware mode, the \ac{EDAIN} layer aims to normalize each input such that t
 distribution of all the samples in the dataset resemble a unimodal normal distribution, that is,
 a ``global normalization''. In local-aware mode,
 the \ac{EDAIN} layer's normalization operations
-also depend on summary statistics of each input sample $\bfX^{(i)}$, and the goal is to transform
+also depend on summary statistics of each input time-series $\bfX^{(i)}$, and the goal is to transform
 all the data into a common normalized representation space, independent of where in the
-``global distribution'' the sample originated from. This mode is most suitable for
+``global distribution'' the sample originated from. The high-level difference between these two
+modes of adaptive normalization is shown in \cref{fig:local_vs_global}.
+The local-aware mode is most suitable for
 multi-modal input data, as samples from different modes can all be transformed into one common
 normalized unimodal distribution. On the other hand, the global-aware mode
 is most suitable if all the data comes from a similar data generation mechanism,
 and works best if the input data has few modes.
 In local-aware mode, the \ac{EDAIN} architecture is similar to the
-\ac{DAIN} architecture proposed by \citeauthor{dain} and shown
+\ac{DAIN} architecture proposed by \cite{dain} and shown
 in \cref{fig:dain-arch}, but it
 extends it with both a global-aware mode as well as an adaptive outlier removal sublayer and
 an adaptive power transform sublayer.
@@ -1049,7 +1099,7 @@ mode, it is simply the mean of the current batch of data points, $\mathcal{B}$:
 \begin{equation}
     \hat{\bm\mu}=\frac{1}{|\mathcal{B}| T} \sum_{i \in \mathcal{B}} \sum_{t=1}^T \bfx_{t}^{(i)}. %, \qquad k=1,\dots,d.
 \end{equation}
-In \textit{global-aware} mode, it is iteratively updated using a \textit{cumulative
+In global-aware mode, it is iteratively updated using a \textit{cumulative
 moving average estimate} at each forward pass of the sublayer.
 This is to better approximate the global mean of the data.
 With this approach, we simply keep track of the current estimated average at forward pass $i$,
@@ -1079,7 +1129,8 @@ values for $\alpha'$ and $\beta'$.}
 Depending on the dataset, one might want to aim for a \textit{global
 normalization}, in which case a \textit{global-aware} scale and shift operation is most
 suitable. If the dataset has many different modes, with significantly different distribution characteristics, a \textit{local normalization} based on the specific mode each data point comes from is more suitable, in which case a \textit{local-ware} scale and shift
-operation works best. This gives two different approaches and scaling and shifting the data in an adaptive fashion.
+operation works best. This gives two different approaches to scaling and
+shifting the data in an adaptive fashion, both illustrated in \cref{fig:local_vs_global}.
 
 \paragraph{Global-aware}%
 \label{par:Global-aware}
@@ -1098,32 +1149,35 @@ and
 \begin{equation}
     \bm\lambda=\frac{1}{N T} \sum^{N}_{i=1} \sum^{T}_{t=1} \left(\bfx_{t}^{(i)}- \bm\gamma\right)^2
 \end{equation}
-makes the operation in \cref{eq:adaptive-scale-shift} equivalent to Z-score scaling.
-This \textit{global-aware} mode is useful if the distribution is similar across batches
+makes the operation in \cref{eq:adaptive-scale-shift} equivalent applying Z-score scaling
+across time.
+This global-aware mode is useful if the distribution is similar across batches
 and constitute a global unimodal distribution that should be centred, as the operation can generalise Z-score scaling.
 
 \paragraph{Local-aware}%
 \label{par:Local-aware}
 
 Some datasets might have multiple modes arising from significantly different
-data generation mechanisms. Attempting to scale and shift each batch to a global mean and
-standard deviation might hurt performance in such cases. Instead, \citeauthor{dain} propose
+data generation mechanisms. Attempting to scale and shift each time-series sample
+to a global mean and
+standard deviation might hurt performance in such cases. Instead, \cite{dain} propose
 basing the scale and shift on a \textit{summary representation} of each data point, allowing
-each sample to be normalized according the specific mode  of the data it originated from.
+each time-series to be normalized according the specific mode of the data it originated from.
 This gives
 \begin{equation}
     \mathbf{h}_3\left(\mathbf{h}_2\left(\bfx_t^{(i)}\right)\right)=
     \left(\bfx_t^{(i)} - \left[\bm\gamma \odot \mu_{\bfx}^{(i)}\right]\right) \oslash \left[\bm\lambda \odot \sigma_{\bfx}^{(i)}\right],
 \end{equation}
-where the summary representations $\sigma_{\bfx}^{(i)} \in \R^d$ and $\mu_{\bfx}^{(i)} \in \R^d$ are computed through a reduction
-along the temporal dimension of each observation:
+where the summary representations $\sigma_{\bfx}^{(i)} \in \R^d$ and $\mu_{\bfx}^{(i)} \in \R^d$,
+which as shown in \cref{fig:local_vs_global},  are computed through a reduction
+along the temporal dimension of each observation $\bfX^{(i)}$:
 \begin{align}
     \mu_\bfx^{(i)}&=\frac{1}{T} \sum^{T}_{t=1} \bfx^{(i)}_t  \\
     \sigma_\bfx^{(i)}&=\sqrt{\frac{1}{T}  \sum^{T}_{t=1} \left(\bfx^{(i)}_t- \mu_\bfx^{(i)} \right)^2}.
 \end{align}
 With this mode, it is difficult for the layer to generalise Z-score scaling, but it allows
 discarding mode information such that highly multimodal distributions appear unimodal after passing
-through the layer.
+through the preprocessing layer.
 
 % }}}
 
