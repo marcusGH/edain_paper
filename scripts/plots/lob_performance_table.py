@@ -31,7 +31,7 @@ print(df.to_latex(index=False))
 
 # table of results per fold
 fig, axs = plt.subplots(nrows=2, figsize=get_figsize(fraction=1.0, height_width_ratio=1.6))
-# plt.subplots_adjust(hspace=.0)
+plt.subplots_adjust(hspace=0.3)
 for hist, c, ls, lab in zip(histories, cols, linestyles, names):
     vals = get_confidence_interval(hist, key='kappa', get_vals=True)
     axs[0].plot(vals, label=f"{lab}", color=c, linestyle=ls, marker="x", markersize=9)
@@ -46,6 +46,6 @@ for hist, c, ls, lab in zip(histories, cols, linestyles, names):
 axs[1].legend(title=f"Preprocessing method", loc='center left', bbox_to_anchor=(1, 0.5))
 axs[1].set_xlabel("Fold")
 axs[1].set_xticks(range(9))
-axs[1].set_ylabel("Average $F_1$-score")
-axs[1].set_title("Average $F_1$-score")
+axs[1].set_ylabel("Average macro-$F_1$-score")
+axs[1].set_title("Average macro-$F_1$-score")
 save_plot(fig, "lob_performance_per_fold")

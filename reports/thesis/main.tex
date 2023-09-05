@@ -2806,7 +2806,7 @@ $\eta=10^{-4}$. No learning rate scheduler nor early stoppers were used%
 This was done to best reproduce the methodology used by \cite{dain}.
 At each validation fold, the model was trained for 20
 epochs. The details on how all these hyperparameters were selected can be found in
-\cref{sec:hyp_lob_prep}.
+\cref{sec:hyp_lob_opt} and \cref{sec:hyp_lob_prep}.
 
 \subsubsection{Evaluation metrics}%
 \label{ssub:Evaluation metrics}
@@ -3720,23 +3720,30 @@ specifications:
 \section{Model architecture for the Amex dataset}%
 \label{sec:hyp_amex_mod}
 
-Why this specific model architecture?
-
-
-The \ac{RNN} architecture is based on a ``starter model'' found on the Kaggle competition
-discussion page for the American Express default prediction competition, where the dataset
-originate from \cite{amex-data}. The ``starter model'' was developed by \cite{amex-starter}.
+The \ac{GRU} \ac{RNN} architecture is based on a ``starter model'' found on the Kaggle competition
+discussion page\footnote{
+    \url{https://www.kaggle.com/competitions/amex-default-prediction/discussion}
+} for the American Express default prediction competition, where the dataset
+originate from \citep{amex-data}. The ``starter model'' architecture was initially
+proposed by \cite{amex-starter}.
 
 \section{Optimizer for the Amex dataset}%
 \label{sec:hyp_amex_opt}
 
-
-Why Adam? Why batch size 1024
-Why base learning rate $\eta=10^{-3}$? Why momentum params $\beta_1$ and $\beta_2$
-Why multi-step at 4 and 7 epochs? Why step by $\gamma=0.1$?
-Why patience of 5?
-
-
+For the training the \ac{RNN} model on Amex dataset, why used a batch size of 1024.
+This was chosen to give a good trade-off between the time required to train the model and
+predictive performance. This model was also optimised with the Adam optimizer proposed by
+\cite{adam}. This optimizer was chosen for its reputation of being an effective optimizer in
+most cases. The learning rate was also set to $\eta=10^{-3}$ after testing what learning rate
+from the set $H=\{10^{-1}, 10^{-2}, 10^{-3}, 10^{-4}\}$ gave the most stable convergence.
+To momentum parameters $\beta_1$ and $\beta_2$ were set to their default values according to
+the PyTorch implementation of the optimizer \citep{pytorch}.
+For learning rate scheduler, the step size was set to $\gamma=\frac{1}{10}$ because this is
+a natural step-size. For the milestones, we first tune the first step based on observing the
+learning rate curve during training and setting the step epoch to ensure the performance did not
+jump around too much. This was done until we got milestones at 4 and 7.
+For the patience for the early stopper, the number $p_{\textrm{patience}}=5$ was chosen as nice
+non-zero number that was not too big.
 
 \section{Hyperparameters of preprocessing methods for the Amex dataset}%
 \label{sec:hyp_amex_prep}
@@ -3826,10 +3833,88 @@ the number of clusters used in the final benchmarking in \cref{ch:Results}.
     \label{fig:prepmix_tune}
 \end{figure}
 
+\section{Optimizer for the LOB dataset}%
+\label{sec:hyp_lob_opt}
+
+For the \ac{LOB} datasets, we used a \ac{GRU} \ac{RNN} architecture with the exact
+same architecture as what \ac{DAIN} used when evaluating \ac{DAIN} on the same \ac{LOB} dataset.
+This was to ensure a fair comparison to their work. For similar reasons, why also used the same
+optimizer and learning rates as they did, giving us the RMSProp optimizer proposed by \cite{rmsprop}
+with base learning rate $\eta=10^{-4}$. Since \cite{dain} did not use any early stoppers nor
+learning rate schedulers, we also chose to not do this in our \ac{LOB} experiments.
+
 \section{Hyperparameters of preprocessing methods for the LOB dataset}%
 \label{sec:hyp_lob_prep}
 
-TODO TODO TODO
+The \ac{BIN} method proposed by \cite{bin} and the \ac{DAIN} method proposed by \cite{dain} have
+already been applied to the \ac{LOB} dataset before, but only \ac{DAIN} have been applied
+with the specific \ac{GRU} \ac{RNN} architecture we are using. Therefore, the learning rate
+modifiers found by \cite{dain} will be used as-is, and the learning rate modifiers for
+the remaining methods will be tuned. The details of this is presented here.
+For all the learning rate tuning experiments, we used the first day of data from the FI-2010
+\ac{LOB} for training and the data from the second day for validation. We then pick the
+combination giving the highest validation Cohen's $\kappa$-metric.
+
+\paragraph{BIN}
+
+We used the grids:
+
+$H_{\beta}=\{10,1,10^{-1},10^{-2},10^{-6},10^{-8}\}$,
+
+$H_{\gamma}=\{10,1,10^{-1},10^{-2},10^{-6}, 10^{-8}\}$, and
+
+$H_{\lambda}=\{10,1,10^{-1},10^{-2},10^{-6},10^{-8}\}$.
+
+The combination giving the lowest average cross-validation loss was found to be
+$\eta_\beta=1$, $\eta_\gamma=10^{-8}$, and $\eta_\lambda=10^{-1}$, giving $\kappa=0.3287$.
+
+\paragraph{Global-aware EDAIN}%
+
+We used the grids:
+
+$H_{\textrm{scale}}=H_{\textrm{shift}}=H_{\textrm{outlier}}=H_{\textrm{pow}}=\{
+10, 10^{-1}, 10^{-3}, 10^{-6}\}$.
+
+The combination giving the lowest average cross-validation loss was found to be
+$\eta_{\textrm{shift}}=10$,
+$\eta_{\textrm{scale}}=10$,
+$\eta_{\textrm{outlier}}=10^{-6}$, and
+$\eta_{\textrm{pow}}=10^{-3}$, giving $\kappa=0.2788$.
+
+\paragraph{Local-aware EDAIN}%
+
+We used the grids:
+
+$H_{\textrm{scale}}=\{10^{-1}, 10^{-4}, 10^{-8}\}$,
+
+$H_{\textrm{shift}}=\{10^{-1}, 10^{-2}\}$,
+
+$H_{\textrm{outlier}}=\{10, 1, 10^{-1}, 10^{-2}, 10^{-3}, 10^{-5}, 10^{-7}\}$, and
+
+$H_{\textrm{pow}}=\{10, 1, 10^{-1}, 10^{-2}, 10^{-3}, 10^{-5}, 10^{-7}\}$.
+
+The combination giving the lowest validation loss was found to be
+$\eta_{\textrm{shift}}=10^{-2}$,
+$\eta_{\textrm{scale}}=10^{-4}$,
+$\eta_{\textrm{outlier}}=10$, and
+$\eta_{\textrm{pow}}=10$, giving $\kappa=0.3859$.
+
+\paragraph{EDAIN-KL}%
+
+
+$H_{\textrm{scale}}=\{10^{-1}, 10^{-4}, 10^{-7}\}$,
+
+$H_{\textrm{shift}}=\{10^{-1}, 10^{-2}\}$,
+
+$H_{\textrm{outlier}}=\{10, 1, 10^{-1}, 10^{-2}, 10^{-3}, 10^{-5}, 10^{-7}\}$, and
+
+$H_{\textrm{pow}}=\{10^{-2}, 10^{-3}, 10^{-5}, 10^{-7}\}$.
+
+The combination giving the lowest average cross-validation loss was found to be
+$\eta_{\textrm{shift}}=10^{-2}$,
+$\eta_{\textrm{scale}}=10^{-4}$,
+$\eta_{\textrm{outlier}}=10$, and
+$\eta_{\textrm{pow}}=10^{-3}$, giving $\kappa=0.2757$.
 
 % }}}
 
@@ -3837,11 +3922,26 @@ TODO TODO TODO
 % {{{
 \label{ch:undo_amex_pre}
 
-First, cite Raddar, denoise
-numerical and categorical features, then randomly generate scale and shift of
-data to undo Min-Max normalization, done using parameters TODO TODO
-% TODO: can do brief summary here, then move detailed explanation to the appendix, such
-%       as what parameters used to sample the scale and shift ....
+For privacy reasons, before the Amex dataset was made public by \cite{amex-data}, the data was
+normalized with Min-Max scaling and a noise term was added to each numeric value. That is,
+if we let 
+\begin{equation}
+    x_j^{(min)}=\min_{t=1,\dots,T,i=1,\dots,N} x_{t,j}^{(i)}
+    \quad \textrm{ and }\quad
+    x_j^{(max)}=\max_{t=1,\dots,T,i=1,\dots,N} x_{t,j}^{(i)},
+\end{equation}
+then the transformation applied to the time-series in the Amex dataset can be formulated as
+\begin{equation}
+    \tilde{x}_{t,j}^{(i)} = \frac{x_{t,j}^{(i)}-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}}+0.01\cdot\epsilon_{t,j}^{(t)},
+    \qquad \textrm{where }\epsilon_{t,j}^{(i)} \stackrel{\textsc{iid}}{\sim} \textrm{Uniform}[0,1].
+\end{equation}
+Not having the raw data available when part of the thesis' aim is to evaluate different ways to
+preprocess completely raw data is not very convenient. Therefore, we first used post-processing
+work conducted by \cite{raddar} to remove the additive noise terms $\epsilon_{t,j}^{(i)}$ wherever
+possible. Afterwards, the Min-Max scaling was undone by randomly sampling a scale and shift
+for each of the predictor variable, and assume these were the original scale and shifts.
+The shifts were samples from $\textrm{shift}_j\sim\textrm{Uniform}[10^{-4}, 10^{4}]$ and the
+scales were set to $\textrm{scale}_j=10^{s_j}$, where $s_j\sim\textrm{Uniform}[-1, 5]$.
 
 % }}}
 
@@ -3849,9 +3949,11 @@ data to undo Min-Max normalization, done using parameters TODO TODO
 % {{{
 \label{ch:synth_data_appendix}
 
-Used bounds
+Here we present the hyperparameters used when synthesizing our irregular data. More details
+on the synthetic data generation procedure can be found in \cref{sub:data_gen}.
+We used the following bounds for the three \acp{pdf}:
 $(A_1,B_1)=(-8, 10)$, $(A_2,B_2)=(-30, 30)$, and $(A_3, B_3)=(-1, 7)$.
-Thetas were all with $q=3$, and then
+The thetas were all configured with $q=3$, and we used
 \begin{equation}
     \bm\Theta=\begin{bmatrix}
         \bm\theta_1 \\
@@ -3865,7 +3967,8 @@ Thetas were all with $q=3$, and then
         -1 & \frac{4}{5} & \frac{3}{10} & -\frac{9}{10} 
     \end{bmatrix}
 \end{equation}
-Then $\sigma_{\textrm{cov}}=1.4$, $\sigma_{\eta}=\frac{1}{2}$, $\sigma_\beta=2$.
+The standard deviations were set to
+$\sigma_{\textrm{cov}}=1.4$, $\sigma_{\eta}=\frac{1}{2}$, and $\sigma_\beta=2$.
 
 The training was done using the Adam optimizer proposed by \cite{adam} using a base learning
 rate of $\eta=10^{-3}$ and the model was trained for 30 epochs. I also used a multi-step
