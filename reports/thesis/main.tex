@@ -54,7 +54,6 @@
     time-series dataset provided by American Express, and a real-world financial forecasting dataset.
     The methods are also compared to related work on time-series preprocessing by \cite{dain} and \cite{bin}.
     Our results demonstrate better performance of the proposed preprocessing methods on all three
-    \marginpar{\scriptsize ``average''?}
     datasets considered.
 
 
@@ -313,9 +312,9 @@ more implementation details in \cref{cha:imp_notes}.
 In this project, we make extensive use of deep learning methods, especially sequence models, as
 both of the real-world datasets and the synthetic dataset we will be working with all contain
 multivariate time-series.  Therefore, we start this chapter off with a background on deep
-learning, building up to sequence models.
+learning, building up to deep sequence models such as \acp{RNN}.
 Another big part of the project is investigating the effect of different
-preprocessing techniques applied to the data before it is passed onto the deep neural network.
+preprocessing techniques applied to the data before it is passed to the deep neural network.
 As such, this chapter also covers the most commonly used \textit{static preprocessing methods} used
 in the literature. Additionally, we will look at the current state of the art when it comes
 to preprocessing multivariate time-series data, which includes three
@@ -354,7 +353,7 @@ $\bfz^{(0)}=\bfx \in \R^d$ denote the input and let $n_0=d$, we have for $\ell=1
 \begin{equation}\label{eq:nn_update}
     z_j^{(\ell)} = \sigma \left(\left[ \boldsymbol{W}^{(\ell)} \bfz^{(\ell-1)} + \boldsymbol{b}^{(\ell)} \right]_j \right),\qquad j=1,\dots,n_\ell,
 \end{equation}
-where $\boldsymbol{W}^{(\ell)} \in \R^{n_{\ell} \times n_{\ell-1}}$ is the \textit{weight matrix},
+where $\boldsymbol{W}^{(\ell)} \in \R^{n_{\ell} \times n_{\ell-1}}$ is a \textit{weight matrix},
 $\boldsymbol{b}^{(\ell)} \in \R^{n_{\ell}}$ is a \textit{bias} term and
 $\sigma : \R \rightarrow {\R}$ is some deterministic \textit{activation function}.
 To get the output of the neural network, we iteratively calculate the post-activations
@@ -383,7 +382,7 @@ $\bfx^{(i)} \in \R^d$ and \textit{targets} $\bfy \in \R^{n_L}$, we want to find
     \widehat{\bm\theta}= \argmin_{\bm\theta}
     \frac{1}{N}  \sum^{N}_{i=1} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}).
 \end{equation}
-As evident from \cref{eq:nn_update}, $\hat{\bfy}^{(i)}$ is a function of
+Recall from \cref{eq:nn_update} that $\hat{\bfy}^{(i)}=\mathbf{z}^{(L)}$ is a function of
 $\bfx^{(i)}$ and the unknown parameters $\bm\theta$.
 In most situations, there is no analytic solution to \cref{eq:nn_loss}, so
 the parameters $\bm\theta$ are optimised through \textit{stochastic gradient descent},
@@ -393,8 +392,8 @@ $\frac{\partial }{\partial \bm\theta} \mathcal{L}(\hat{\bfy}^{(i)}, \bfy^{(i)}) 
 using the chain-rule. A more comprehensive description of the algorithm can be
 found in \cite{backprop}.
 After computing the gradients, the weights and biases, $\bm\theta=(\mathbf{W},\mathbf{b})$, are updated through
-stochastic gradient descent. This requires estimating
-the full gradient using only a \textit{sample batch} of the training data,
+stochastic gradient descent. This means that
+the full gradient is estimated using only a \textit{sample batch} of the training data,
 $\mathcal{B}=\{i_1,i_2,\dots,i_B\}$, where $B$ is the \textit{batch-size} and
 $1\leq i_1,i_2,\dots,i_B \leq N$ are indices into the training dataset $\mathcal{D}$.
 If let $J(\bm\theta)$ denote the \textit{objective} to minimize in \cref{eq:nn_loss}, that is
@@ -409,23 +408,23 @@ then we estimate its gradient with
 After computing this estimate, we update the unknown parameters by setting a \textit{stepsize}
 $\eta \in \R$ and performing the parameter update:
 \begin{equation}\label{eq:sadaosidhaoisdh89}
-    \bm\theta \leftarrow \bm\theta - \eta \widehat{\nabla_{\bm\theta} J(\bm\theta)}.
+    \bm\theta' \leftarrow \bm\theta - \eta \widehat{\nabla_{\bm\theta} J(\bm\theta)}.
 \end{equation}
 This is usually done once for each of the batches
 $\mathcal{B}_1,\mathcal{B}_2,\dots, \mathcal{B}_{\lceil N / B \rceil}$, where
-the batches are a partition of the indices of the training dataset
+the batches constitute a partition of the indices of the training dataset
 $\mathcal{D}$. This sequence of $\lceil N / B \rceil$ parameter updates, once for each batch, is
 referred to as one \textit{training epoch}.
-When training a neural network, one usually optimise the parameters by repeating this process
-for several epochs, for example 20 epochs.
+When training a neural network, one usually optimises the parameters by repeating this process
+for several epochs, for example 20.
 
 
 % Early stopping paragraph
 One way of improving generalization performance, that is, how well the model performs on data
 not present in the training data, is to use \textit{early stopping} when training the neural
 network. To do this, the training data $\mathcal{D}$ is split into a \textit{training set}
-$\mathcal{D}_{\textrm{train}}$ and validation set $\mathcal{D}_{\textrm{val}}$, where only
-$\mathcal{D}_{\textrm{train}}$ is used for the parameter updates.
+$\mathcal{D}_{\textrm{train}}$ and \textit{validation set} $\mathcal{D}_{\textrm{val}}$, where only
+$\mathcal{D}_{\textrm{train}}$ is used to update the parameters $\bm\theta$.
 Then, after each epoch, the average value of the criterion $\mathcal{L}(\cdot,\cdot)$ is computed on
 the validation set, giving the \textit{validation loss}. If we start seeing the validation loss
 increasing at some point, training is terminated. However, during neural network training, the loss
@@ -444,9 +443,9 @@ to the learning rate $\eta \in \R$ that is used when updating the parameters at 
 a learning rate scheduler, the parameter update in \cref{eq:sadaosidhaoisdh89} can be reformulated
 as
 \begin{equation}
-    \bm\theta^{(t+1)} \leftarrow \bm\theta^{(t)} - \eta(t) \widehat{\nabla_{\bm\theta} J\left(\bm\theta^{(t)}\right)},
+    \bm\theta' \leftarrow \bm\theta - \eta(t) \widehat{\nabla_{\bm\theta} J\left(\bm\theta\right)},
 \end{equation}
-where $\bm\theta^{(t)}$ denotes the parameter values at epoch $t \in \mathbb{N}$.
+where $\bm\theta$ denotes the parameter values at one of the iterations in epoch $t \in \mathbb{N}$.
 
 % TODO: adaptive learning rate optimizers
 Another common way of increasing model convergence efficiency is using an optimizer with adaptive
@@ -477,7 +476,7 @@ several matrix multiplications operations \citep{backprop}.
 This can efficiently be parallelised on a \ac{GPU}, so deep learning is typically done using
 libraries built to execute code on the computer's \ac{GPU}, as this reduces computation time
 during both training and inference. Popular Python libraries for deep learning that leverage
-\acp{GPU} to efficiently speed up computation include PyTorch \citep{pytorch} and TensorFlow \citep{tensorflow}. For all the code in this thesis, I have used PyTorch.
+\acp{GPU} to efficiently speed up computation include PyTorch \citep{pytorch} and TensorFlow \citep{tensorflow}. For all the code in this thesis, I have used PyTorch. More details on the implementation and the hardware used are presented in \cref{cha:imp_notes}.
 
 \subsection{Sequence models}%
 \label{sub:Sequence models}
@@ -488,7 +487,7 @@ and how these take input samples of the form $\bfx \in \R^d$. Sequence models su
 $\bfX \in \R^{d \times T}$, where $T \in \mathbb{N}$ is the sequence length. We might alternatively
 denote these sequences with $\bfxvec=(\bfx_1,\bfx_2,\dots,\bfx_T)$, where $\bfx_t\in\R^d$ is the
 value of the sequence at timestep $t$.
-A traditional \acp{RNN} of dimenstionality $p$ can then process the sequence $\bfxvec$ by
+A traditional \ac{RNN} of dimensionality $p$ can then process the sequence $\bfxvec$ by
 iteratively updating its \textit{recurrent hidden state} $\mathbf{h}_t \in
 \R^{p}$ with
 \begin{equation}\label{eq:rnn_trad}
@@ -512,7 +511,7 @@ the classes. On the other hand, if the task is to predict the next \textit{token
 sequence, the vectors $\bfh_1,\bfh_2,\dots,\bfh_T$ can separately be fed into a feedforward
 neural network that produces a probability distribution over the set of all possible next tokens.
 
-Unfortunately, the traditional \acp{RNN} presented in \cref{eq:rnn_trad} cannot
+Unfortunately, the traditional \ac{RNN} presented in \cref{eq:rnn_trad} cannot
 capture long-term dependencies in the input sequences very well
 \citep{long_term_dep}. Therefore, more sophisticated recurrent update equations
 than the one in \cref{eq:rnn_trad} have been proposed, such as the \ac{LSTM}
@@ -530,7 +529,7 @@ Data preprocessing in machine learning has been studied as early
 as \citeyear{preprocess_origin} by for instance \citeauthor{preprocess_origin}.
 Moreover, several works study its effects on neural networks \citep{stanislav, nawi, singh, hassan}.
 In this section, we first cover \textit{static preprocessing methods}, which
-are transformations where the parameters are simple statistics that can be
+are transformations where the parameters are normalization statistics that can be
 computed directly
 from the dataset, such as the mean, minimum, standard deviation, etc.
 We cover the methods most commonly used in the literature, such as min-max
@@ -542,8 +541,8 @@ time-series data.
 After this, we move onto describing three state of the art adaptive
 preprocessing methods from work by \cite{dain,rdain,bin}.
 In the adaptive preprocessing techniques, the preprocessing layers also have
-unknown parameters, but instead of setting them equal to simple statistics of
-the dataset, we iteratively tune them through gradient descent while training the
+unknown parameters, but instead of setting them equal to normalization statistics of
+the dataset, we iteratively update them through gradient descent while training the
 neural network. Additionally, these three layers all
 perform a \textit{local-aware} normalization, meaning they also consider
 summary statistics computed for each individual time-series sample when
@@ -570,8 +569,8 @@ Moreover, for $j=1,2,\dots,d$, we let
 \end{align}
 
 With notation out of the way, we now proceed with describing some of the most common
-static preprocessing techniques.  The Min-Max transformation can be
-used to transform the data to the range $[0, 1]$ by performing the following operation:
+static preprocessing techniques.  The min-max transformation can be
+used to constrain the data to the range $[0, 1]$ using the following operation:
 \begin{equation}\label{eq:pp1}
     \tilde{x}_j = \frac{x_j-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}} .
 \end{equation}
@@ -579,8 +578,8 @@ It can also be modified to transform the data to the range $[-1,+1]$ with
 \begin{equation}\label{eq:pp2}
     \tilde{x}_j = 2\cdot\frac{x_j-x_j^{(min)}}{x_j^{(max)}-x_j^{(min)}}-1.
 \end{equation}
-Standard scaling, also known as Z-score scaling, is a common preprocessing technique and
-uses the operation
+Standard scaling, also known as Z-score scaling, is another common preprocessing technique and
+uses the transformation:
 \begin{equation}\label{eq:pp3}
     \tilde{x}_j=\frac{x_j-\mu_j}{\sigma_j}.
 \end{equation}
@@ -589,7 +588,8 @@ giving
 \begin{equation}\label{eq:pp4}
     \tilde{x}_j=f\left(\frac{x_j-\mu_j}{\sigma_j}\right).
 \end{equation}
-For example, \cite{mixture_ct} use $f(\cdot)=\tanh(\cdot)$ to constrain the data into domain $[-1,+1]$.
+For example, \cite{mixture_ct} use $f(\cdot)=\tanh(\cdot)$ to constrain the data into 
+the range $[-1,+1]$.
 Another option is decimal scaling, which is the operation
 \begin{equation}\label{eq:pp5}
     \tilde{x}_j=\frac{x_j}{10^{a_j}}, \quad \textrm{ where } a_j
@@ -600,15 +600,15 @@ We also have the Box-Cox transformation, proposed by \cite{boxcox}:
 \begin{equation}\label{eq:pp6}
     \tilde{x}_j=\left\{
         \begin{array}{ll}
-            \frac{x_j^\lambda-1}{\lambda}, & \textrm{ if } \lambda \neq 0 \\
-            \log(x_j), & \textrm{ if } \lambda=0
+            \frac{x_j^\lambda-1}{\lambda}, & \textrm{ if } \lambda \neq 0; \\
+            \log(x_j), & \textrm{ if } \lambda=0,
         \end{array}
-    \right.,
+    \right.
 \end{equation}
 which works for positive $x_j$ and is a power-transformation that can reduce the skewness of
 a distribution.  If the data has outliers, a transformation for reducing the effects of these
-is what is called \textit{winsorization}, or clipping,
-where the transformation is
+is \textit{winsorization}, or clipping,
+where the transformation applied is
 \begin{equation}\label{eq:pp7}
     \tilde{x}_j=\max\left\{q_j^{(\alpha/2)},\;\min\left(q_j^{(1-\alpha/2)},\; x_j\right)\right\},
 \end{equation}
@@ -663,7 +663,7 @@ from the dataset $\mathcal{D}$. The first approach, which I will refer to as
 an augmented dataset $\mathcal{D}'=\{\bfx^{(i\cdot T +t)}\}_{i=1,2,\dots,N,t=1,2,\dots,T}$
 containing $N \cdot T$ samples, each of dimensionality $d$. This dataset $\mathcal{D}'$ is then
 used to compute the normalization statistics $\bm\lambda \in \R^d$, and to transform each sample, we do
-$\tilde{x}_{t,j}=f(x_{t,j};\lambda_j)$ for all $t=1,2,\dots,T$ is. In other words, we apply the same
+$\tilde{x}_{t,j}=f(x_{t,j};\lambda_j)$ for all $t=1,2,\dots,T$. In other words, we apply the same
 transformation \textit{across time}.
 %
 In the second approach, which will be referred to as
@@ -673,7 +673,7 @@ each of the $d \cdot T$ ``new features''. That is, we let
 $\mathcal{D}''=\left\{\left[\bfx^{(i)}_{1} \; \bfx^{(i)}_{2} \; \cdots \; \bfx^{(i)}_{T} \right]^\top \right\}_{i=1,2,\dots,N}$ be our new dataset of $N$ samples, each $d\cdot T$-dimensional.
 This gives normalization statistics on the form $\bm\lambda \in \R^{d\times T}$.
 When transforming a data-point $x^{(i)}_{t,j}\in\R$, the transformation depends on both $j$ and $t$,
-unlike the first method which only depended on $j$. This difference is also illustrated
+unlike the first method which only depended on $j$. This difference is illustrated
 in \cref{fig:local_vs_global}.
 
 % }}}
@@ -750,7 +750,7 @@ that can suppress irrelevant features, that is, perform feature selection.
 Before delving deeper into how exactly the sublayers operate, we consider an illustrative
 example of what might cause a high number of modes in financial data and why this might
 be problematic for deep sequence models. In
-\cite{dain}, the authors provide an illustrative example of this:
+\cite{dain}, the authors gives the example:
 \begin{quote}
     ``\textit{[A]ssume two tightly
     connected companies with very different stock prices, e.g., 1\$
@@ -768,7 +768,7 @@ the amount of shifting and scaling to also depend on the particular mode in the 
 came from, and this information can then be discarded.
 This enables transforming all the samples into a common more unimodal
 representation space, despite the input data being highly multimodal.
-Illustrative plots of this happening in practice are presented later in the thesis in
+Illustrative plots of this phenomenon are presented later in the thesis in
 \cref{sub:local_vs_global}.
 
 We now look more closely at  the \ac{DAIN} architecture, of which an overview is shown
@@ -850,12 +850,14 @@ third gating layer. Additionally, while the \ac{DAIN} only does an adaptive shif
 based on a summary representation computed from a sum along the time-axis, the \ac{BIN} layer
 does a similar operation twice, once across the time-axis, and once across the dimension-axis.
 It then returns a linear combination of these two normalized time-series as the
-final output.
+final output. Visually, this can be thought of as performing the local-aware normalization
+shown in \cref{fig:local_vs_global} two times, once for $\bfX^{(i)}$ and once for its transpose,
+and outputting trainable a linear combination of the two.
 
 We now look at the adaptive scale- and shift sublayers of the \ac{BIN} architecture.
 Recall that one sample is a multivariate time-series of the form $\bfX^{(i)} \in \R^{d \times T}$.
 Like the \ac{DAIN} layer in \cref{eq:dain_a,eq:dain_b}, the \ac{BIN} layer also
-compute two summary representations of each sample along the time-\textit{column}:
+computes two summary representations of each sample along the time-\textit{column}:
 \begin{align}
     \overline{\mathbf{c}}^{(i)}& =\frac{1}{T} \sum^{T}_{t=1} \bfx_t^{(i)} \in \R^d, \\
     \bm\sigma_c^{(i)}&=\sqrt{
@@ -871,8 +873,10 @@ the time-\textit{column}:
         \left(\mathbf{x}^{(i)}_t - \overline{\mathbf{c}}^{(i)}\right)\oslash \bm\sigma_c^{(i)}
     \right\}+\bm\beta_c, \qquad \forall t=1,2,\dots,T.
 \end{equation}
-Note that the order of the multiplication order of the unknown parameters differ from what
-\ac{DAIN} does in \cref{eq:dain_tild}. Similarly, along the dimension-\textit{row}, we compute
+Note that the multiplication order of the unknown parameters differ from what
+\ac{DAIN} does in \cref{eq:dain_tild}, where the summary representations and unknown parameters
+are first multiplied together before being used to transform the sample.
+Similarly, along the dimension-\textit{row}, we compute
 the summary representations:
 \begin{align}
     \overline{\mathbf{r}}^{(i)}& =\frac{1}{d} \sum^{d}_{k=1} \bfx_{*,k}^{(i)} \in \R^T, \\
@@ -895,7 +899,7 @@ The output of the \ac{BIN} layers is then a linear combination of these two norm
     = \lambda_c \tilde{x}^{(i)}_{t,k} + \lambda_r \tilde{\tilde{x}}^{(i)}_{t,k},
 \end{equation}
 where $\lambda_c \in \R$ and $\lambda_r\in\R$ are two learnable scalars that allows the \ac{BIN} layer
-to learn how much to weight each of the normalization methods.
+to learn how much to weigh each of the normalization methods.
 
 
 % }}}
@@ -923,13 +927,13 @@ In this chapter, we provided an overview of deep learning and various data prepr
 suitable for multivariate time-series. We looked at the linear neural network layer, which
 produces pre-activations that are weighted sums of the previous post-activations and bias terms.
 These are then passed through a non-linear activation function to produce the next vector of
-post-activations. We also looked at training the neural network with stochastic gradient descent,
+post-activations. We also looked at training a neural network with stochastic gradient descent,
 where the gradients of the loss with respect to the unknown parameters are estimated on a batch of
 data using backpropagation. The gradient estimates are then used to iteratively update the model
 parameters until a certain number of epochs have elapsed. We also looked at using early stopping,
 learning rate scheduling and adaptive optimizers to make the training process more efficient and
 stable, as well as improving generalization performance. Finally, we covered some common building
-blocks used in creating deep sequence models.
+blocks used in deep sequence models.
 
 % * data preprocessing.Covered static distribution transformations such as min-max, Z-score
 %   scaling, Z-score scaling with tanh activation function, decimal scaling,
@@ -943,14 +947,16 @@ blocks used in creating deep sequence models.
 %   a learned linear combination of these, while the DAIN layer only summary representation along
 %   time-axis
 We then looked at the most commonly used data preprocessing techniques, which are mostly static
-distribution transformation such as min-max scaling, Z-score scaling, Z-score scaling with a
+distribution transformations such as min-max scaling, Z-score scaling, Z-score scaling with a
 $\tanh$ activation function, decimal scaling, the Box-Cox transformation for handling skewed data,
-and winsorization for handling outliers. All of these techniques use simple statistics such as the
+and winsorization for handling outliers. All of these techniques use normalization
+statistics such as the
 mean, the standard deviation, etc.\ to compute the transformation parameters. We then looked at
-another more recent class of preprocessing techniques, adaptive methods, of which we considered the
-\ac{DAIN}, \ac{RDAIN} and \ac{BIN} methods. These three adaptive preprocessing
+another more recent class of preprocessing techniques: adaptive preprocessing methods.
+We considered \ac{DAIN}, \ac{RDAIN}, and \ac{BIN}, which were proposed by
+\cite{dain,rdain,bin}, respectively. These three adaptive preprocessing
 methods have trainable parameters that are optimised together with the neural
-network instead of using simple statistics. They are also all local-aware, meaning that they use
+network instead of using normalization statistics. They are also all local-aware, meaning that they use
 a summary representation of each sample to adjust the extent at which the normalization is applied
 to each sample. The \ac{BIN} method does this over both the time- and dimension-axis while the
 \ac{DAIN} method only uses summary representations computed by summing over the time-axis.
@@ -1049,7 +1055,7 @@ an adaptive power transform sublayer.
 \subsubsection{Outlier removal}% {{{
 \label{ssub:Outlier removal}
 
-Handling outliers and extreme values in our dataset can increase predictive performance if done
+Treating outliers and extreme values in our dataset can increase predictive performance if done
 correctly, as evident in work by \cite{outlier_wind}.
 Two common ways of doing this are omission and winsorization
 \citep{winsorization}. With the former, observations that are deemed to be extreme are simply
@@ -1705,14 +1711,12 @@ non-Euclidean, the linkage criteria used was selected to be ``average''.
 \label{sub:prep_determine}
 
 \begin{figure}[htp]
-    \vspace*{-15pt}
     \begin{center}
         \includegraphics[width=\textwidth]{diagrams/prepmix-diagram.pdf}
     \end{center}
     \caption{Illustration of ``ablation studies'' done for finding the optimal preprocessing method
     for each cluster, as part of the \ac{PREPMIX-CAPS} routine.}
     \label{fig:prepmix}
-    \vspace*{-15pt}
 \end{figure}
 
 The goal of the \ac{PREPMIX-CAPS} preprocessing approach is preprocessing the
@@ -1863,7 +1867,7 @@ insight on how the different preprocessing methods transform the data and how ef
 transformations are, all in a controlled setup. As the different preprocessing techniques are
 designed to handle irregularly-distributed data that might be skewed or contain outliers, just like
 real-world data, we will synthesize data with such characteristics.
-In this section, we first go through the novel data generation algorithm I proposed, which
+In this section, we first go through the novel data generation algorithm I propose, which
 has several desirable properties for assessing the effectiveness of preprocessing
 techniques. After this, we look at examples of how the distributions of the predictor variables
 change when the dataset is transformed by the different preprocessing techniques. Then, we assess
@@ -2528,7 +2532,7 @@ The normalized Gini coefficient is then $G=G_1/G_0$, which is what we use in the
 \label{sub:amex_res}
 
 For the preprocessing method experiments on the Amex dataset, we look at the performance of
-the three novel methods I proposed in \cref{sec:EDAIN-method,sec:EDAIN-KL-method,sec:PREPMIX-CAPS-method}, that is, the \ac{EDAIN} method, the \ac{EDAIN-KL} method and the \ac{PREPMIX-CAPS} method.
+the three novel methods I propose in \cref{sec:EDAIN-method,sec:EDAIN-KL-method,sec:PREPMIX-CAPS-method}, that is, the \ac{EDAIN} method, the \ac{EDAIN-KL} method and the \ac{PREPMIX-CAPS} method.
 All these methods were compared to the state of the art in adaptive preprocessing techniques
 for multivariate time-series data, which includes the \ac{DAIN} method proposed
 by \cite{dain} and the
@@ -2847,7 +2851,6 @@ where $p_{i,c}$ denotes the predicted probability of class $c$ for the $i$th inp
 For example, we interpret $p_{42,0}$ as the predicted probability that the mid price will decrease
 based on 42$^{\textrm{nd}}$ multivariate time-series sample.
 The \ac{GRU} \ac{RNN} model was then trained according to the description in
-\marginpar{\scriptsize Is ``generalization performance'' explained anywhere? Add this to background}
 \cref{sec:Deep learning}. This was done using a batch size of 128. The optimizer used
 was the RMSProp optimizer proposed by \cite{rmsprop}. The base learning rate was set to
 $\eta=10^{-4}$. No learning rate scheduler nor early stoppers were used%
@@ -3566,7 +3569,7 @@ than the \ac{DAIN} and \ac{BIN} methods, but there were no clear-cut best perfor
 %   cahracteristics of the two approaches to normalizing time-series data
 After evaluating all the methods, we discussed potential reasons for why the local-aware methods
 all perform very well on the \ac{LOB} dataset, but poorly on the Amex dataset,
-which was likely due to the different underlying data generation mechanisms in each dataset.
+which is likely due to the different underlying data generation mechanisms in each dataset.
 This discussion was augmented with illustrative plots that showed how the different
 preprocessing methods transformed the data distribution in practice.
 Afterwards, we looked at some of the limitations of each of the three preprocessing
@@ -3999,7 +4002,7 @@ scales were set to $\textrm{scale}_j=10^{s_j}$, where $s_j\sim\textrm{Uniform}[-
 
 % }}}
 
-\chapter{Synthetic data experiments}%
+\chapter{Hyperparameters for the synthetic data experiments}%
 % {{{
 \label{ch:synth_data_appendix}
 
