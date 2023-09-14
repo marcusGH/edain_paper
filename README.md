@@ -4,6 +4,8 @@ Introduction coming soon!
 
 The report/thesis can be found [here](reports/thesis/build/main.pdf).
 
+The presentation slides can be found [here](https://docs.google.com/presentation/d/1PKnreB1iCtCqs6Rln6X7bzGtAqydiRM8wnKQSAgDoLc/edit?usp=sharing).
+
 <!-- vim-markdown-toc GFM -->
 
 * [Main contributions](#main-contributions)
