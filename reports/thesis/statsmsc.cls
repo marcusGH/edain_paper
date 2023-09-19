@@ -46,6 +46,7 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{amsthm}
+\usepackage{mathtools}
 
 % for bold symbols, e.g. bold Greek symbols, use the bm package
 \usepackage{bm} 
@@ -75,6 +76,7 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
 % for clickable table of content entries
 \usepackage{color}
 \usepackage{xcolor}
+\PassOptionsToPackage{hyphens}{url}% to line-break long URLs
 \usepackage{hyperref}
 \definecolor{linkcolor}{rgb}{0.0,0.0,0.3}
 \hypersetup{
@@ -83,7 +85,10 @@ shrink=10,      % > reduce stretchability/shrinkability (default is 20/20)
     linkcolor=black,  %choose some color if you want links to stand out
     citecolor=linkcolor,
 }
-\usepackage{cleveref} 
+\usepackage[noabbrev,nameinlink]{cleveref} 
+% For using capitalised references
+% (e.g. "as seen in Figure 1" instead of "as seen in figure 1")
+\renewcommand{\cref}[1]{\Cref{#1}}
 % For handling acronyms
 \usepackage{acronym} 
 
