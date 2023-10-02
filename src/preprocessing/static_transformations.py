@@ -1,6 +1,9 @@
 import numpy as np
 import sklearn
 from sklearn import preprocessing
+import copy
+from scipy.stats import ecdf, norm
+from tqdm.auto import tqdm
 
 def identity_corrupt(X, y) -> (np.ndarray, np.ndarray):
     """
@@ -214,3 +217,42 @@ class IgnoreTimeDecorator(sklearn.base.TransformerMixin, sklearn.base.BaseEstima
         X = self.transformer.transform(X)
         # unflatten and return
         return X.reshape((-1, self.T, self.D))
+
+
+class InvertCDFTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
+    def __init__(self, time_series_length : int = 13, epsilon = 1e-6):
+        self.ecdf_objects = None
+        self.T = time_series_length
+        self.d = None
+        self.eps = epsilon
+
+    def fit(self, X, y = None):
+        assert X.shape[1] == self.T
+        self.d = X.shape[2]
+
+        X = X.reshape((-1, self.d))
+        self.ecdf_objects = []
+        # go through all the predictor variables, and estimate their CDFs
+        for j in tqdm(range(self.d), desc="Fitting CDF inverter"):
+            self.ecdf_objects.append(
+                ecdf(X[:, j])
+            )
+        return self
+
+    def transform(self, X):
+        assert X.shape[1] == self.T
+        assert (self.ecdf_objects is not None) and (X.shape[2] == self.d)
+
+        X = copy.deepcopy(X)
+
+        X = X.reshape((-1, self.d))
+
+        # apply the inverse CDF transformation
+        for j in tqdm(range(self.d), desc="Transforming data with CDF inverter"):
+            X[:, j] = norm.ppf(self.ecdf_objects[j].cdf.evaluate(X[:, j]) * (1 - self.eps) + self.eps / 2)
+
+        X = X.reshape((-1, self.T, self.d))
+        return X
+
+    def __repr__(self, N_CHAR_MAX=None):
+        return "InvertCDFTimeSeries(...)"

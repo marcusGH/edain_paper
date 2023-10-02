@@ -14,6 +14,7 @@ from src.preprocessing.static_transformations import (
     TanhStandardScalerTimeSeries,
     WinsorizeDecorator,
     IgnoreTimeDecorator,
+    InvertCDFTimeSeries,
 )
 from src.preprocessing.adaptive_transformations import (
     DAIN_Layer,
@@ -45,6 +46,7 @@ static_preprocessing_methods = {
     'log-standard-scaler' : LogStandardScalerTimeSeries,
     'min-max' : MinMaxTimeSeries,
     'tanh-standard-scaler' : TanhStandardScalerTimeSeries,
+    'cdf-invert' : InvertCDFTimeSeries,
 }
 
 parser = argparse.ArgumentParser(

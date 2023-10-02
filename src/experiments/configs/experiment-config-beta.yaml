@@ -71,15 +71,20 @@ edain_bijector_fit:
   num_epochs: 20
   num_fits: 1
   base_lr: 0.001
-  # the below parameters also apply when optimising with backpropagation
+  # below for local-aware
   # scale_lr: 0.0001
   # shift_lr: 0.01
   # outlier_lr: 10.0
   # power_lr: 0.1 # changed from 10 because it gave errors...
   # below for global-aware
-  scale_lr: 10.0
-  shift_lr: 10.0
-  outlier_lr: 0.000001
+  # scale_lr: 10.0
+  # shift_lr: 10.0
+  # outlier_lr: 0.000001
+  # power_lr: 0.001
+  # below for EDAIN-KL
+  scale_lr: 0.0001
+  shift_lr: 0.01
+  outlier_lr: 10.0
   power_lr: 0.001
 
 # Configuration for the DAIN layer

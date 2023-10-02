@@ -10,7 +10,6 @@ import pandas as pd
 import os
 import gc
 import cupy
-import cudf
 import sklearn
 
 from datetime import datetime
