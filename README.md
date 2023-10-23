@@ -17,6 +17,8 @@ order book benchmark dataset, demonstrate the superior performance of the EDAIN
 layer when compared to conventional normalization methods and existing adaptive
 time series preprocessing layers.
 
+![edain_diagram](https://github.com/marcusGH/edain_paper/assets/29378769/83235029-bdf0-49a0-a875-1c2c32427e2e)
+
 In this repository we provide an implementation of the Extended Deep Adaptive
 Input Normalization (EDAIN) layer using PyTorch. We also provide all the
 necessary code and instructions for reproducing the results in our paper.
@@ -25,9 +27,6 @@ our paper is available at TODO.
 
 <!-- vim-markdown-toc GFM -->
 
-* [Main contributions](#main-contributions)
-  * [Extended Deep Adaptive Input Normalization (EDAIN) preprocessing layer](#extended-deep-adaptive-input-normalization-edain-preprocessing-layer)
-* [Repository overview](#repository-overview)
 * [Reproducing the results](#reproducing-the-results)
   * [Setting up the Amex dataset](#setting-up-the-amex-dataset)
   * [Setting up the FI-2010 LOB dataset](#setting-up-the-fi-2010-lob-dataset)
@@ -43,22 +42,6 @@ our paper is available at TODO.
 * [License information](#license-information)
 
 <!-- vim-markdown-toc -->
-
-# Main contributions
-
-## Extended Deep Adaptive Input Normalization (EDAIN) preprocessing layer
-
-![EDAIN-architecture-diagram](https://github.com/marcusGH/automated-preprocessing-for-deep-neural-networks/assets/29378769/2646f250-6b96-4b77-8fa2-91a87f0e67c7)
-
-This adaptive preprocessing layer can be attached in front of any deep sequence model
-and its unknown parameters can be trained in an end-to-end fashion while the sequence
-model is being trained with backpropagation. It has two modes, _local-aware_ and
-_global-aware_, where the former is most suitable for highly multimodal data and the
-latter is most suitable for data all originating from the same data generation mechanism.
-
-# Repository overview
-
-Coming soon!
 
 # Reproducing the results
 
@@ -154,18 +137,139 @@ To generate the history files for the different preprocessing methods on the Ame
 
 ## Using the EDAIN preprocessing layer
 
-Coming soon!
+Below is a minimal example on how to incorporate the global-aware EDAIN layer into a basic RNN sequence model for time-series binary classification. The example also includes optimising the model using sublayer-specific learning rate modifiers.
+
+```python3
+import torch
+import torch.nn as nn
+from src.preprocessing.normalizing_flows import EDAIN_Layer
+
+class ExampleModel(nn.Module):
+    def __init__(self, input_dim):
+        super(ExampleModel, self).__init__()
+
+        # initialise the global-aware EDAIN layer
+        self.edain = EDAIN_Layer(
+            input_dim=input_dim,
+            # This is used by the EDAIN-KL version
+            invert_bijector=False,
+            # Add the skip connection to the outlier mitigation sublayer
+            outlier_removal_residual_connection=True,
+            # change to True to use the local-aware version of EDAIN
+            batch_aware=False,
+            outlier_removal_mode='exp',
+        )
+
+        self.gru_layer = nn.GRU(
+            input_size=input_dim,
+            hidden_size=128,
+            num_layers=2,
+            batch_first=True,
+            dropout=0.2,
+        )
+
+        self.classifier_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, X):
+        """
+        Input tensor shape (N, T, input_dim)
+        """
+        # preprocess
+        X = self.edain(X)
+
+        # RNN layers
+        h0 = torch.zeros(2, X.size(0), 128, device=X.device)#.required_grad_()
+        X, _ = self.gru_layer(X, h0.detach())
+        X = X[:, -1, :]
+
+        # classifier head
+        return self.classifier_head(X)
+
+### Example of inference ###
+
+model = ExampleModel(144)
+example_input = torch.normal(0, 1, size=(1024, 13, 144)) # sequence length = 13
+example_output = model(example_input)
+
+### Training with sublayer learning rate modifiers ###
+
+optimizer = torch.optim.Adam(
+    [
+        {'params' : model.gru_layer.parameters(), 'lr' : 1e-3},
+        {'params' : model.classifier_head.parameters(), 'lr' : 1e-3},
+    ] +
+    model.edain.get_optimizer_param_list(
+        base_lr=1e-3,
+        # These modifiers should be further tuned for your specific dataset
+        scale_lr=0.01,
+        shift_lr=0.01,
+        outlier_lr=100.0,
+        power_lr=10.0,
+    ), lr=1e-3)
+
+# ...
+```
 
 ## Generating synthetic multivariate time-series data
 
-Coming soon!
+Below is an example of generating a time series dataset with three predictor variables, each distributed according to some irregular PDFs:
+
+```python3
+from scipy import stats
+from src.lib.synthetic_data import SyntheticData
+
+import numpy as np
+
+D = 3
+T = 10
+# lower bound, upper bound, and unormalized PDF
+bounds = [(-8, 10), (-30, 30), (-1, 7)]
+# The PDFs from which to generate samples
+f1 = lambda x: 10 * stats.norm.cdf(10 * (x+4)) * stats.norm.pdf(x+4) + 0.1 * np.where(x > 8, np.exp(x - 8), 0) * np.where(x < 9.5, np.exp(9.5 - x), 0)
+f2 = lambda x: np.where(x > np.pi, 20 * stats.norm.pdf(x-20), np.exp(x / 6) * (10 * np.sin(x) + 10))
+f3 = lambda x: 2 * stats.norm.cdf(-4 * (x-4)) * stats.norm.pdf(x - 4)
+# The MA theta parameters for setting the covariance structure within each time-series
+thetas = np.array([
+    [-1., 0.5, -0.2, 0.8],
+    [-1., 0.3, 0.9, 0.0],
+    [-1., 0.8, 0.3, -0.9],
+])
+CROSS_VAR_SIGMA = 1.4
+RESPONSE_NOISE_SIGMA = 0.5
+RESPONSE_BETA_SIGMA = 2.0
+RANDOM_STATE = 42
+NUM_DATASETS = 100
+NUM_EPOCHS = 30
+NUM_SAMPLES = 50000
+
+synth_data = SyntheticData(
+    dim_size=D,
+    time_series_length=T,
+    pdfs = [f1, f2, f3],
+    ar_q = thetas.shape[1] - 1,
+    ar_thetas=thetas,
+    pdf_bounds=bounds,
+    cross_variables_cor_init_sigma=CROSS_VAR_SIGMA,
+    response_noise_sigma=RESPONSE_NOISE_SIGMA,
+    response_beta_sigma=RESPONSE_BETA_SIGMA,
+    random_state=RANDOM_STATE,
+)
+
+# generate a dataset
+X_raw, y_raw = synth_data.generate_data(n=NUM_SAMPLES, return_uniform=False, random_state=42)
+print(X_raw.shape, y_raw.shape) # (50000, 10, 3), (50000,)
+```
 
 # Known issues
 
-Gradients in power transformation layer might becomes `NaN`s. TODO: elaborate
-
-This might also happen if not using standard scaler as preprocessing method
-before applying EDAIN, as gradients might explode for this case as well!
+The gradients in power transformation EDAIN sublayer might produce `NaN`s during optimisation. This is known to occur when either the power transform sublayer-specific learning rate modifier is too high or the input values are extreme. If this is encountered, it is recommended to apply $z$-score scaling to the data before passing it to the global-aware EDAIN layer for further preprocessing.
 
 # License information
 
@@ -173,4 +277,4 @@ In our work, we used the following assets:
 * The [`dain`](https://github.com/passalis/dain/) preprocessing layer developed by [Passalis et al. (2019)](https://arxiv.org/pdf/1902.07892.pdf). No license information is specified in their repository
 * The [`bin`](https://github.com/viebboy/mlproject/blob/main/mlproject/models/tabl.py#L106) preprocessing layer developed by [Tran et al. (2020)](https://ieeexplore.ieee.org/document/9412547). Their implementation is publicly released under the Apache License 2.0.
 * The benchmark dataset for mid-price forecasting of limit order books (FI-2010), available [here](https://etsin.fairdata.fi/dataset/73eb48d7-4dbc-4a10-a52a-da745b47a649). This dataset is released under the creative commons attribution 4.0.
-* The American Express default prediction dataset used as part of [this Kaggle competition](https://www.kaggle.com/competitions/amex-default-prediction). We have received permission to use this dataset in our research.
+* The American Express default prediction dataset was published online for use in [this Kaggle competition](https://www.kaggle.com/competitions/amex-default-prediction). We have received permission to use this dataset in our research by American Express.
