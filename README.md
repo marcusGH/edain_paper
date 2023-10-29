@@ -23,7 +23,7 @@ In this repository we provide an implementation of the Extended Deep Adaptive
 Input Normalization (EDAIN) layer using PyTorch. We also provide all the
 necessary code and instructions for reproducing the results in our paper.
 The associated thesis can be found [here](reports/thesis/build/main.pdf) and
-our paper is available at TODO.
+our paper is available at [arXiv](https://arxiv.org/abs/2310.14720).
 
 <!-- vim-markdown-toc GFM -->
 
