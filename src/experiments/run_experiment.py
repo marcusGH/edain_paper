@@ -8,6 +8,7 @@ import argparse
 from src.preprocessing.static_transformations import (
     IdentityTransform,
     StandardScalerTimeSeries,
+    McCarterTimeSeries,
     LogMinMaxTimeSeries,
     LogStandardScalerTimeSeries,
     MinMaxTimeSeries,
@@ -42,6 +43,10 @@ from src.lib.experimentation import (
 static_preprocessing_methods = {
     'identity' : IdentityTransform,
     'standard-scaler' : StandardScalerTimeSeries,
+    'mccarter-0.1' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=0.1),
+    'mccarter-1' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=1),
+    'mccarter-10' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=10),
+    'mccarter-100' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=100),
     'log-min-max' : LogMinMaxTimeSeries,
     'log-standard-scaler' : LogStandardScalerTimeSeries,
     'min-max' : MinMaxTimeSeries,

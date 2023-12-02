@@ -2,8 +2,9 @@ import numpy as np
 import sklearn
 from sklearn import preprocessing
 import copy
-from scipy.stats import ecdf, norm
+from scipy.stats import ecdf, norm, yeojohnson
 from tqdm.auto import tqdm
+from kditransform import KDITransformer
 
 def identity_corrupt(X, y) -> (np.ndarray, np.ndarray):
     """
@@ -19,6 +20,24 @@ class IdentityTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
         return self
 
     def transform(self, X):
+        return X
+
+class McCarterTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
+    def __init__(self, time_series_length : int = 13, alpha=1.0):
+        self.kdt = KDITransformer(alpha=alpha)
+        self.T = time_series_length
+
+    def fit(self, X, y = None):
+        assert X.shape[1] == self.T
+        X = X.reshape((X.shape[0], -1))
+        self.kdt.fit(X, y)
+        return self
+
+    def transform(self, X):
+        assert X.shape[1] == self.T
+        X = X.reshape((X.shape[0], -1))
+        X = self.kdt.transform(X)
+        X = X.reshape((X.shape[0], self.T, -1))
         return X
 
 class StandardScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
@@ -161,6 +180,67 @@ class TanhStandardScalerTimeSeries(sklearn.base.TransformerMixin, sklearn.base.B
         X = X.reshape((X.shape[0], self.T, -1))
         return np.tanh(X)
 
+class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
+    """
+    Applies winsorization, standard scaling and a Yeo-Johnson transformation
+    """
+    def __init__(self, time_series_length=13, winsorize=True, z_score=True, transform=True, winsorize_alpha=0.05):
+        self.T = time_series_length
+        self.winsorize = winsorize
+        self.alpha = winsorize_alpha
+        self.z_score = z_score
+        self.transform = transform
+
+        self.ss = preprocessing.StandardScaler()
+        self.lower = None
+        self.upper = None
+        self.lambdas = []
+
+    def fit(self, X, y=None):
+        # merge the dimensions and time axis
+        X = X.reshape((X.shape[0], -1))
+        d = X.shape[1]
+
+        # fit the standard scaler
+        if self.z_score:
+            X = self.ss.fit_transform(X)
+
+        # fit the winsorization
+        if self.winsorize:
+            # save the quantiles for each of the T * D variables
+            self.lower = np.quantile(X, q=self.alpha/2, axis=0)
+            self.upper = np.quantile(X, q=1-self.alpha/2, axis=0)
+            # transform the data
+            X = np.clip(X, self.lower, self.upper)
+
+        # fit the Yeo-Johnson transformation
+        if self.transform:
+            self.lambdas = []
+            for i in range(d):
+                _, lambd = yeojohnson(X[:, i])
+                self.lambdas.append(lambd)
+
+    def transform(self, X):
+        # merge the dimensions and time axis
+        X = X.reshape((X.shape[0], -1))
+        d = X.shape[1]
+
+        # apply the standard scaler
+        if self.z_score:
+            X = self.ss.transform(X)
+
+        # apply the winsorization
+        if self.winsorize:
+            X = np.clip(X, self.lower, self.upper)
+
+        # apply the Yeo-Johnson transformation
+        if self.transform:
+            X_transformed = X.copy()
+            for i in range(d):
+                x = yeojohnson(X[:, i], self.lambdas[i])
+                X_transformed[:, i] = x
+            X = X_transformed
+        return X
 
 class WinsorizeDecorator(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
     """

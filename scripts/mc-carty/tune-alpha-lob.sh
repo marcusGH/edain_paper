@@ -1,0 +1,5 @@
+#!/bin/sh
+python3 src/experiments/run_experiment.py --experiment-config src/experiments/configs/experiment-config-beta.yaml --device 6 --dataset lob --model gru-rnn --preprocessing-method mccarter-0.1 --ignore-time --experiment-name="mcCarter-lob-0.1" --num-cross-validation-folds 99 --random-state 42
+python3 src/experiments/run_experiment.py --experiment-config src/experiments/configs/experiment-config-beta.yaml --device 6 --dataset lob --model gru-rnn --preprocessing-method mccarter-1 --ignore-time --experiment-name="mcCarter-lob-1" --num-cross-validation-folds 99 --random-state 42
+python3 src/experiments/run_experiment.py --experiment-config src/experiments/configs/experiment-config-beta.yaml --device 6 --dataset lob --model gru-rnn --preprocessing-method mccarter-10 --ignore-time --experiment-name="mcCarter-lob-10" --num-cross-validation-folds 99 --random-state 42
+python3 src/experiments/run_experiment.py --experiment-config src/experiments/configs/experiment-config-beta.yaml --device 6 --dataset lob --model gru-rnn --preprocessing-method mccarter-100 --ignore-time --experiment-name="mcCarter-lob-100" --num-cross-validation-folds 99 --random-state 42

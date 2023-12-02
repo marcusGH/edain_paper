@@ -10,9 +10,10 @@ from src.models.adaptive_grunet import AdaptiveGRUNet
 from src.models.basic_grunet import GRUNetBasic
 from src.preprocessing.adaptive_transformations import DAIN_Layer, BiN_Layer
 from src.preprocessing.normalizing_flows import EDAIN_Layer, EDAINScalerTimeSeries, EDAINScalerTimeSeriesDecorator
-from src.preprocessing.static_transformations import StandardScalerTimeSeries
+from src.preprocessing.static_transformations import StandardScalerTimeSeries, McCarterTimeSeries
 from tqdm.auto import tqdm
 
+import sys
 import copy
 import cudf
 import cupy
@@ -193,6 +194,24 @@ datasets = []
 for i in tqdm(range(NUM_DATASETS)):
     X_raw, y_raw = synth_data.generate_data(n=NUM_SAMPLES, return_uniform=False, random_state=i)
     datasets.append((X_raw, y_raw))
+
+print("Evaluating McCarter 0.1...")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : McCarterTimeSeries(10, alpha=0.1), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "mcCarter-synth-0.1.npy"), hist)
+
+print("Evaluating McCarter 1...")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : McCarterTimeSeries(10, alpha=1), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "mcCarter-synth-1.npy"), hist)
+
+print("Evaluating McCarter 10...")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : McCarterTimeSeries(10, alpha=10), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "mcCarter-synth-10.npy"), hist)
+
+print("Evaluating McCarter 100...")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : McCarterTimeSeries(10, alpha=100), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "mcCarter-synth-100.npy"), hist)
+
+sys.exit()
 
 print("Evaluating raw data...")
 hist = evaluate_model(datasets, preprocess_init_fn=None, return_model=False)
