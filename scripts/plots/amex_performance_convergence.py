@@ -20,22 +20,27 @@ hist_bin = load_hist("amex-bin-preprocessing-1")
 hist_no_preprocess = load_hist("no-preprocess-amex-RECENT")
 hist_edain_local = load_hist("edain-local-aware-amex-RECENT")
 hist_cdf_invert = load_hist("cdf-inversion-amex")
+# Mc-Carty
+hist_mccarty_01 = load_hist("mcCarter-amex-0.1")
+hist_mccarty_1 = load_hist("mcCarter-amex-1")
+hist_mccarty_10 = load_hist("mcCarter-amex-10")
+hist_mccarty_100 = load_hist("mcCarter-amex-100")
 
 # setup plotting parameters
 linestyles = ['solid', 'dashed', 'dotted', 'dashdot', (5, (10, 3)), (0, (5, 10)), (7, (7, 3)), (7, (7, 3, 1, 3))]
 cols = ['black', 'tab:blue', 'black', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown']
-names = ["No preprocessing", 'Standard scaling', "CDF inversion", 'EDAIN-KL', 'EDAIN (global-aware)', 'EDAIN (local-aware)', 'DAIN', 'BIN']
-histories = [hist_no_preprocess, hist_ss, hist_cdf_invert, hist_edain_kl, hist_edain, hist_edain_local, hist_dain, hist_bin]
+names = ["No preprocessing", 'Standard scaling', "CDF inversion", 'EDAIN-KL', 'EDAIN (global-aware)', 'EDAIN (local-aware)', 'DAIN', 'BIN', 'McCarter ($\\alpha=0.1$)', 'McCarter ($\\alpha=1$)', 'McCarter ($\\alpha=10$)', 'McCarter ($\\alpha=100$)']
+histories = [hist_no_preprocess, hist_ss, hist_cdf_invert, hist_edain_kl, hist_edain, hist_edain_local, hist_dain, hist_bin, hist_mccarty_01, hist_mccarty_1, hist_mccarty_10, hist_mccarty_100]
 
-for h in histories:
-    d = h['cli_arguments']
-    print("=====================================")
-    print(f"Preprocessing method: {h['experiment_name']}")
-    cmd_str = "python3 src/experiments/run_experiments.py"
-    for k in d.keys():
-        if d[k]:
-            cmd_str = f"{cmd_str} --{k}={d[k]}"
-    print(cmd_str)
+# for h in histories:
+#     d = h['cli_arguments']
+#     print("=====================================")
+#     print(f"Preprocessing method: {h['experiment_name']}")
+#     cmd_str = "python3 src/experiments/run_experiments.py"
+#     for k in d.keys():
+#         if d[k]:
+#             cmd_str = f"{cmd_str} --{k}={d[k]}"
+#     print(cmd_str)
 
 # %% make validation loss plot
 assert len(linestyles) == len(cols) == len(names) == len(histories)

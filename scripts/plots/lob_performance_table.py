@@ -21,11 +21,16 @@ hist_standard_scaling = load_hist("LOB-standard-scaling-experiment-final")
 # additinal histories for the paper
 hist_no_preprocess = load_hist("no-preprocess-lob-RECENT")
 hist_cdf_invert = load_hist("cdf-inversion-lob-v2")
+# Mc-Carty
+hist_mccarty_01 = load_hist("mcCarter-lob-0.1")
+hist_mccarty_1 = load_hist("mcCarter-lob-1")
+hist_mccarty_10 = load_hist("mcCarter-lob-10")
+hist_mccarty_100 = load_hist("mcCarter-lob-100")
 
 linestyles = ['solid', 'dashed', 'dotted', 'dashdot', (5, (10, 3)), (0, (5, 10)), (0, (3, 1)), (0, (3, 10, 1, 10))]
 cols = ['black', 'tab:blue', 'tab:brown', 'tab:green', 'tab:red', 'tab:purple', 'tab:orange', 'tab:pink']
-histories = [hist_no_preprocess, hist_standard_scaling, hist_cdf_invert, hist_bin, hist_dain, hist_edain_local, hist_edain_global, hist_edain_kl]
-names = ["No preprocessing", 'Standard scaling', 'CDF inversion', 'BIN', 'DAIN', 'EDAIN (local-aware)', 'EDAIN (global-aware)', 'EDAIN-KL']
+histories = [hist_no_preprocess, hist_standard_scaling, hist_cdf_invert, hist_bin, hist_dain, hist_edain_local, hist_edain_global, hist_edain_kl, hist_mccarty_01, hist_mccarty_1, hist_mccarty_10, hist_mccarty_100]
+names = ["No preprocessing", 'Standard scaling', 'CDF inversion', 'BIN', 'DAIN', 'EDAIN (local-aware)', 'EDAIN (global-aware)', 'EDAIN-KL', 'McCarter ($\\alpha=0.1$)', 'McCarter ($\\alpha=1$)', 'McCarter ($\\alpha=10$)', 'McCarter ($\\alpha=100$)']
 
 for h in histories:
     d = h['cli_arguments']

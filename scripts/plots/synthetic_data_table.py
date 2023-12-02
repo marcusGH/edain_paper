@@ -1,28 +1,8 @@
 #!/usr/bin/env python
-from datetime import datetime
-from scipy import stats
-from scipy.integrate import quad, cumulative_trapezoid
-from src.lib import experimentation
 from src.lib.plotting import load_hist
-from src.lib.synthetic_data import SyntheticData
-from src.models.adaptive_grunet import AdaptiveGRUNet
-from src.models.basic_grunet import GRUNetBasic
-from src.preprocessing.adaptive_transformations import DAIN_Layer, BiN_Layer
-from src.preprocessing.normalizing_flows import EDAIN_Layer, EDAINScalerTimeSeries, EDAINScalerTimeSeriesDecorator
-from src.preprocessing.static_transformations import StandardScalerTimeSeries
-from tqdm.auto import tqdm
-
-import copy
-import gc
-import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
-import sklearn
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import yaml
 
 DEV = torch.device('cuda', 0)
 
@@ -30,12 +10,18 @@ methods = ["raw", "z_score", "inverse_CDF", "bin", "dain", "edain_local", "edain
 
 hists = [load_hist(f"synth_data_performance_{lab}") for lab in methods]
 
+hists.append(load_hist("mcCarter-synth-0.1"))
+hists.append(load_hist("mcCarter-synth-1"))
+hists.append(load_hist("mcCarter-synth-10"))
+hists.append(load_hist("mcCarter-synth-100"))
+methods.extend(['McCarter ($\\alpha=0.1$)', 'McCarter ($\\alpha=1$)', 'McCarter ($\\alpha=10$)', 'McCarter ($\\alpha=100$)'])
+
 res_data = {
     "method" : [],
     "val_loss" : [],
-    "val_amex_metric" : [],
+    # "val_amex_metric" : [],
     "val_accs" : [],
-    "num_epochs" : [],
+    # "num_epochs" : [],
 }
 for h, lab in zip(hists, methods):
     for k in res_data.keys():
