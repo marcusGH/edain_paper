@@ -184,12 +184,12 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
     """
     Applies winsorization, standard scaling and a Yeo-Johnson transformation
     """
-    def __init__(self, time_series_length=13, winsorize=True, z_score=True, transform=True, winsorize_alpha=0.05):
+    def __init__(self, time_series_length=13, winsorize=True, z_score=True, do_transform=True, winsorize_alpha=0.05):
         self.T = time_series_length
         self.winsorize = winsorize
         self.alpha = winsorize_alpha
         self.z_score = z_score
-        self.transform = transform
+        self.do_transform = do_transform
 
         self.ss = preprocessing.StandardScaler()
         self.lower = None
@@ -214,11 +214,13 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
             X = np.clip(X, self.lower, self.upper)
 
         # fit the Yeo-Johnson transformation
-        if self.transform:
+        if self.do_transform:
             self.lambdas = []
-            for i in range(d):
-                _, lambd = yeojohnson(X[:, i])
+            for i in tqdm(range(d), desc="Fitting Yeo-Johnson transform"):
+                # only use 5% of the samples to speed-up fitting procedure
+                _, lambd = yeojohnson(X[::20, i])
                 self.lambdas.append(lambd)
+        return self
 
     def transform(self, X):
         # merge the dimensions and time axis
@@ -234,9 +236,9 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
             X = np.clip(X, self.lower, self.upper)
 
         # apply the Yeo-Johnson transformation
-        if self.transform:
+        if self.do_transform:
             X_transformed = X.copy()
-            for i in range(d):
+            for i in tqdm(range(d), desc="Applying Yeo-Johnson transform"):
                 x = yeojohnson(X[:, i], self.lambdas[i])
                 X_transformed[:, i] = x
             X = X_transformed

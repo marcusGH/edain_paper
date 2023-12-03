@@ -8,6 +8,7 @@ import argparse
 from src.preprocessing.static_transformations import (
     IdentityTransform,
     StandardScalerTimeSeries,
+    BaselineTransform,
     McCarterTimeSeries,
     LogMinMaxTimeSeries,
     LogStandardScalerTimeSeries,
@@ -47,6 +48,11 @@ static_preprocessing_methods = {
     'mccarter-1' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=1),
     'mccarter-10' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=10),
     'mccarter-100' : lambda time_series_length : McCarterTimeSeries(time_series_length, alpha=100),
+    # the numbers represent binary flags for the three layers: winsorize, z_score, yeo-johnson
+    'baseline-111' : lambda time_series_length : BaselineTransform(time_series_length, True, True, True),
+    'baseline-010' : lambda time_series_length : BaselineTransform(time_series_length, False, True, False),
+    'baseline-011' : lambda time_series_length : BaselineTransform(time_series_length, False, True, True),
+    'baseline-110' : lambda time_series_length : BaselineTransform(time_series_length, True, True, False),
     'log-min-max' : LogMinMaxTimeSeries,
     'log-standard-scaler' : LogStandardScalerTimeSeries,
     'min-max' : MinMaxTimeSeries,
