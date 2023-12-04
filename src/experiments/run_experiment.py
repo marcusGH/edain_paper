@@ -38,6 +38,7 @@ from src.lib.experimentation import (
     cross_validate_experiment,
     train_evaluate_lob_anchored,
     load_amex_numpy_data,
+    load_power_numpy_data,
     undo_min_max_corrupt_func,
 )
 
@@ -87,7 +88,7 @@ parser.add_argument("--mixture-device-ids",
 )
 parser.add_argument("--dataset",
     help="The dataset to use for the experiment",
-    choices=['amex', 'lob'],
+    choices=['amex', 'lob', 'hpc'],
     required=True,
 )
 parser.add_argument("--model",
@@ -207,6 +208,9 @@ if __name__ == '__main__':
             num_categorical_features=exp_cfg['amex_dataset']['num_categorical_features']
         )
         print(f"Finished loading dataset '{args.dataset}' with covariates of shape {X.shape} and responses of shape {y.shape}")
+    elif args.dataset == 'hpc':
+        X, y = load_power_numpy_data()
+        print(f"Finished loading dataset '{args.dataset}' with covariates of shape {X.shape} and responses of shape {y.shape}")
     elif args.dataset == 'lob':
         X, y = None, None
     else:
@@ -220,7 +224,7 @@ if __name__ == '__main__':
     time_series_length = exp_cfg[f"{args.dataset}_dataset"]['time_series_length']
 
     if args.model == 'gru-rnn' and args.adaptive_layer is None:
-        if args.dataset == 'amex':
+        if args.dataset == 'amex' or args.dataset == 'hpc':
             model_init_fn = lambda : GRUNetBasic(
                 num_cat_columns=exp_cfg['amex_dataset']['num_categorical_features'],
                 **exp_cfg['gru_model_amex']
@@ -268,7 +272,7 @@ if __name__ == '__main__':
 
         # set up model
         print(f"Setting up adaptive model using layer: {args.adaptive_layer}")
-        if args.dataset == 'amex':
+        if args.dataset == 'amex' or args.dataset == 'hpc':
             model_init_fn = lambda : AdaptiveGRUNet(
                 adaptive_layer=adaptive_layer_init_fn(),
                 num_cat_columns=exp_cfg['amex_dataset']['num_categorical_features'],
@@ -420,7 +424,7 @@ if __name__ == '__main__':
     ################################################################
 
     print(f"Starting cross-validation experiment on dataset {args.dataset}")
-    if args.dataset == "amex":
+    if args.dataset == "amex" or args.dataset == "hpc":
         history = cross_validate_experiment(
             model_init_fn=model_init_fn,
             preprocess_init_fn=scaler_init_fn,

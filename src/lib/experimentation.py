@@ -17,6 +17,7 @@ from tqdm.auto import tqdm
 from src.models import basic_grunet
 from src.lib.lob_train_utils import lob_epoch_train_one_epoch, lob_evaluator
 from src.lib.lob_loader import get_wf_lob_loaders, ImbalancedDatasetSampler
+from sklearn.metrics import accuracy_score
 
 class EarlyStopper:
     """
@@ -82,6 +83,14 @@ def amex_metric_mod(y_true, y_pred):
         gini[i]        = np.sum((lorentz - weight_random) * weight)
 
     return 0.5 * (gini[1]/gini[0] + top_four)
+
+def load_power_numpy_data():
+    Xs = np.load("/home/silo1/mas322/power-dataset/X_hpc.npy")
+    ys = np.load("/home/silo1/mas322/power-dataset/y_hpc.npy")
+    # swap d and T dimensions
+    Xs = Xs.transpose(0, 2, 1)
+    return Xs, ys
+
 
 def load_amex_numpy_data(split_data_dir, fill_dict, corrupt_func=None, num_categorical_features=11, load_small_subset=False):
     """
@@ -252,6 +261,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
         "val_loss" : [],
         "train_amex_metric" : [],
         "val_amex_metric" : [],
+        "val_accuracy" : [],
     }
 
     if isinstance(device_ids, torch.device):
@@ -280,6 +290,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
 
         running_vloss = 0.0
         running_vmetric = 0.0
+        running_vacc = 0.0
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         model.eval()
@@ -292,11 +303,15 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
                 voutputs = model(vinputs)
                 vloss = loss_fn(voutputs, vlabels).cpu().item()
                 vmetric = amex_metric_mod(vlabels.cpu().numpy(), voutputs.cpu().numpy())
+                class_preds = np.where(voutputs.cpu().numpy() > .5, 1., 0.)
+                vacc = accuracy_score(vlabels.cpu().numpy(), class_preds)
                 running_vloss += vloss
                 running_vmetric += vmetric
+                running_vacc += vacc
 
         avg_vloss = running_vloss / (i + 1)
         avg_vmetric = running_vmetric / (i + 1)
+        avg_vacc = running_vacc / (i + 1)
         if verbose:
             print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
             print('AMEX metric train {} valid {}'.format(avg_metric, avg_vmetric))
@@ -314,6 +329,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
         history['train_amex_metric'].append(avg_metric)
         history['val_loss'].append(avg_vloss)
         history['val_amex_metric'].append(avg_vmetric)
+        history['val_accuracy'].append(avg_vacc)
 
         # Log the running loss averaged per batch
         # for both training and validation

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-declare -a scale_lrs=(1.0 0.1 0.01)
-declare -a shift_lrs=(1.0 0.1 0.01)
-declare -a outlier_lrs=(10 1 0.1 0.01 0.001)
-declare -a power_lrs=(10 1 0.1 0.01 0.001)
+declare -a scale_lrs=(1.0 0.1)
+declare -a shift_lrs=(1.0 0.1)
+declare -a outlier_lrs=(1 0.1 0.01 0.001)
+declare -a power_lrs=(1 0.01 0.001)
 i=0
 
 for LR_scale in "${scale_lrs[@]}" ; do
