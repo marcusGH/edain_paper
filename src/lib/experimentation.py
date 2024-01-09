@@ -322,7 +322,7 @@ def fit_model(model, loss_fn, train_loader, val_loader, optimizer, scheduler = N
 
         # update progress bar
         pbar.update()
-        pbar.set_description("LOSS train {:.4f} valid {:.4f}. AMEX METRIC train {:.4f} valid {:.4f}".format(avg_loss, avg_vloss, avg_metric, avg_vmetric))
+        pbar.set_description("LOSS train {:.4f} valid {:.4f}. AMEX METRIC train {:.4f} valid {:.4f} ACC {:.4f}".format(avg_loss, avg_vloss, avg_metric, avg_vmetric, avg_vacc))
 
         # Log the metric values
         history['train_loss'].append(avg_loss)
@@ -384,6 +384,7 @@ def cross_validate_experiment(
         "val_loss": [None] * num_folds,
         "train_amex_metric": [None] * num_folds,
         "val_amex_metric": [None] * num_folds,
+        "val_accuracy": [None] * num_folds,
     }
     history_num_epochs = [None] * num_folds
     history_preprocess_time = [None] * num_folds

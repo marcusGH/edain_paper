@@ -1,0 +1,124 @@
+# Experimentation configuration file alpha
+---
+# Amex dataset configuration
+amex_dataset:
+  data_loader:
+    batch_size: 1024
+    shuffle: false
+    drop_last: true
+  time_series_length: 13
+  num_categorical_features: 11
+  train_split_data_dir: /home/silo1/mas322/amex-default-prediction/derived/processed-splits/
+  fill:
+    nan: -0.5
+    pad_categorical: -2
+    pad_numeric: -1
+  numeric_input_dim: 177
+
+# FI-2010 dataset configuration
+lob_dataset:
+  preprocessed_lob_path: /home/silo1/mas322/fi-2010-lob-preprocessed/lob.h5
+  batch_size: 128
+  # look 10 timesteps ahead
+  horizon: 2
+  # get a window of 15 timesteps (= time series length)
+  time_series_length: 15 # this can also be changed (see windows docs)
+  splits: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  use_resampling: true
+  numeric_input_dim: 144
+
+# Configuration for fitting the amex dataset
+fit:
+  num_epochs: 40
+  early_stopper_patience: 5
+  early_stopper_min_delta: 0.0
+  optimizer: adam
+  base_lr: 0.001
+  scheduler_milestones: [4, 7]
+  verbose: False
+
+# Configuration for GRU RNN model
+gru_model_amex:
+  num_features: 188
+  hidden_dim: 128
+  layer_dim: 2
+  embedding_dim: 4
+  dropout_prob: 0.2
+
+# Configuration for GRU model used on LOB dataset
+gru_model_lob:
+  input_dim: 144
+  linear_dim: 512
+  gru_dim: 256
+  num_gru_layers: 1
+  dropout_prob: 0.5
+
+# Configuration for the EDAIN Layer
+edain_bijector:
+  init_sigma: 0.3
+  eps: 0.000001
+  adaptive_shift: true
+  adaptive_scale: true
+  adaptive_outlier_removal: false
+  adaptive_power_transform: false
+  outlier_removal_mode: exp
+  batch_aware: false
+
+# Configuration for EDAIN layer, when optimised with KL-divergence
+edain_bijector_fit:
+  batch_size: 1024
+  milestones: [3, 7]
+  num_epochs: 20
+  num_fits: 1
+  base_lr: 0.001
+  # the below parameters also apply when optimising with backpropagation
+  scale_lr: 0.01
+  shift_lr: 0.01
+  outlier_lr: 100.0
+  power_lr: 10.0
+
+# Configuration for the DAIN layer
+dain:
+  mode: adaptive_scale
+  mean_lr: 1.0
+  scale_lr: 1.0
+  gate_lr: 0.001
+
+# Configuration for the BiN layer
+bin:
+  beta_lr: 10.0
+  gamma_lr: 1.0
+  lambda_lr: 0.000001
+
+# configuration for brute force clustering approach
+mixture:
+  num_epochs_brute_force: 10
+  # the set of transformations to consider a mixture of (should always include "standard-scaler")
+  transforms:
+    - standard-scaler
+    - standard-scaler-no-time
+    - tanh-standard-scaler
+    - tanh-standard-scaler-no-time
+    - min-max-scaler
+    - min-max-scaler-no-time
+  jobs_per_gpu: 1
+  cache_directory: /home/silo1/mas322/cache-files/
+  # should be either "statistics" or "kl-divergence"
+  cluster_method: statistics
+  number_of_clusters: 3
+  statistics_cluster:
+    # keyword argument to the KMeans clustering routine
+    kmeans:
+      n_init: auto
+      random_state: 42
+    # number of bins for the histogram, used as part of determining some statistics
+    num_bins: 5000
+  kl_cluster:
+    agglomerative_clustering:
+      linkage: average
+    num_bins: 5000
+  # the metric used to determine which mixture is best (lower is better)
+  metric: val_loss
+
+# End config
+...
