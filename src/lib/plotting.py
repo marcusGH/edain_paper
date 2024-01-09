@@ -22,6 +22,8 @@ def update_plot_params(**kwargs):
     params = {
         "text.usetex": True,
         "font.family": "serif",
+        'font.serif': ['Computer Modern'],
+        # 'font' : {'family': 'serif', 'serif': ['Computer Modern']},
         "axes.labelsize": 9,
         "font.size": 11,
         "legend.fontsize": 7,
@@ -57,7 +59,7 @@ def get_figsize(width=418.25555, fraction=1.0, height_width_ratio=(5 ** .5 - 1)/
 def save_plot(fig, plot_name):
     global _cfg
     save_path = os.path.join(__file__.split("src")[0], _cfg["plot_output_dir"], f"{plot_name}.pdf")
-    fig.savefig(save_path, bbox_inches='tight')
+    fig.savefig(save_path, bbox_inches='tight', pad_inches=0.01)
 
 def get_average(history, key):
     """
@@ -111,7 +113,7 @@ def get_confidence_interval(history, key, min_val='val_loss', get_vals=False):
     if get_vals:
         return vals
     else:
-        return np.mean(vals), np.std(vals) * 1.96
+        return np.mean(vals), np.std(vals) * 1.96 / np.sqrt(len(vals))
 
 
 def plot_cv(history, suffix, ax, cols = ['tab:blue', 'tab:orange'], **kwargs):
