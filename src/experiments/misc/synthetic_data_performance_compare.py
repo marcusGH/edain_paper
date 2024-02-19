@@ -10,7 +10,7 @@ from src.models.adaptive_grunet import AdaptiveGRUNet
 from src.models.basic_grunet import GRUNetBasic
 from src.preprocessing.adaptive_transformations import DAIN_Layer, BiN_Layer
 from src.preprocessing.normalizing_flows import EDAIN_Layer, EDAINScalerTimeSeries, EDAINScalerTimeSeriesDecorator
-from src.preprocessing.static_transformations import StandardScalerTimeSeries, McCarterTimeSeries
+from src.preprocessing.static_transformations import StandardScalerTimeSeries, McCarterTimeSeries, BaselineTransform
 from tqdm.auto import tqdm
 
 import sys
@@ -38,7 +38,8 @@ with open(os.path.join("src", "experiments", "configs", "experiment-config-alpha
 with open(os.path.join("src", "experiments", "configs", "experiment-config-beta.yaml")) as f:
     lob_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-DEV = torch.device('cuda', 5)
+DEV = torch.device('cuda', 0)
+# DEV = torch.device('cpu')
 
 def evaluate_model(datasets, preprocess_init_fn=None, model_init_fn=None, input_dim=3, return_model=False):
     tlosses = []
@@ -72,9 +73,13 @@ def evaluate_model(datasets, preprocess_init_fn=None, model_init_fn=None, input_
 
         # preprocess the dataset if provided with a method
         if preprocess_init_fn is not None:
+            print(f"Before preprocess: {X_train.shape}, y_train: {y_train.shape}")
             preprocess = preprocess_init_fn()
             X_train = preprocess.fit_transform(X_train, y_train)
             X_val = preprocess.transform(X_val)
+            print("Preprocessing finished!")
+
+        print(f"Starting training with X_train: {X_train.shape}, y_train: {y_train.shape}")
 
         train_loader = torch.utils.data.DataLoader(
                 dataset = torch.utils.data.TensorDataset(
@@ -194,6 +199,26 @@ datasets = []
 for i in tqdm(range(NUM_DATASETS)):
     X_raw, y_raw = synth_data.generate_data(n=NUM_SAMPLES, return_uniform=False, random_state=i)
     datasets.append((X_raw, y_raw))
+
+
+# evaluate the statistical baselines
+print("Evaluating baseline 111")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : BaselineTransform(10, True, True, True), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "synth_data_performance_baseline-111.npy"), hist)
+
+print("Evaluating baseline 010")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : BaselineTransform(10, False, True, False), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "synth_data_performance_baseline-010.npy"), hist)
+
+print("Evaluating baseline 011")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : BaselineTransform(10, False, True, True), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "synth_data_performance_baseline-011.npy"), hist)
+
+print("Evaluating baseline 110")
+hist = evaluate_model(datasets, preprocess_init_fn=lambda : BaselineTransform(10, True, True, False), return_model=False)
+np.save(os.path.join(main_cfg['experiment_directory'], "synth_data_performance_baseline-110.npy"), hist)
+
+sys.exit()
 
 print("Evaluating McCarter 0.1...")
 hist = evaluate_model(datasets, preprocess_init_fn=lambda : McCarterTimeSeries(10, alpha=0.1), return_model=False)

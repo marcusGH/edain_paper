@@ -223,6 +223,7 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
         return self
 
     def transform(self, X):
+        assert X.shape[1] == self.T
         # merge the dimensions and time axis
         X = X.reshape((X.shape[0], -1))
         d = X.shape[1]
@@ -234,6 +235,7 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
         # apply the winsorization
         if self.winsorize:
             X = np.clip(X, self.lower, self.upper)
+            X = X.astype(np.float32)
 
         # apply the Yeo-Johnson transformation
         if self.do_transform:
@@ -242,6 +244,8 @@ class BaselineTransform(sklearn.base.TransformerMixin, sklearn.base.BaseEstimato
                 x = yeojohnson(X[:, i], self.lambdas[i])
                 X_transformed[:, i] = x
             X = X_transformed
+
+        X = X.reshape((X.shape[0], self.T, -1))
         return X
 
 class WinsorizeDecorator(sklearn.base.TransformerMixin, sklearn.base.BaseEstimator):
